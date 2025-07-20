@@ -1,0 +1,99 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cargo build",
+      "type": "shell",
+      "command": "cargo build",
+      "options": {
+        "cwd": "ruggine_server"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Rust: Run All Tests",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--", "--nocapture"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_server"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Rust: Run Unit Tests",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--lib", "--", "--nocapture"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_server"
+      },
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Rust: Run Integration Tests",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "--test", "*", "--", "--nocapture"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_server"
+      },
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Rust: Run Test by Name",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["test", "${input:testName}", "--", "--nocapture"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_server"
+      },
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$rustc"]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testName",
+      "description": "Test name or pattern",
+      "default": "",
+      "type": "promptString"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+    "rust-analyzer.cargo.target": "x86_64-pc-windows-msvc",
+    "rust-analyzer.workspace.symbol.search.scope": "workspace_and_dependencies",
+    
+    // Test configuration
+    "rust-analyzer.runnables.command": "cargo",
+    "rust-analyzer.debug.engine": "vadimcn.vscode-lldb",
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.lens.enable": true,
+    "rust-analyzer.lens.run.enable": true,
+    "rust-analyzer.lens.debug.enable": true,
+    
+    // Test discovery and native testing
+    "testing.automaticallyOpenPeekView": "never",
+    "testing.openTesting": "neverOpen",
+    "testing.showAllMessages": false,
+    
+    // Enable Rust test discovery
+    "rust-analyzer.runnables.extraArgs": ["--", "--nocapture"],
+    
+    // Workspace configuration for multiple projects
+    "rust-analyzer.linkedProjects": [
+        "./ruggine_server/Cargo.toml"
+    ],
+    
+    // File associations
+    "files.associations": {
+        "Cargo.toml": "toml",
+        "Cargo.lock": "toml"
+    },
+    "rust-analyzer.testExplorer.enabled": true,
+    "testing.automaticallyOpenTestResults": "neverOpen"
+}

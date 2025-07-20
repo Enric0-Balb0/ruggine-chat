@@ -1,0 +1,52 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Axum Server",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/ruggine_server/target/debug/ruggine_server",
+      "args": [],
+      "cwd": "${workspaceFolder}/ruggine_server",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "preLaunchTask": "cargo build",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'ruggine_server'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=ruggine_server"
+        ],
+        "filter": {
+          "name": "ruggine_server",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/ruggine_server"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration tests",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=*",
+          "--package=ruggine_server"
+        ]
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/ruggine_server"
+    }
+  ]
+}
