@@ -9,10 +9,10 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.6.3", features = ["headers"] }
-hyper = { version = "0.14.23", features = ["full"] }
-tokio = { version = "1.24.2", features = ["full"] }
-tower = { version = "0.4.13", features = ["full"] }
-tower-http = { version = "0.4.0", features = ["full"] }
+hyper = { version = "0.14.23", features = ["http1", "http2", "server", "client", "tcp"] }
+tokio = { version = "1.24.2", features = ["macros", "rt-multi-thread", "time"] }
+tower = { version = "0.4.13", features = ["util"] }
+tower-http = { version = "0.4.0", features = ["cors", "trace"] }
 dotenv = "0.15.0"
 serde =  { version = "1.0.152", features = ["derive"] }
 jsonwebtoken = "8.3.0"
@@ -35,12 +35,39 @@ env_logger = "0.10"
 serial_test = "3.0"  # For tests that cannot run in parallel
 tempfile = "3.5"    # For temporary files in tests
 
-# Integration test configurations
 [[test]]
 name = "user_repository_unit"
 path = "tests/unit/repository/user_repository_test.rs"
 
 [[test]]
+name = "user_dto_unit"
+path = "tests/unit/dto/user_dto_test.rs"
+
+[[test]]
+name = "auth_handler_unit"
+path = "tests/unit/handler/auth_handler_test.rs"
+
+[[test]]
 name = "user_repository_integration"
 path = "tests/integration/repository/user_repository_test.rs"
+
+# Ottimizzazioni di compilazione
+[profile.dev]
+debug = 1
+incremental = true
+opt-level = 0
+
+[profile.test]
+debug = 1
+incremental = true
+opt-level = 0
+
+# Ottimizza le dipendenze per velocizzare i build
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.test.package."*"]
+opt-level = 1
+debug = false
 

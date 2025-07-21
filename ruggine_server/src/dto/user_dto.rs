@@ -25,8 +25,8 @@ pub struct UserRegisterDto {
         message = "Password must be between 3 and 20 characters"
     ))]
     pub password: String,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
     #[validate(length(
         min = 3,
         max = 20,
@@ -38,8 +38,8 @@ pub struct UserRegisterDto {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UserReadDto {
     pub id: i32,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
     pub user_name: String,
     pub email: String,
     pub created_at: DateTime<Utc>,

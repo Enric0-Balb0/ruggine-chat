@@ -25,16 +25,11 @@ fn get_unique_test_data(prefix: &str) -> (String, String, String) {
 
 // Helper function for test database setup
 async fn setup_test_db() -> Arc<Database> {
-    // In a real environment, you'd use a separate test database
-    // For now, we use the standard database initialization
-    // You can set TEST_DATABASE_URL environment variable for a test-specific database
     dotenv::dotenv().ok();
     let _database_url = std::env::var("TEST_DATABASE_URL")
         .unwrap_or_else(|_| "mysql://root:password@localhost/ruggine_test".to_string());
     println!("DB URL: {}", _database_url);
     
-    // Note: Database::init() should be used instead of new_with_url
-    // For integration tests, you'd need to set up the database properly
     let database = Database::init(_database_url).await
         .expect("Failed to connect to test database");
     
@@ -64,8 +59,8 @@ mod user_repository_integration_tests {
         
         let (email, username, full_name) = get_unique_test_data("integration");
         let new_user = NewUser {
-            first_name: Some(full_name.clone()),
-            last_name: Some("Test".to_string()),
+            first_name: full_name.clone(),
+            last_name: "Test".to_string(),
             user_name: username.clone(),
             email: email.clone(),
             password: "hashed_password".to_string(),
@@ -86,8 +81,8 @@ mod user_repository_integration_tests {
         
         let user = found_user.unwrap();
         assert_eq!(user.email, email);
-        assert_eq!(user.first_name, Some(full_name));
-        assert_eq!(user.last_name, Some("Test".to_string()));
+        assert_eq!(user.first_name, full_name);
+        assert_eq!(user.last_name, "Test".to_string());
 
         // Cleanup
         cleanup_test_db_specific(&db, &email).await;
@@ -101,8 +96,8 @@ mod user_repository_integration_tests {
         
         let (email, username, full_name) = get_unique_test_data("findbyid");
         let new_user = NewUser {
-            first_name: Some(full_name),
-            last_name: Some("ById".to_string()),
+            first_name: full_name,
+            last_name: "ById".to_string(),
             user_name: username,
             email: email.clone(),
             password: "hashed_password".to_string(),
@@ -163,8 +158,8 @@ mod user_repository_integration_tests {
         let (_, username2, full_name2) = get_unique_test_data("duplicate2");
         
         let user1 = NewUser {
-            first_name: Some(full_name1),
-            last_name: Some("User".to_string()),
+            first_name: full_name1,
+            last_name: "User".to_string(),
             user_name: username1,
             email: shared_email.clone(),
             password: "password1".to_string(),
@@ -172,8 +167,8 @@ mod user_repository_integration_tests {
         };
 
         let user2 = NewUser {
-            first_name: Some(full_name2),
-            last_name: Some("User".to_string()),
+            first_name: full_name2,
+            last_name: "User".to_string(),
             user_name: username2,
             email: shared_email.clone(), // Same email
             password: "password2".to_string(),
@@ -209,8 +204,8 @@ mod user_repository_integration_tests {
             
             let handle = tokio::spawn(async move {
                 let new_user = NewUser {
-                    first_name: Some(full_name),
-                    last_name: Some("Test".to_string()),
+                    first_name: full_name,
+                    last_name: "Test".to_string(),
                     user_name: username,
                     email,
                     password: "password".to_string(),
@@ -258,8 +253,8 @@ mod user_repository_performance_tests {
             emails_to_cleanup.push(email.clone());
             
             let new_user = NewUser {
-                first_name: Some(full_name),
-                last_name: Some("Test".to_string()),
+                first_name: full_name,
+                last_name: "Test".to_string(),
                 user_name: username,
                 email,
                 password: "password".to_string(),

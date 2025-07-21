@@ -10,8 +10,8 @@ mod user_repository_unit_tests {
     fn test_new_user_creation() {
         // Arrange & Act
         let new_user = NewUser {
-            first_name: Some("John".to_string()),
-            last_name: Some("Doe".to_string()),
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
             user_name: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
@@ -19,8 +19,8 @@ mod user_repository_unit_tests {
         };
 
         // Assert
-        assert_eq!(new_user.first_name, Some("John".to_string()));
-        assert_eq!(new_user.last_name, Some("Doe".to_string()));
+        assert_eq!(new_user.first_name, "John".to_string());
+        assert_eq!(new_user.last_name, "Doe".to_string());
         assert_eq!(new_user.user_name, "johndoe");
         assert_eq!(new_user.email, "john.doe@example.com");
         assert_eq!(new_user.password, "hashed_password");
@@ -45,8 +45,8 @@ mod user_repository_unit_tests {
         let now = Utc::now();
         let user = User {
             id: 1,
-            first_name: Some("Test".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
             user_name: "testuser".to_string(),
             email: "test@example.com".to_string(),
             password: "password".to_string(),
@@ -58,28 +58,9 @@ mod user_repository_unit_tests {
         assert_eq!(user.id, 1);
         assert_eq!(user.email, "test@example.com");
         assert_eq!(user.is_active, 1);
-        assert_eq!(user.first_name, Some("Test".to_string()));
+        assert_eq!(user.first_name, "Test".to_string());
         assert_eq!(user.updated_at, None);
     }
-
-    #[test]
-    fn test_new_user_with_none_names() {
-        // Test NewUser with None values for optional fields
-        let new_user = NewUser {
-            first_name: None,
-            last_name: None,
-            user_name: "usernameonly".to_string(),
-            email: "email@example.com".to_string(),
-            password: "password123".to_string(),
-            is_active: 1,
-        };
-
-        assert_eq!(new_user.first_name, None);
-        assert_eq!(new_user.last_name, None);
-        assert_eq!(new_user.user_name, "usernameonly");
-        assert_eq!(new_user.is_active, 1);
-    }
-
 
     #[test]
     fn test_user_creation() {
@@ -87,8 +68,8 @@ mod user_repository_unit_tests {
         let now = Utc::now();
         let user = User {
             id: 1,
-            first_name: Some("Jane".to_string()),
-            last_name: Some("Smith".to_string()),
+            first_name: "Jane".to_string(),
+            last_name: "Smith".to_string(),
             user_name: "janesmith".to_string(),
             email: "jane@example.com".to_string(),
             password: "hashed_password".to_string(),
@@ -100,33 +81,16 @@ mod user_repository_unit_tests {
         assert_eq!(user.id, 1);
         assert_eq!(user.user_name, "janesmith");
         assert_eq!(user.email, "jane@example.com");
-        assert_eq!(user.first_name, Some("Jane".to_string()));
+        assert_eq!(user.first_name, "Jane".to_string());
         assert_eq!(user.is_active, 1);
-    }
-
-    #[test] 
-    fn test_optional_names() {
-        // Test that first_name and last_name can be None
-        let new_user = NewUser {
-            first_name: None,
-            last_name: None,
-            user_name: "testuser".to_string(),
-            email: "test@example.com".to_string(),
-            password: "password".to_string(),
-            is_active: 1,
-        };
-
-        assert_eq!(new_user.first_name, None);
-        assert_eq!(new_user.last_name, None);
-        assert_eq!(new_user.user_name, "testuser");
     }
 
     #[test]
     fn test_inactive_user() {
         // Test inactive user
         let new_user = NewUser {
-            first_name: Some("Inactive".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Inactive".to_string(),
+            last_name: "User".to_string(),
             user_name: "inactive".to_string(),
             email: "inactive@example.com".to_string(),
             password: "password".to_string(),
@@ -142,8 +106,8 @@ mod user_repository_unit_tests {
         let now = Utc::now();
         let user = User {
             id: 42,
-            first_name: Some("Test".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
             user_name: "testuser42".to_string(),
             email: "test42@example.com".to_string(),
             password: "secure_hash".to_string(),
@@ -161,8 +125,8 @@ mod user_repository_unit_tests {
     fn test_user_clone_functionality() {
         // Test that User structs can be cloned (important for repositories)
         let original_user = NewUser {
-            first_name: Some("Original".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Original".to_string(),
+            last_name: "User".to_string(),
             user_name: "original".to_string(),
             email: "original@example.com".to_string(),
             password: "password".to_string(),
@@ -188,8 +152,8 @@ mod user_repository_unit_tests {
 
         for email in test_cases {
             let new_user = NewUser {
-                first_name: Some("Test".to_string()),
-                last_name: Some("User".to_string()),
+                first_name: "Test".to_string(),
+                last_name: "User".to_string(),
                 user_name: format!("user_{}", email.replace("@", "_at_").replace(".", "_")),
                 email: email.to_string(),
                 password: "password".to_string(),
@@ -205,8 +169,8 @@ mod user_repository_unit_tests {
     fn test_inactive_new_user() {
         // Test creating an inactive user
         let new_user = NewUser {
-            first_name: Some("Inactive".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Inactive".to_string(),
+            last_name: "User".to_string(),
             user_name: "inactive_user".to_string(),
             email: "inactive@example.com".to_string(),
             password: "password".to_string(),
@@ -214,15 +178,15 @@ mod user_repository_unit_tests {
         };
 
         assert_eq!(new_user.is_active, 0);
-        assert_eq!(new_user.first_name, Some("Inactive".to_string()));
+        assert_eq!(new_user.first_name, "Inactive".to_string());
     }
 
     #[test]
     fn test_new_user_validation_fields() {
         // Test that NewUser has all required fields for database insertion
         let new_user = NewUser {
-            first_name: Some("Valid".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Valid".to_string(),
+            last_name: "User".to_string(),
             user_name: "validuser".to_string(),
             email: "valid@example.com".to_string(),
             password: "hashed_password_123".to_string(),
@@ -244,8 +208,8 @@ mod user_repository_unit_tests {
         // Test that User ID is i32 as expected by database
         let user = User {
             id: i32::MAX,
-            first_name: Some("Max".to_string()),
-            last_name: Some("Id".to_string()),
+            first_name: "Max".to_string(),
+            last_name: "Id".to_string(),
             user_name: "maxid".to_string(),
             email: "max@example.com".to_string(),
             password: "password".to_string(),
@@ -259,8 +223,8 @@ mod user_repository_unit_tests {
         // Test minimum valid ID
         let user_min = User {
             id: 1,
-            first_name: Some("Min".to_string()),
-            last_name: Some("Id".to_string()),
+            first_name: "Min".to_string(),
+            last_name: "Id".to_string(),
             user_name: "minid".to_string(),
             email: "min@example.com".to_string(),
             password: "password".to_string(),
@@ -282,8 +246,8 @@ mod user_repository_unit_tests {
         
         let user = User {
             id: 100,
-            first_name: None, // Test with None names
-            last_name: None,
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
             user_name: "timestamp_test".to_string(),
             email: "timestamp@example.com".to_string(),
             password: "password".to_string(),
@@ -302,8 +266,8 @@ mod user_repository_unit_tests {
     fn test_is_active_states() {
         // Test both active states
         let active_user = NewUser {
-            first_name: Some("Active".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Active".to_string(),
+            last_name: "User".to_string(),
             user_name: "active_user".to_string(),
             email: "active@example.com".to_string(),
             password: "password".to_string(),
@@ -311,8 +275,8 @@ mod user_repository_unit_tests {
         };
 
         let inactive_user = NewUser {
-            first_name: Some("Inactive".to_string()),
-            last_name: Some("User".to_string()),
+            first_name: "Inactive".to_string(),
+            last_name: "User".to_string(),
             user_name: "inactive_user".to_string(),
             email: "inactive@example.com".to_string(),
             password: "password".to_string(),
@@ -334,8 +298,8 @@ mod user_repository_unit_tests {
         use serde_json;
         
         let new_user = NewUser {
-            first_name: Some("Serialize".to_string()),
-            last_name: Some("Test".to_string()),
+            first_name: "Serialize".to_string(),
+            last_name: "Test".to_string(),
             user_name: "serialize_test".to_string(),
             email: "serialize@example.com".to_string(),
             password: "password123".to_string(),
@@ -359,21 +323,4 @@ mod user_repository_unit_tests {
         assert_eq!(deserialized_user.email, new_user.email);
     }
 
-    #[test]
-    fn test_empty_email_handling() {
-        let empty_email = "";
-        assert!(empty_email.is_empty());
-    }
-
-    #[test]
-    fn test_long_username_handling() {
-        let long_username = "a".repeat(256);
-        assert!(long_username.len() > 255);
-    }
-
-    #[test]
-    fn test_special_characters_in_fields() {
-        let special_chars = "test@#$%^&*()";
-        assert!(special_chars.contains('@'));
-    }
 }

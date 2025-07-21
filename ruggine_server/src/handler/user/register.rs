@@ -1,5 +1,6 @@
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
 use crate::error::{api_error::ApiError, request_error::ValidatedRequest};
+use crate::service::user_service::UserServiceTrait;
 use crate::state::user_state::UserState;
 use axum::{extract::State, Json};
 

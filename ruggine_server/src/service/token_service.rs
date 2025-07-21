@@ -11,33 +11,36 @@ pub struct TokenService {
 }
 
 pub trait TokenServiceTrait {
-    fn new() -> Self;
     fn retrieve_token_claims(
         &self,
         token: &str,
     ) -> jsonwebtoken::errors::Result<TokenData<TokenClaimsDto>>;
+
     fn generate_token(&self, user: User) -> Result<TokenReadDto, TokenError>;
-    const TOKEN_EXPIRATION: i64;
+}
+
+impl TokenService {
+    pub fn new() -> Self {
+        Self {
+            secret: parameter::get("JWT_SECRET"),
+        }
+    }
+
+    pub const TOKEN_EXPIRATION: i64 = 30;
 }
 
 impl TokenServiceTrait for TokenService {
-    fn new() -> Self {
-        return Self {
-            secret: parameter::get("JWT_SECRET"),
-        };
-    }
     fn retrieve_token_claims(
         &self,
         token: &str,
     ) -> jsonwebtoken::errors::Result<TokenData<TokenClaimsDto>> {
-        let result = decode::<TokenClaimsDto>(
+        decode::<TokenClaimsDto>(
             token,
             &DecodingKey::from_secret(self.secret.as_ref()),
             &Validation::default(),
-        );
-
-        return result;
+        )
     }
+
     fn generate_token(&self, user: User) -> Result<TokenReadDto, TokenError> {
         let iat = chrono::Utc::now().timestamp();
         let exp = chrono::Utc::now()
@@ -61,6 +64,4 @@ impl TokenServiceTrait for TokenService {
 
         Ok(TokenReadDto { token, iat, exp })
     }
-
-    const TOKEN_EXPIRATION: i64 = 30;
 }

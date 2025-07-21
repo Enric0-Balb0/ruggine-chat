@@ -1,6 +1,6 @@
 use crate::config::database::Database;
-use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use crate::service::token_service::{TokenService, TokenServiceTrait};
+use crate::repository::user_repository::{UserRepository};
+use crate::service::token_service::{TokenService};
 use std::sync::Arc;
 
 #[derive(Clone)]

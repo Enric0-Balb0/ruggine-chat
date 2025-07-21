@@ -1,23 +1,34 @@
 use crate::config::database::Database;
-use crate::repository::user_repository;
-use crate::repository::user_repository::UserRepositoryTrait;
+use crate::repository::user_repository::{self, UserRepositoryTrait};
 use crate::service::token_service::{TokenService, TokenServiceTrait};
-use crate::service::user_service::UserService;
+use crate::service::user_service::{UserService, UserServiceTrait};
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AuthState {
-    pub(crate) token_service: TokenService,
-    pub(crate) user_repo: user_repository::UserRepository,
-    pub(crate) user_service: UserService,
+    pub token_service: Arc<dyn TokenServiceTrait + Send + Sync>,
+    pub user_repo: Arc<dyn UserRepositoryTrait + Send + Sync>,
+    pub user_service: Arc<dyn UserServiceTrait + Send + Sync>,
 }
 
 impl AuthState {
     pub fn new(db_conn: &Arc<Database>) -> AuthState {
         Self {
-            token_service: TokenService::new(),
-            user_service: UserService::new(db_conn),
-            user_repo: user_repository::UserRepository::new(db_conn),
+            token_service: Arc::new(TokenService::new()),
+            user_repo: Arc::new(user_repository::UserRepository::new(db_conn)),
+            user_service: Arc::new(UserService::new(db_conn)),
         }
+    }
+
+    pub fn token_service(&self) -> Arc<dyn TokenServiceTrait + Send + Sync> {
+        Arc::clone(&self.token_service)
+    }
+
+    pub fn user_repo(&self) -> Arc<dyn UserRepositoryTrait + Send + Sync> {
+        Arc::clone(&self.user_repo)
+    }
+
+    pub fn user_service(&self) -> Arc<dyn UserServiceTrait + Send + Sync> {
+        Arc::clone(&self.user_service)
     }
 }
