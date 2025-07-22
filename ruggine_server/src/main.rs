@@ -13,6 +13,7 @@ mod state;
 mod service;
 mod middleware;
 mod handler;
+mod factory;
 
 #[tokio::main]
 async fn main() {

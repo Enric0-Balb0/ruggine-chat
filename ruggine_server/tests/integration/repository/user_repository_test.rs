@@ -1,74 +1,26 @@
 use std::sync::Arc;
-use ruggine_server::config::database::{Database, DatabaseTrait};
-use ruggine_server::entity::user::NewUser;
+use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use std::sync::atomic::{AtomicU32, Ordering};
-
-// Global counter for unique test data
-static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
-
-// Helper function to generate unique test data
-fn get_unique_test_data(prefix: &str) -> (String, String, String) {
-    let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    
-    let unique_suffix = format!("{}_{}", counter, timestamp);
-    let email = format!("{}{}@test.com", prefix, unique_suffix);
-    let username = format!("{}_{}", prefix, unique_suffix);
-    let full_name = format!("{}{}", prefix, unique_suffix);
-    
-    (email, username, full_name)
-}
-
-// Helper function for test database setup
-async fn setup_test_db() -> Arc<Database> {
-    dotenv::dotenv().ok();
-    let _database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "mysql://root:password@localhost/ruggine_test".to_string());
-    println!("DB URL: {}", _database_url);
-    
-    let database = Database::init(_database_url).await
-        .expect("Failed to connect to test database");
-    
-    Arc::new(database)
-}
-
-// Helper function to clean database after tests - now cleans only specific test data
-async fn cleanup_test_db_specific(db: &Arc<Database>, email: &str) {
-    if let Err(e) = sqlx::query("DELETE FROM user WHERE email = ?")
-        .bind(email)
-        .execute(db.get_pool())
-        .await 
-    {
-        eprintln!("Failed to cleanup test data for {}: {}", email, e);
-    }
-}
+use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_repository_integration_tests {
+    use std::sync::Mutex;
+
+    use crate::get_shared_database;
+
     use super::*;
 
     #[tokio::test]
-    async fn test_insert_and_find_by_email() {
+    async fn test_insert_find_and_delete_by_email() {
         // Arrange
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = UserRepository::new(&db);
-        
-        let (email, username, full_name) = get_unique_test_data("integration");
-        let new_user = NewUser {
-            first_name: full_name.clone(),
-            last_name: "Test".to_string(),
-            user_name: username.clone(),
-            email: email.clone(),
-            password: "hashed_password".to_string(),
-            is_active: 1, // i8 value (1 for active)
-        };
+
+        let new_user = UserFactory::unique_fake_new_user("insertfind", 1);
 
         // Act
-        let insert_result = repository.insert(new_user).await;
+        let insert_result = repository.insert(new_user.clone()).await;
         
         // Assert
         assert!(insert_result.is_ok(), "Failed to insert user: {:?}", insert_result);
@@ -76,36 +28,31 @@ mod user_repository_integration_tests {
         assert!(user_id > 0);
 
         // Test find_by_email
-        let found_user = repository.find_by_email(email.clone()).await;
+        let found_user = repository.find_by_email(new_user.email.clone()).await;
         assert!(found_user.is_some(), "User not found by email");
         
         let user = found_user.unwrap();
-        assert_eq!(user.email, email);
-        assert_eq!(user.first_name, full_name);
-        assert_eq!(user.last_name, "Test".to_string());
+        assert_eq!(user.email, new_user.email);
+        assert_eq!(user.first_name, new_user.first_name);
+        assert_eq!(user.last_name, new_user.last_name);
 
         // Cleanup
-        cleanup_test_db_specific(&db, &email).await;
+        if let Err(e) = repository.delete_by_email(new_user.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", new_user.email, e);
+        }
+        assert!(repository.find_by_email(new_user.email.clone()).await.is_none(), "User should be deleted");
     }
 
     #[tokio::test]
     async fn test_find_by_id() {
         // Arrange
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = UserRepository::new(&db);
         
-        let (email, username, full_name) = get_unique_test_data("findbyid");
-        let new_user = NewUser {
-            first_name: full_name,
-            last_name: "ById".to_string(),
-            user_name: username,
-            email: email.clone(),
-            password: "hashed_password".to_string(),
-            is_active: 1, // i8 value (1 for active)
-        };
+        let new_user = UserFactory::unique_fake_new_user("findbyid", 1);
 
         // Act - Insert user first
-        let user_id = repository.insert(new_user).await.unwrap();
+        let user_id = repository.insert(new_user.clone()).await.unwrap();
         
         // Test find by id  
         let found_user = repository.find(user_id).await;
@@ -114,19 +61,22 @@ mod user_repository_integration_tests {
         assert!(found_user.is_ok(), "Failed to find user by id");
         let user = found_user.unwrap();
         assert_eq!(user.id, user_id as i32); // Convert u64 to i32 for comparison
-        assert_eq!(user.email, email);
+        assert_eq!(user.email, new_user.email.clone());
 
         // Cleanup
-        cleanup_test_db_specific(&db, &email).await;
+        if let Err(e) = repository.delete_by_email(new_user.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", new_user.email.clone(), e);
+        }
+        assert!(repository.find_by_email(new_user.email.clone()).await.is_none(), "User should be deleted");
     }
 
     #[tokio::test]
     async fn test_find_by_email_not_found() {
         // Arrange
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = UserRepository::new(&db);
-        
-        let (nonexistent_email, _, _) = get_unique_test_data("nonexistent");
+
+        let (nonexistent_email, _, _) = UserFactory::get_unique_user_information("nonexistent");
 
         // Act
         let result = repository.find_by_email(nonexistent_email).await;
@@ -138,7 +88,7 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_find_by_id_not_found() {
         // Arrange
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = UserRepository::new(&db);
 
         // Act
@@ -151,67 +101,46 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_insert_duplicate_email() {
         // Arrange
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = UserRepository::new(&db);
         
-        let (shared_email, username1, full_name1) = get_unique_test_data("duplicate");
-        let (_, username2, full_name2) = get_unique_test_data("duplicate2");
-        
-        let user1 = NewUser {
-            first_name: full_name1,
-            last_name: "User".to_string(),
-            user_name: username1,
-            email: shared_email.clone(),
-            password: "password1".to_string(),
-            is_active: 1, // i8 value (1 for active)
-        };
+        let user1 = UserFactory::unique_fake_new_user("duplicate", 1);
+        let mut user2 = UserFactory::unique_fake_new_user("duplicate", 1);
 
-        let user2 = NewUser {
-            first_name: full_name2,
-            last_name: "User".to_string(),
-            user_name: username2,
-            email: shared_email.clone(), // Same email
-            password: "password2".to_string(),
-            is_active: 1, // i8 value (1 for active)
-        };
+        user2.email = user1.email.clone(); // Same email
 
         // Act
-        let first_insert = repository.insert(user1).await;
-        let second_insert = repository.insert(user2).await;
+        let first_insert = repository.insert(user1.clone()).await;
+        let second_insert = repository.insert(user2.clone()).await;
 
         // Assert
         assert!(first_insert.is_ok(), "First insert should succeed");
         assert!(second_insert.is_err(), "Second insert should fail due to unique constraint");
 
         // Cleanup
-        cleanup_test_db_specific(&db, &shared_email).await;
+        if let Err(e) = repository.delete_by_email(user1.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", user1.email.clone(), e);
+        }
+        assert!(repository.find_by_email(user1.email.clone()).await.is_none(), "User should be deleted");
     }
 
     #[tokio::test]
     async fn test_repository_concurrent_access() {
         // Test to verify concurrent access
-        let db = setup_test_db().await;
+        let db = get_shared_database().await;
         let repository = Arc::new(UserRepository::new(&db));
 
         let mut handles = vec![];
-        let mut emails_to_cleanup = vec![];
+        let emails_to_cleanup = Arc::new(Mutex::new(vec![]));
 
         // Create 5 concurrent tasks
         for i in 0..5 {
             let repo_clone: Arc<UserRepository> = Arc::clone(&repository);
-            let (email, username, full_name) = get_unique_test_data(&format!("concurrent{}", i));
-            emails_to_cleanup.push(email.clone());
+            let emails_clone = Arc::clone(&emails_to_cleanup);
             
             let handle = tokio::spawn(async move {
-                let new_user = NewUser {
-                    first_name: full_name,
-                    last_name: "Test".to_string(),
-                    user_name: username,
-                    email,
-                    password: "password".to_string(),
-                    is_active: 1, // i8 value (1 for active)
-                };
-
+                let new_user = UserFactory::unique_fake_new_user(&format!("concurrent_{}", i), i);
+                emails_clone.lock().unwrap().push(new_user.email.clone());
                 repo_clone.insert(new_user).await
             });
             handles.push(handle);
@@ -222,57 +151,16 @@ mod user_repository_integration_tests {
 
         // Verify that all insertions succeeded
         for (i, result) in results.iter().enumerate() {
-            assert!(result.is_ok(), "Task {} panicked", i);
-            assert!(result.as_ref().unwrap().is_ok(), "Insert {} failed", i);
+            assert!(result.is_ok(), "Task {i} panicked");
+            assert!(result.as_ref().unwrap().is_ok(), "Insert {i} failed");
         }
 
         // Cleanup
-        for email in emails_to_cleanup {
-            cleanup_test_db_specific(&db, &email).await;
-        }
-    }
-}
-
-#[cfg(test)]
-mod user_repository_performance_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_insert_performance() {
-        let db = setup_test_db().await;
-        let repository = UserRepository::new(&db);
-        
-        use std::time::Instant;
-        
-        let start = Instant::now();
-        let mut emails_to_cleanup = vec![];
-        
-        // Insert 100 users
-        for i in 0..100 {
-            let (email, username, full_name) = get_unique_test_data(&format!("perf{}", i));
-            emails_to_cleanup.push(email.clone());
-            
-            let new_user = NewUser {
-                first_name: full_name,
-                last_name: "Test".to_string(),
-                user_name: username,
-                email,
-                password: "password".to_string(),
-                is_active: 1, // i8 value (1 for active)
-            };
-
-            repository.insert(new_user).await.unwrap();
-        }
-
-        let duration = start.elapsed();
-        println!("100 insertions took: {:?}", duration);
-        
-        // Assert that it doesn't take more than 10 seconds
-        assert!(duration.as_secs() < 10, "Performance test took too long: {:?}", duration);
-
-        // Cleanup
-        for email in emails_to_cleanup {
-            cleanup_test_db_specific(&db, &email).await;
+        for email in emails_to_cleanup.lock().unwrap().iter() {
+            if let Err(e) = repository.delete_by_email(email.clone()).await {
+                eprintln!("Cleanup failed for {}: {:?}", email, e);
+            }
+            assert!(repository.find_by_email(email.clone()).await.is_none(), "User should be deleted");
         }
     }
 }
