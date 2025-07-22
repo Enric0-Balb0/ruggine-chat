@@ -126,41 +126,51 @@ mod user_repository_integration_tests {
 
     #[tokio::test]
     async fn test_repository_concurrent_access() {
-        // Test to verify concurrent access
+        use tokio::sync::Mutex;
+        use std::sync::Arc;
+
         let db = get_shared_database().await;
         let repository = Arc::new(UserRepository::new(&db));
-
-        let mut handles = vec![];
         let emails_to_cleanup = Arc::new(Mutex::new(vec![]));
 
-        // Create 5 concurrent tasks
+        let mut handles = vec![];
+
+        // Spawn concurrent insertions
         for i in 0..5 {
-            let repo_clone: Arc<UserRepository> = Arc::clone(&repository);
+            let repo_clone = Arc::clone(&repository);
             let emails_clone = Arc::clone(&emails_to_cleanup);
-            
+
             let handle = tokio::spawn(async move {
                 let new_user = UserFactory::unique_fake_new_user(&format!("concurrent_{}", i), i);
-                emails_clone.lock().unwrap().push(new_user.email.clone());
+                {
+                    let mut guard = emails_clone.lock().await;
+                    guard.push(new_user.email.clone());
+                }
                 repo_clone.insert(new_user).await
             });
             handles.push(handle);
         }
 
-        // Wait for all tasks to finish
-        let results: Vec<_> = futures::future::join_all(handles).await;
+        // Wait for all inserts
+        let results = futures::future::join_all(handles).await;
 
-        // Verify that all insertions succeeded
         for (i, result) in results.iter().enumerate() {
             assert!(result.is_ok(), "Task {i} panicked");
             assert!(result.as_ref().unwrap().is_ok(), "Insert {i} failed");
         }
 
-        // Cleanup
-        for email in emails_to_cleanup.lock().unwrap().iter() {
+        // ✅ CLEANUP PHASE: inline .await and make sure runtime is active
+        let emails = emails_to_cleanup.lock().await.clone(); // Clone early to avoid holding lock during awaits
+
+        for email in emails {
             if let Err(e) = repository.delete_by_email(email.clone()).await {
                 eprintln!("Cleanup failed for {}: {:?}", email, e);
             }
-            assert!(repository.find_by_email(email.clone()).await.is_none(), "User should be deleted");
+            // Do not panic here if context is shutting down; instead log
+            match repository.find_by_email(email.clone()).await {
+                Some(_) => panic!("User should be deleted: {}", email),
+                None => {}
+            }
         }
     }
 }

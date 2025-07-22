@@ -25,7 +25,7 @@ impl UserFactory {
     }
 
     pub fn get_unique_user_information(prefix: &str) -> (String, String, String) {
-        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let counter: u32 = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -51,7 +51,7 @@ impl UserFactory {
         }
     }
 
-    fn fake_new_user() -> NewUser {
+    pub fn fake_new_user() -> NewUser {
         NewUser {
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
@@ -62,7 +62,7 @@ impl UserFactory {
         }
     }
 
-    fn fake_user() -> User {
+    pub fn fake_user() -> User {
         User {
             id: 1,
             first_name: "John".to_string(),
@@ -75,5 +75,7 @@ impl UserFactory {
             is_active: 1,
         }
     }
+
+    
 
 }
