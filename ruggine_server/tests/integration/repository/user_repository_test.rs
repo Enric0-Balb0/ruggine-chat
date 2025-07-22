@@ -162,15 +162,23 @@ mod user_repository_integration_tests {
         // ✅ CLEANUP PHASE: inline .await and make sure runtime is active
         let emails = emails_to_cleanup.lock().await.clone(); // Clone early to avoid holding lock during awaits
 
-        for email in emails {
-            if let Err(e) = repository.delete_by_email(email.clone()).await {
-                eprintln!("Cleanup failed for {}: {:?}", email, e);
+        let h = tokio::task::spawn(async move {
+            for email in emails {
+                if let Err(e) = repository.delete_by_email(email.clone()).await {
+                    eprintln!("Cleanup failed for {}: {:?}", email, e);
+                }
+                match repository.find_by_email(email.clone()).await {
+                    Some(_) => panic!("User should be deleted but still exists: {}", email),
+                    None => {}
+                }
             }
-            // Do not panic here if context is shutting down; instead log
-            match repository.find_by_email(email.clone()).await {
-                Some(_) => panic!("User should be deleted: {}", email),
-                None => {}
-            }
+        });
+
+        // Wait for cleanup to finish. This piece of code seems not necessary but due to some
+        // problem of VS Code 'tokio' is closed before the cleanup task finishes.
+        if let Err(e) = h.await {
+            eprintln!("Cleanup task panicked: {:?}", e);
         }
+
     }
 }

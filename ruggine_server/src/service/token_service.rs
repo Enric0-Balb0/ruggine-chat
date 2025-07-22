@@ -67,3 +67,84 @@ impl TokenServiceTrait for TokenService {
         Ok(TokenReadDto { token, iat, exp })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dto::token_dto::{TokenClaimsDto, TokenReadDto};
+    use crate::entity::user::User;
+    use crate::error::token_error::TokenError;
+    use crate::factory::user_factory::UserFactory;
+    use chrono::Utc;
+    use jsonwebtoken::{Algorithm, Header, Validation};
+    use mockall::predicate;
+    use std::sync::Arc;
+    use super::MockTokenServiceTrait;
+
+    fn sample_user() -> User {
+        UserFactory::fake_user()
+    }
+
+    #[test]
+    fn test_generate_token_success() {
+        let user = sample_user();
+        std::env::set_var("JWT_SECRET", "mysecret");
+        let service = TokenService::new();
+
+        let token_result = service.generate_token(user.clone());
+        assert!(token_result.is_ok());
+
+        let token_data = token_result.unwrap();
+        assert!(!token_data.token.is_empty());
+        assert!(token_data.iat <= Utc::now().timestamp());
+        assert!(token_data.exp > token_data.iat);
+    }
+
+    #[test]
+    fn test_retrieve_token_claims_success() {
+        std::env::set_var("JWT_SECRET", "mysecret");
+        let service = TokenService::new();
+
+        let user = sample_user();
+        let token_dto = service.generate_token(user.clone()).unwrap();
+
+        let result = service.retrieve_token_claims(&token_dto.token);
+        assert!(result.is_ok());
+
+        let claims = result.unwrap().claims;
+        assert_eq!(claims.email, user.email);
+        assert_eq!(claims.sub, user.id);
+    }
+
+    #[test]
+    fn test_retrieve_token_claims_invalid_token() {
+        std::env::set_var("JWT_SECRET", "mysecret");
+        let service = TokenService::new();
+
+        let invalid_token = "invalid.token.value";
+
+        let result = service.retrieve_token_claims(invalid_token);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mock_token_service_trait() {
+        let mut mock = MockTokenServiceTrait::new();
+
+        let fake_token = "mock_token".to_string();
+        let user = sample_user();
+
+        mock.expect_generate_token()
+            .with(predicate::eq(user.clone()))
+            .returning(move |_| Ok(TokenReadDto {
+                token: fake_token.clone(),
+                iat: 1234567890,
+                exp: 1234569990,
+            }));
+
+        let result = mock.generate_token(user.clone());
+        assert!(result.is_ok());
+        let dto = result.unwrap();
+        assert_eq!(dto.token, "mock_token");
+    }
+}
