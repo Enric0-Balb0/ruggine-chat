@@ -14,7 +14,7 @@ pub struct UserRepository {
 
 #[async_trait]
 #[automock]
-pub trait UserRepositoryTrait {
+pub trait UserRepositoryTrait: Send + Sync {
     async fn find_by_email(&self, email: String) -> Option<User>;
     async fn find(&self, id: u64) -> Result<User, Error>;
     async fn insert(&self, new_user: NewUser) -> Result<u64, SqlxError>;
