@@ -8,6 +8,7 @@ use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use axum::async_trait;
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
+use mockall::automock;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -16,6 +17,7 @@ pub struct UserService {
 }
 
 #[async_trait]
+#[automock]
 pub trait UserServiceTrait: Send + Sync {
     async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError>;
     fn verify_password(&self, user: &User, password: &str) -> bool;

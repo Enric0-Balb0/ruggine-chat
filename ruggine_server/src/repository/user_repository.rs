@@ -5,6 +5,7 @@ use sqlx;
 use sqlx::Error;
 use std::sync::Arc;
 use sqlx::Error as SqlxError;
+use mockall::automock;
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -12,6 +13,7 @@ pub struct UserRepository {
 }
 
 #[async_trait]
+#[automock]
 pub trait UserRepositoryTrait {
     async fn find_by_email(&self, email: String) -> Option<User>;
     async fn find(&self, id: u64) -> Result<User, Error>;

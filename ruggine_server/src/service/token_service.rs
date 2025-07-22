@@ -4,12 +4,14 @@ use crate::entity::user::User;
 use crate::error::token_error::TokenError;
 use chrono;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use mockall::automock;
 
 #[derive(Clone)]
 pub struct TokenService {
     secret: String,
 }
 
+#[automock]
 pub trait TokenServiceTrait {
     fn retrieve_token_claims(
         &self,

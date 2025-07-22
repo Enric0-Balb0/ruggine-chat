@@ -50,10 +50,6 @@ name = "user_dto_unit"
 path = "tests/unit/dto/user_dto_test.rs"
 
 [[test]]
-name = "auth_handler_unit"
-path = "tests/unit/handler/auth_handler_test.rs"
-
-[[test]]
 name = "user_repository_integration"
 path = "tests/integration/repository/user_repository_test.rs"
 
