@@ -57,21 +57,23 @@ tempfile = "3.5"    # For temporary files in tests
 
 # Ottimizzazioni di compilazione
 [profile.dev]
-debug = 1
-incremental = true
+debug = true
+# incremental = true
 opt-level = 0
 
 [profile.test]
-debug = 1
-incremental = true
+debug = true
+# incremental = true
 opt-level = 0
 
 # Ottimizza le dipendenze per velocizzare i build
-[profile.dev.package."*"]
-opt-level = 1
-debug = false
+# [profile.dev.package."*"]
+# opt-level = 1
+# debug = false
 
-[profile.test.package."*"]
-opt-level = 1
-debug = false
+# [profile.test.package."*"]
+# opt-level = 1
+# debug = false
 
+# [alias]
+# llvm-cov_ruggine_server = "llvm-cov --html --output-dir coverage --remap-path-prefix"

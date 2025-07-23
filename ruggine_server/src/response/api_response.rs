@@ -22,6 +22,10 @@ where
     pub(crate) fn send(data: T) -> Self {
         return ApiSuccessResponse { data };
     }
+
+    pub(crate) fn data(&self) -> &T {
+        &self.data
+    }
 }
 
 impl ApiErrorResponse {

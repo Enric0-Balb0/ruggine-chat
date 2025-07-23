@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::Utc;
 
-use crate::{entity::user::{NewUser, User}, dto::user_dto::UserLoginDto};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User}};
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -76,6 +76,27 @@ impl UserFactory {
         }
     }
 
-    
+    pub fn fake_read_user_dto() -> UserReadDto {
+        UserReadDto {
+            id: 1,
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
+            user_name: "johndoe".to_string(),
+            email: "john.doe@example.com".to_string(),
+            created_at: Utc::now(),
+            updated_at: None,
+            is_active: 1,
+        }
+    }
 
+    pub fn fake_user_register_dto() -> UserRegisterDto {
+        UserRegisterDto {
+            email: "john.doe@example.com".to_string(),
+            password: "securepassword".to_string(),
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
+            user_name: "johndoe".to_string(),
+        }
+    
+    }
 }

@@ -15,7 +15,7 @@ pub struct UserLoginDto {
     pub password: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Validate)]
+#[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq)]
 pub struct UserRegisterDto {
     #[validate(email(message = "Email is not valid"))]
     pub email: String,
@@ -35,7 +35,7 @@ pub struct UserRegisterDto {
     pub user_name: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct UserReadDto {
     pub id: i32,
     pub first_name: String,
