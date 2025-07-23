@@ -4,7 +4,7 @@ use ruggine_server::{config::database::{Database, DatabaseTrait}, dto::user_dto:
 
 static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
 
-pub async fn get_shared_database() -> Arc<Database> {
+/* pub async fn get_shared_database() -> Arc<Database> {
     init_test_logging();
 
     DATABASE
@@ -22,7 +22,22 @@ pub async fn get_shared_database() -> Arc<Database> {
         })
         .await
         .clone()
+} */
+
+pub async fn get_shared_database() -> Arc<Database> {
+    init_test_logging();
+    dotenv::dotenv().ok();
+
+    let database_url = std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "mysql://testuser:testpass@localhost/ruggine_test".to_string());
+
+    let db = Database::init(database_url)
+        .await
+        .expect("Failed to connect to test database");
+
+    Arc::new(db)
 }
+
 
 use std::sync::Once;
 static INIT_LOG: Once = Once::new();

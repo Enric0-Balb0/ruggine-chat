@@ -97,6 +97,16 @@ impl UserFactory {
             last_name: "Doe".to_string(),
             user_name: "johndoe".to_string(),
         }
-    
+    }
+
+    pub fn unique_fake_user_register_dto(prefix: &str) -> UserRegisterDto {
+        let (email, username, full_name) = Self::get_unique_user_information(prefix);
+        UserRegisterDto {
+            email,
+            password: "securepassword123".to_string(),
+            first_name: full_name,
+            last_name: "Test".to_string(),
+            user_name: username,
+        }
     }
 }
