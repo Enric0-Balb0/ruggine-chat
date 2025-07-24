@@ -1,4 +1,4 @@
 /target
 /coverage
 /.idea
-/.env
+.env
