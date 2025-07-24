@@ -1,7 +1,9 @@
 use std::sync::Arc;
+use axum::http::Method;
 use crate::config::{database, parameter};
 use crate::config::database::DatabaseTrait;
 use tokio::net::TcpListener;
+use tower_http::cors::{Any, CorsLayer};
 
 mod config;
 mod docs;
@@ -33,7 +35,15 @@ async fn main() {
     let listener = TcpListener::bind(&host).await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", host, e));
     
-    axum::serve(listener, routes::root::routes(Arc::new(connection)))
+    let app = routes::root::routes(Arc::new(connection))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any) // ⚠️ per sviluppo, in produzione specifica l'origin
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+                .allow_headers(Any)
+        );
+
+    axum::serve(listener, app)
         .await
         .unwrap_or_else(|e| panic!("Server error: {}", e.to_string()));
 }
