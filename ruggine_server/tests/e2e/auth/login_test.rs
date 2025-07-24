@@ -11,19 +11,12 @@ use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
-use crate::common::cleanup_user;
+use crate::common::{cleanup_user, create_auth_router};
 
 #[cfg(test)]
 mod login_e2e_tests {
     use crate::get_database;
     use super::*;
-
-    /// Helper function to create the auth router with real database state
-    async fn create_auth_router() -> Router {
-        let db = get_database().await;
-        let auth_state = AuthState::new(&db);
-        auth::routes().with_state(auth_state)
-    }
 
     /// Helper function to create a real user in the database
     async fn create_test_user(prefix: &str) -> (UserRegisterDto, String) {

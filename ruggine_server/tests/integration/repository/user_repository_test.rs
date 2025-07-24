@@ -5,7 +5,6 @@ use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_repository_integration_tests {
-    use std::sync::Mutex;
 
     use crate::get_database;
 
@@ -127,7 +126,6 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_repository_concurrent_access() {
         use tokio::sync::Mutex;
-        use std::sync::Arc;
 
         let db = get_database().await;
         let repository = Arc::new(UserRepository::new(&db));

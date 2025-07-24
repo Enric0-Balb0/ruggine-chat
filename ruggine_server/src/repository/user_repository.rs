@@ -82,8 +82,7 @@ impl UserRepositoryTrait for UserRepository {
 mod user_repository_unit_tests {
     use super::*;
     use crate::entity::user::{User, NewUser};
-    use chrono::{DateTime, Utc};
-    use std::sync::Arc;
+    use chrono::{Utc};
     use mockall::predicate::*;
     use crate::factory::user_factory::UserFactory;
 
@@ -280,8 +279,7 @@ mod user_repository_unit_tests {
         
         // Test dati per operazioni multiple
         let (email1, username1, _) = UserFactory::get_unique_user_information("multi1");
-        let (email2, username2, _) = UserFactory::get_unique_user_information("multi2");
-        
+
         let new_user1 = UserFactory::unique_fake_new_user("multi1", 1);
         let new_user2 = UserFactory::unique_fake_new_user("multi2", 1);
         

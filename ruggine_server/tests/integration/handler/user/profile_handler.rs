@@ -6,7 +6,6 @@ use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
 use axum::Extension;
-use std::sync::Arc;
 use crate::common::cleanup_user;
 
 #[cfg(test)]

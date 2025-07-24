@@ -7,25 +7,15 @@ use serde_json::json;
 use tower::ServiceExt;
 use ruggine_server::routes::user;
 use ruggine_server::state::{token_state::TokenState, user_state::UserState};
-use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
-use crate::common::cleanup_user;
+use crate::common::{cleanup_user, create_user_router};
 
 #[cfg(test)]
 mod register_e2e_tests {
-    use hyper::body::to_bytes;
     use crate::get_database;
     use super::*;
-
-    /// Helper function to create the user router with real database state
-    async fn create_user_router() -> Router {
-        let db = get_database().await;
-        let user_state = UserState::new(&db);
-        let token_state = TokenState::new(&db);
-        user::routes(user_state, token_state)
-    }
 
     #[tokio::test]
     async fn test_register_success_with_valid_data() {

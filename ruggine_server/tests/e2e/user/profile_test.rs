@@ -11,27 +11,12 @@ use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
-use crate::common::cleanup_user;
+use crate::common::{cleanup_user, create_user_router, create_auth_router};
 
 #[cfg(test)]
 mod profile_e2e_tests {
     use crate::get_database;
     use super::*;
-
-    /// Helper function to create the user router with real database state and auth middleware
-    async fn create_user_router() -> Router {
-        let db = get_database().await;
-        let user_state = UserState::new(&db);
-        let token_state = TokenState::new(&db);
-        user::routes(user_state, token_state)
-    }
-
-    /// Helper function to create the auth router for login
-    async fn create_auth_router() -> Router {
-        let db = get_database().await;
-        let auth_state = AuthState::new(&db);
-        auth::routes().with_state(auth_state)
-    }
 
     /// Helper function to create a real user in the database
     async fn create_test_user(prefix: &str) -> (UserRegisterDto, String) {
@@ -405,7 +390,7 @@ mod profile_e2e_tests {
     async fn test_profile_concurrent_requests() {
         // Arrange: Create router, user, and get token
         let app = create_user_router().await;
-        let (user_dto, password) = create_test_user("profile_concurrent_requests").await;
+        let (user_dto, password) = create_test_user("e2e_profile_concurrent_requests").await;
         let token = login_and_get_token(&user_dto, &password).await;
 
         // Act: Send multiple concurrent requests to /profile
