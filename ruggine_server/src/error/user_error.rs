@@ -21,8 +21,8 @@ impl IntoResponse for UserError {
     fn into_response(self) -> Response {
         let status_code = match self {
             UserError::UserNotFound => StatusCode::NOT_FOUND,
-            UserError::UserAlreadyExists => StatusCode::BAD_REQUEST,
-            UserError::InvalidPassword => StatusCode::BAD_REQUEST,
+            UserError::UserAlreadyExists => StatusCode::CONFLICT,
+            UserError::InvalidPassword => StatusCode::UNAUTHORIZED,
             UserError::UserNotActive => StatusCode::FORBIDDEN,
         };
 

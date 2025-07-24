@@ -9,8 +9,8 @@ pub struct UserLoginDto {
     pub email: String,
     #[validate(length(
         min = 3,
-        max = 20,
-        message = "Password must be between 3 and 20 characters"
+        max = 50,
+        message = "Password must be between 3 and 50 characters"
     ))]
     pub password: String,
 }
@@ -21,16 +21,16 @@ pub struct UserRegisterDto {
     pub email: String,
     #[validate(length(
         min = 3,
-        max = 20,
-        message = "Password must be between 3 and 20 characters"
+        max = 50,
+        message = "Password must be between 3 and 50 characters"
     ))]
     pub password: String,
     pub first_name: String,
     pub last_name: String,
     #[validate(length(
         min = 3,
-        max = 20,
-        message = "Username must be between 3 and 20 characters"
+        max = 50,
+        message = "Username must be between 3 and 50 characters"
     ))]
     pub user_name: String,
 }
@@ -130,7 +130,7 @@ mod tests {
     fn test_user_login_dto_password_too_long() {
         let login_dto = UserLoginDto {
             email: "test@example.com".to_string(),
-            password: "a".repeat(21), // More than 20 characters
+            password: "a".repeat(51), // More than 50 characters
         };
 
         let validation_result = login_dto.validate();
@@ -196,7 +196,7 @@ mod tests {
     fn test_user_register_dto_password_too_long() {
         let register_dto = UserRegisterDto {
             email: "test@example.com".to_string(),
-            password: "a".repeat(21), // More than 20 characters
+            password: "a".repeat(51), // More than 50 characters
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
             user_name: "johndoe".to_string(),
@@ -233,7 +233,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "a".repeat(21), // More than 20 characters
+            user_name: "a".repeat(51), // More than 50 characters
         };
 
         let validation_result = register_dto.validate();

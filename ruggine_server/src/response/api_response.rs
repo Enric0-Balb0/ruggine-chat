@@ -23,7 +23,7 @@ where
         return ApiSuccessResponse { data };
     }
 
-    pub(crate) fn data(&self) -> &T {
+    pub fn data(&self) -> &T {
         &self.data
     }
 }

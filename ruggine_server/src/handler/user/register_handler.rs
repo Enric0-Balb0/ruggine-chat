@@ -16,7 +16,6 @@ pub async fn register(
 mod tests {
     use super::*;
     use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-    use crate::entity::user::User;
     use crate::error::user_error::UserError;
     use crate::factory::user_factory::UserFactory;
     use crate::service::user_service::MockUserServiceTrait;
@@ -51,7 +50,7 @@ mod tests {
         };
 
         let mut mock_service = MockUserServiceTrait::new();
-        let mut mock_repo = MockUserRepositoryTrait::new();
+        let mock_repo = MockUserRepositoryTrait::new();
         let expected_output_clone = expected_output.clone();
         mock_service
             .expect_create_user()

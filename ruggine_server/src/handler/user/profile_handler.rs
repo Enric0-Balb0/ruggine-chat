@@ -15,7 +15,6 @@ mod tests {
     use crate::dto::user_dto::UserReadDto;
     use crate::entity::user::User;
     use crate::factory::user_factory::UserFactory;
-    use crate::response::api_response::ApiSuccessResponse;
     use axum::Extension;
 
     #[tokio::test]
