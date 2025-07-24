@@ -22,9 +22,9 @@ pub trait TokenServiceTrait {
 }
 
 impl TokenService {
-    pub fn new() -> Self {
+    pub fn new(secret: String) -> Self {
         Self {
-            secret: parameter::get("JWT_SECRET"),
+            secret
         }
     }
 
@@ -88,8 +88,7 @@ mod tests {
     #[test]
     fn test_generate_token_success() {
         let user = sample_user();
-        std::env::set_var("JWT_SECRET", "mysecret");
-        let service = TokenService::new();
+        let service = TokenService::new("mysecret".into());
 
         let token_result = service.generate_token(user.clone());
         assert!(token_result.is_ok());
@@ -102,8 +101,7 @@ mod tests {
 
     #[test]
     fn test_retrieve_token_claims_success() {
-        std::env::set_var("JWT_SECRET", "mysecret");
-        let service = TokenService::new();
+        let service = TokenService::new("mysecret".to_string());
 
         let user = sample_user();
         let token_dto = service.generate_token(user.clone()).unwrap();
@@ -118,8 +116,7 @@ mod tests {
 
     #[test]
     fn test_retrieve_token_claims_invalid_token() {
-        std::env::set_var("JWT_SECRET", "mysecret");
-        let service = TokenService::new();
+        let service = TokenService::new("mysecret".to_string());
 
         let invalid_token = "invalid.token.value";
 

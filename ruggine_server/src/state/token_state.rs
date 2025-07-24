@@ -3,6 +3,7 @@ use crate::config::database::Database;
 use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use crate::service::token_service::{TokenService, TokenServiceTrait};
 use std::sync::Arc;
+use crate::config::parameter;
 
 #[derive(Clone)]
 pub struct TokenState {
@@ -14,7 +15,7 @@ pub struct TokenState {
 impl TokenState {
     pub fn new(db_conn: &Arc<Database>) -> Self {
         Self {
-            token_service: Arc::new(TokenService::new()),
+            token_service: Arc::new(TokenService::new(parameter::get("JWT_SECRET"))),
             user_repo: Arc::new(UserRepository::new(db_conn)),
         }
     }

@@ -7,14 +7,14 @@ use ruggine_server::factory::user_factory::UserFactory;
 mod user_repository_integration_tests {
     use std::sync::Mutex;
 
-    use crate::get_shared_database;
+    use crate::get_database;
 
     use super::*;
 
     #[tokio::test]
     async fn test_insert_find_and_delete_by_email() {
         // Arrange
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = UserRepository::new(&db);
 
         let new_user = UserFactory::unique_fake_new_user("insertfind", 1);
@@ -46,7 +46,7 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_find_by_id() {
         // Arrange
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = UserRepository::new(&db);
         
         let new_user = UserFactory::unique_fake_new_user("findbyid", 1);
@@ -73,7 +73,7 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_find_by_email_not_found() {
         // Arrange
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = UserRepository::new(&db);
 
         let (nonexistent_email, _, _) = UserFactory::get_unique_user_information("nonexistent");
@@ -88,7 +88,7 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_find_by_id_not_found() {
         // Arrange
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = UserRepository::new(&db);
 
         // Act
@@ -101,7 +101,7 @@ mod user_repository_integration_tests {
     #[tokio::test]
     async fn test_insert_duplicate_email() {
         // Arrange
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = UserRepository::new(&db);
         
         let user1 = UserFactory::unique_fake_new_user("duplicate", 1);
@@ -129,7 +129,7 @@ mod user_repository_integration_tests {
         use tokio::sync::Mutex;
         use std::sync::Arc;
 
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let repository = Arc::new(UserRepository::new(&db));
         let emails_to_cleanup = Arc::new(Mutex::new(vec![]));
 

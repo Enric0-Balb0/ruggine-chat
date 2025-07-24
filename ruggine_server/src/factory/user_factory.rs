@@ -109,4 +109,5 @@ impl UserFactory {
             user_name: username,
         }
     }
+
 }

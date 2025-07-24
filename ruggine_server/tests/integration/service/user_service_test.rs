@@ -9,13 +9,13 @@ use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_service_integration_tests {
-    use crate::get_shared_database;
+    use crate::get_database;
     use super::*;
 
     #[tokio::test]
     async fn test_create_user_success() {
         // Arrange: Set up a real database connection and service
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -43,7 +43,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_create_user_already_exists() {
         // Arrange: Create a user first, then try to create another with same email
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -78,7 +78,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_verify_password_correct() {
         // Arrange: Create a user in the database with a known password
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -110,7 +110,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_verify_password_incorrect() {
         // Arrange: Create a user in the database with a known password
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -143,7 +143,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_verify_password_empty_password() {
         // Arrange: Create a user in the database with a known password
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -179,7 +179,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_create_user_validates_data_integrity() {
         // Arrange: Set up a real database connection and service
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -221,7 +221,7 @@ mod user_service_integration_tests {
     #[tokio::test]
     async fn test_create_user_with_special_characters() {
         // Arrange: Test with special characters in names
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         

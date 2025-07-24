@@ -21,20 +21,19 @@ fn get_unique_jwt_secret(test_name: &str) -> String {
 
 #[cfg(test)]
 mod token_service_integration_tests {
-    use crate::get_shared_database;
+    use crate::get_database;
     use super::*;
 
     #[tokio::test]
     async fn test_generate_token_with_real_user() {
         // Arrange: Create a real user in the database
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let user_service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
         // Set up unique JWT secret for token generation
         let jwt_secret = get_unique_jwt_secret("integration");
-        std::env::set_var("JWT_SECRET", &jwt_secret);
-        let token_service = TokenService::new();
+        let token_service = TokenService::new(jwt_secret);
         
         // Create a unique user using UserFactory
         let user_dto = UserFactory::unique_fake_user_register_dto("token_gen");
@@ -67,14 +66,13 @@ mod token_service_integration_tests {
     #[tokio::test]
     async fn test_generate_and_retrieve_token_claims_roundtrip() {
         // Arrange: Create a real user and generate a token
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let user_service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
         // Set up JWT secret
         let jwt_secret = get_unique_jwt_secret("roundtrip");
-        std::env::set_var("JWT_SECRET", &jwt_secret);
-        let token_service = TokenService::new();
+        let token_service = TokenService::new(jwt_secret);
         
         // Create a unique user
         let user_dto = UserFactory::unique_fake_user_register_dto("token_roundtrip");
@@ -112,8 +110,7 @@ mod token_service_integration_tests {
     async fn test_retrieve_token_claims_with_invalid_token() {
         // Arrange: Set up token service
         let jwt_secret = get_unique_jwt_secret("invalid");
-        std::env::set_var("JWT_SECRET", &jwt_secret);
-        let token_service = TokenService::new();
+        let token_service = TokenService::new(jwt_secret);
         
         let invalid_tokens = vec![
             "invalid.token.value",
@@ -135,7 +132,7 @@ mod token_service_integration_tests {
     #[tokio::test]
     async fn test_retrieve_token_claims_with_wrong_secret() {
         // Arrange: Create a token with one secret, try to decode with another
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let user_service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
@@ -154,16 +151,14 @@ mod token_service_integration_tests {
 
         // Generate token with first secret
         let jwt_secret_1 = get_unique_jwt_secret("secret_one");
-        std::env::set_var("JWT_SECRET", &jwt_secret_1);
-        let token_service_1 = TokenService::new();
+        let token_service_1 = TokenService::new(jwt_secret_1);
         let token_result = token_service_1.generate_token(user.clone());
         assert!(token_result.is_ok(), "Failed to generate token");
         let token_data = token_result.unwrap();
 
         // Try to decode with different secret
         let jwt_secret_2 = get_unique_jwt_secret("secret_two");
-        std::env::set_var("JWT_SECRET", &jwt_secret_2);
-        let token_service_2 = TokenService::new();
+        let token_service_2 = TokenService::new(jwt_secret_2);
 
         // Act: Try to retrieve claims with wrong secret
         let result = token_service_2.retrieve_token_claims(&token_data.token);
@@ -180,13 +175,12 @@ mod token_service_integration_tests {
     #[tokio::test]
     async fn test_token_expiration_time() {
         // Arrange: Create a real user
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let user_service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
         let jwt_secret = get_unique_jwt_secret("expiration");
-        std::env::set_var("JWT_SECRET", &jwt_secret);
-        let token_service = TokenService::new();
+        let token_service = TokenService::new(jwt_secret);
         
         let user_dto = UserFactory::unique_fake_user_register_dto("token_exp");
         let create_result = user_service.create_user(user_dto.clone()).await;
@@ -229,13 +223,12 @@ mod token_service_integration_tests {
     #[tokio::test]
     async fn test_token_uniqueness() {
         // Arrange: Create multiple users
-        let db = get_shared_database().await;
+        let db = get_database().await;
         let user_service = UserService::new(&db);
         let repository = UserRepository::new(&db);
         
         let jwt_secret = get_unique_jwt_secret("uniqueness");
-        std::env::set_var("JWT_SECRET", &jwt_secret);
-        let token_service = TokenService::new();
+        let token_service = TokenService::new(jwt_secret);
         
         // Create first user
         let user_dto_1 = UserFactory::unique_fake_user_register_dto("unique1");

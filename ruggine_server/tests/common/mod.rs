@@ -24,7 +24,7 @@ static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
         .clone()
 } */
 
-pub async fn get_shared_database() -> Arc<Database> {
+pub async fn get_database() -> Arc<Database> {
     init_test_logging();
     dotenv::dotenv().ok();
 
