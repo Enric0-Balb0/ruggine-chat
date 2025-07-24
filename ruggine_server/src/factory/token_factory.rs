@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use jsonwebtoken::{TokenData, Header};
 use crate::dto::token_dto::TokenClaimsDto;
 use crate::factory::user_factory::UserFactory;

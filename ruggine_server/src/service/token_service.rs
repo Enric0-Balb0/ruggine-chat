@@ -1,4 +1,3 @@
-use crate::config::parameter;
 use crate::dto::token_dto::{TokenClaimsDto, TokenReadDto};
 use crate::entity::user::User;
 use crate::error::token_error::TokenError;
@@ -71,14 +70,11 @@ impl TokenServiceTrait for TokenService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dto::token_dto::{TokenClaimsDto, TokenReadDto};
+    use crate::dto::token_dto::{TokenReadDto};
     use crate::entity::user::User;
-    use crate::error::token_error::TokenError;
     use crate::factory::user_factory::UserFactory;
     use chrono::Utc;
-    use jsonwebtoken::{Algorithm, Header, Validation};
     use mockall::predicate;
-    use std::sync::Arc;
     use super::MockTokenServiceTrait;
 
     fn sample_user() -> User {

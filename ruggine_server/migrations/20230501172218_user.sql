@@ -1,14 +1,14 @@
 CREATE TABLE `user` (
-                        `id` int NOT NULL AUTO_INCREMENT,
-                        `first_name` varchar(255) DEFAULT NULL,
-                        `last_name` varchar(255) DEFAULT NULL,
-                        `user_name` varchar(255) NOT NULL,
-                        `email` varchar(255) NOT NULL,
-                        `password` varchar(255) NOT NULL,
-                        `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        `updated_at` timestamp NULL,
-                        `is_active` tinyint(1) NOT NULL DEFAULT '0',
-                        PRIMARY KEY (`id`),
-                        UNIQUE KEY `user_name` (`user_name`),
-                        UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `first_name` VARCHAR(255) NOT NULL,
+    `last_name` VARCHAR(255) NOT NULL,
+    `user_name` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
+    `password` VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL,
+    `is_active` TINYINT(1) NOT NULL DEFAULT '0',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `user_name` (`user_name`),
+    UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

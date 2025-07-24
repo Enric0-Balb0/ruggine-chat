@@ -14,8 +14,7 @@ use axum::{
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use ruggine_server::config::database::DatabaseTrait;
-
-
+use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod auth_middleware_integration_tests {
@@ -59,15 +58,6 @@ mod auth_middleware_integration_tests {
         let token_data = token_result.unwrap();
 
         (user, token_data.token, state)
-    }
-
-    /// Helper function to cleanup user after test
-    async fn cleanup_user(email: String) {
-        let db = get_database().await;
-        let repository = UserRepository::new(&db);
-        if let Err(e) = repository.delete_by_email(email.clone()).await {
-            eprintln!("Cleanup failed for {}: {:?}", email.clone(), e);
-        }
     }
 
     #[tokio::test]

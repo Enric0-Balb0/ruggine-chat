@@ -38,8 +38,19 @@ pub async fn get_database() -> Arc<Database> {
     Arc::new(db)
 }
 
+/// Helper function to cleanup user after test
+pub async fn cleanup_user(email: String) {
+    let db = get_database().await;
+    let repository = UserRepository::new(&db);
+    if let Err(e) = repository.delete_by_email(email.clone()).await {
+        eprintln!("Cleanup failed for {}: {:?}", email, e);
+    }
+}
+
 
 use std::sync::Once;
+use ruggine_server::repository::user_repository::UserRepository;
+
 static INIT_LOG: Once = Once::new();
 
 fn init_test_logging() {
