@@ -43,7 +43,7 @@ mod register_handler_integration_tests {
         let user_response = result.unwrap().0;
         
         assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.user_name, register_dto.user_name);
+        assert_eq!(user_response.username, register_dto.username);
         assert_eq!(user_response.first_name, register_dto.first_name);
         assert_eq!(user_response.last_name, register_dto.last_name);
         assert_eq!(user_response.is_active, 1);
@@ -109,7 +109,7 @@ mod register_handler_integration_tests {
         let stored_user = stored_user.unwrap();
         
         assert_eq!(stored_user.email, register_dto.email);
-        assert_eq!(stored_user.user_name, register_dto.user_name);
+        assert_eq!(stored_user.username, register_dto.username);
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
         assert_eq!(stored_user.is_active, 1);
@@ -158,7 +158,7 @@ mod register_handler_integration_tests {
         let register_dto = UserRegisterDto {
             email: "special.chars+test@example.com".to_string(),
             password: "P@ssw0rd!#$%".to_string(),
-            user_name: "user_with_underscore_123".to_string(),
+            username: "user_with_underscore_123".to_string(),
             first_name: "José María".to_string(),
             last_name: "García-López".to_string(),
         };
@@ -174,7 +174,7 @@ mod register_handler_integration_tests {
         let user_response = result.unwrap().0;
         
         assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.user_name, register_dto.user_name);
+        assert_eq!(user_response.username, register_dto.username);
         assert_eq!(user_response.first_name, register_dto.first_name);
         assert_eq!(user_response.last_name, register_dto.last_name);
 
@@ -218,7 +218,7 @@ mod register_handler_integration_tests {
         let register_dto = UserRegisterDto {
             email: "preserve.test@example.com".to_string(),
             password: "test_password_123".to_string(),
-            user_name: "preserve_user".to_string(),
+            username: "preserve_user".to_string(),
             first_name: "PreserveFirst".to_string(),
             last_name: "PreserveLast".to_string(),
         };
@@ -234,7 +234,7 @@ mod register_handler_integration_tests {
         let user_response = result.unwrap().0;
         
         assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.user_name, register_dto.user_name);
+        assert_eq!(user_response.username, register_dto.username);
         assert_eq!(user_response.first_name, register_dto.first_name);
         assert_eq!(user_response.last_name, register_dto.last_name);
         

@@ -61,12 +61,12 @@ impl UserRepositoryTrait for UserRepository {
     async fn insert(&self, new_user: NewUser) -> Result<u64, SqlxError> {
         let result = sqlx::query!(
             r#"
-            INSERT INTO user (first_name, last_name, user_name, email, password, is_active)
+            INSERT INTO user (first_name, last_name, username, email, password, is_active)
             VALUES (?, ?, ?, ?, ?, ?)
             "#,
             new_user.first_name,
             new_user.last_name,
-            new_user.user_name,
+            new_user.username,
             new_user.email,
             new_user.password,
             new_user.is_active
@@ -96,7 +96,7 @@ mod user_repository_unit_tests {
             id: 1,
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
             email: test_email.clone(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
@@ -153,7 +153,7 @@ mod user_repository_unit_tests {
             id: 1,
             first_name: "Jane".to_string(),
             last_name: "Smith".to_string(),
-            user_name: "janesmith".to_string(),
+            username: "janesmith".to_string(),
             email: "jane.smith@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
@@ -313,7 +313,7 @@ mod user_repository_unit_tests {
                         id: 100,
                         first_name: "Multi1".to_string(),
                         last_name: "Test".to_string(),
-                        user_name: username1_clone,
+                        username: username1_clone,
                         email: email1_clone,
                         password: "hashed_password".to_string(),
                         created_at: Utc::now(),

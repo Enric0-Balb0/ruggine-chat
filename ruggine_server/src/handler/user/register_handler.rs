@@ -43,7 +43,7 @@ mod tests {
         let input = UserRegisterDto {
             email: "test@example.com".to_string(),
             password: "securepassword".to_string(),
-            user_name: "testuser".to_string(),
+            username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
         };
@@ -51,7 +51,7 @@ mod tests {
         let expected_output = UserReadDto {
             id: 1,
             email: input.email.clone(),
-            user_name: input.user_name.clone(),
+            username: input.username.clone(),
             first_name: input.first_name.clone(),
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
@@ -90,7 +90,7 @@ mod tests {
         let input = UserRegisterDto {
             email: "existing@example.com".to_string(),
             password: "password123".to_string(),
-            user_name: "existinguser".to_string(),
+            username: "existinguser".to_string(),
             first_name: "Existing".to_string(),
             last_name: "User".to_string(),
         };
@@ -128,7 +128,7 @@ mod tests {
         let expected_output = UserReadDto {
             id: 42,
             email: input.email.clone(),
-            user_name: input.user_name.clone(),
+            username: input.username.clone(),
             first_name: input.first_name.clone(),
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
@@ -160,7 +160,7 @@ mod tests {
         assert!(result.is_ok());
         let Json(user) = result.unwrap();
         assert_eq!(user.email, expected_output.email);
-        assert_eq!(user.user_name, expected_output.user_name);
+        assert_eq!(user.username, expected_output.username);
         assert_eq!(user.first_name, expected_output.first_name);
         assert_eq!(user.last_name, expected_output.last_name);
     }
@@ -171,7 +171,7 @@ mod tests {
         let input = UserRegisterDto {
             email: "test@example.com".to_string(),
             password: "password123".to_string(),
-            user_name: "testuser".to_string(),
+            username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
         };

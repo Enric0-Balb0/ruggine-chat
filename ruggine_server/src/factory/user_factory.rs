@@ -43,7 +43,7 @@ impl UserFactory {
         let (email, username, full_name) = Self::get_unique_user_information(prefix);
         NewUser {
             email,
-            user_name: username,
+            username,
             first_name: full_name.clone(),
             last_name: "Test".to_string(),
             password: "hashed_password".to_string(), // Placeholder for hashed password
@@ -55,7 +55,7 @@ impl UserFactory {
         NewUser {
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
             is_active: 1,
@@ -67,7 +67,7 @@ impl UserFactory {
             id: 1,
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
@@ -81,7 +81,7 @@ impl UserFactory {
             id: 1,
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             created_at: Utc::now(),
             updated_at: None,
@@ -95,7 +95,7 @@ impl UserFactory {
             password: "securepassword".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         }
     }
 
@@ -106,7 +106,7 @@ impl UserFactory {
             password: "securepassword123".to_string(),
             first_name: full_name,
             last_name: "Test".to_string(),
-            user_name: username,
+            username,
         }
     }
 

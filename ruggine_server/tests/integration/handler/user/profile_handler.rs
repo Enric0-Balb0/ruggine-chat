@@ -45,7 +45,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.id, user.id);
         assert_eq!(data.first_name, user.first_name);
         assert_eq!(data.last_name, user.last_name);
-        assert_eq!(data.user_name, user.user_name);
+        assert_eq!(data.username, user.username);
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
@@ -120,7 +120,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.id, user.id);
         assert_eq!(data.first_name, user.first_name);
         assert_eq!(data.last_name, user.last_name);
-        assert_eq!(data.user_name, user.user_name);
+        assert_eq!(data.username, user.username);
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
@@ -149,7 +149,7 @@ mod profile_handler_integration_tests {
         assert!(data.id > 0, "ID should be positive");
         assert!(!data.first_name.is_empty(), "First name should not be empty");
         assert!(!data.last_name.is_empty(), "Last name should not be empty");
-        assert!(!data.user_name.is_empty(), "Username should not be empty");
+        assert!(!data.username.is_empty(), "Username should not be empty");
         assert!(data.email.contains('@'), "Email should be valid format");
         assert!(data.created_at <= chrono::Utc::now(), "Created date should not be in future");
         
@@ -215,7 +215,7 @@ mod profile_handler_integration_tests {
         
         assert_ne!(data1.id, data2.id, "Users should have different IDs");
         assert_ne!(data1.email, data2.email, "Users should have different emails");
-        assert_ne!(data1.user_name, data2.user_name, "Users should have different usernames");
+        assert_ne!(data1.username, data2.username, "Users should have different usernames");
         
         // Both should be valid responses
         assert!(data1.id > 0);

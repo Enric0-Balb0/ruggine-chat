@@ -72,7 +72,7 @@ mod tests {
             id: 42,
             first_name: "Jane".to_string(),
             last_name: "Smith".to_string(),
-            user_name: "janesmith".to_string(),
+            username: "janesmith".to_string(),
             email: "jane.smith@test.com".to_string(),
             password: "secret_hash".to_string(),
             created_at: chrono::Utc::now(),
@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(data.id, user.id);
         assert_eq!(data.first_name, user.first_name);
         assert_eq!(data.last_name, user.last_name);
-        assert_eq!(data.user_name, user.user_name);
+        assert_eq!(data.username, user.username);
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
@@ -112,7 +112,7 @@ mod tests {
         assert!(data.id > 0);
         assert!(!data.first_name.is_empty());
         assert!(!data.last_name.is_empty());
-        assert!(!data.user_name.is_empty());
+        assert!(!data.username.is_empty());
         assert!(data.email.contains('@'));
     }
 }

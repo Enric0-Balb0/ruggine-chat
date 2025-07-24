@@ -6,7 +6,7 @@ pub struct User {
     pub id: i32,
     pub first_name: String,
     pub last_name: String,
-    pub user_name: String,
+    pub username: String,
     pub email: String,
     pub password: String,
     pub created_at: DateTime<Utc>,
@@ -18,7 +18,7 @@ pub struct User {
 pub struct NewUser {
     pub first_name: String,
     pub last_name: String,
-    pub user_name: String,
+    pub username: String,
     pub email: String,
     pub password: String,
     pub is_active: i8,

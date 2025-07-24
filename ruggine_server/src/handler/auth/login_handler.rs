@@ -80,7 +80,7 @@ mod login_tests {
             id: 1,
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
             email: "john@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),

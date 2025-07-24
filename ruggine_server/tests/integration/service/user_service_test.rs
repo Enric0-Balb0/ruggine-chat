@@ -30,7 +30,7 @@ mod user_service_integration_tests {
         assert_eq!(user_dto.email, dto.email);
         assert_eq!(user_dto.first_name, dto.first_name);
         assert_eq!(user_dto.last_name, dto.last_name);
-        assert_eq!(user_dto.user_name, dto.user_name);
+        assert_eq!(user_dto.username, dto.username);
         assert_eq!(user_dto.is_active, 1);
         assert!(user_dto.id > 0);
 
@@ -56,7 +56,7 @@ mod user_service_integration_tests {
         let dto = UserRegisterDto {
             first_name: "Duplicate".into(),
             last_name: "Test".into(),
-            user_name: "different_username".into(),
+            username: "different_username".into(),
             email: first_user.email.clone(), // Same email as first user
             password: "password123".into(),
         };
@@ -195,7 +195,7 @@ mod user_service_integration_tests {
         // Verify data integrity - check that all fields are correctly stored
         assert_eq!(user_dto.first_name, dto.first_name);
         assert_eq!(user_dto.last_name, dto.last_name);
-        assert_eq!(user_dto.user_name, dto.user_name);
+        assert_eq!(user_dto.username, dto.username);
         assert_eq!(user_dto.email, dto.email);
         assert_eq!(user_dto.is_active, 1);
         assert!(user_dto.created_at <= chrono::Utc::now());
@@ -238,7 +238,7 @@ mod user_service_integration_tests {
         
         assert_eq!(user_dto.first_name, "José María");
         assert_eq!(user_dto.last_name, "García-López");
-        assert_eq!(user_dto.user_name, dto.user_name);
+        assert_eq!(user_dto.username, dto.username);
         assert_eq!(user_dto.email, dto.email);
 
         // Cleanup: Delete the test user

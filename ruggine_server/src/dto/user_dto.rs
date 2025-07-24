@@ -29,7 +29,7 @@ pub struct UserLoginDto {
     "password": "securepassword123",
     "first_name": "John",
     "last_name": "Doe",
-    "user_name": "johndoe"
+    "username": "johndoe"
 }))]
 pub struct UserRegisterDto {
     #[validate(email(message = "Email is not valid"))]
@@ -52,7 +52,7 @@ pub struct UserRegisterDto {
         message = "Username must be between 3 and 50 characters"
     ))]
     #[schema(example = "johndoe")]
-    pub user_name: String,
+    pub username: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
@@ -60,7 +60,7 @@ pub struct UserRegisterDto {
     "id": 1,
     "first_name": "John",
     "last_name": "Doe",
-    "user_name": "johndoe",
+    "username": "johndoe",
     "email": "user@example.com",
     "created_at": "2023-01-01T00:00:00Z",
     "updated_at": "2023-01-01T00:00:00Z",
@@ -74,7 +74,7 @@ pub struct UserReadDto {
     #[schema(example = "Doe")]
     pub last_name: String,
     #[schema(example = "johndoe")]
-    pub user_name: String,
+    pub username: String,
     #[schema(example = "user@example.com")]
     pub email: String,
     #[schema(example = "2023-01-01T00:00:00Z")]
@@ -91,7 +91,7 @@ impl UserReadDto {
             id: model.id,
             first_name: model.first_name,
             last_name: model.last_name,
-            user_name: model.user_name,
+            username: model.username,
             email: model.email,
             created_at: model.created_at,
             updated_at: model.updated_at,
@@ -113,7 +113,7 @@ impl std::fmt::Debug for UserRegisterDto {
         f.debug_struct("User")
             .field("first_name", &self.first_name)
             .field("last_name", &self.last_name)
-            .field("user_name", &self.user_name)
+            .field("username", &self.username)
             .field("email", &self.email)
             .finish()
     }
@@ -185,7 +185,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         assert!(register_dto.validate().is_ok());
@@ -193,7 +193,7 @@ mod tests {
         assert_eq!(register_dto.password, "password123");
         assert_eq!(register_dto.first_name, "John");
         assert_eq!(register_dto.last_name, "Doe");
-        assert_eq!(register_dto.user_name, "johndoe");
+        assert_eq!(register_dto.username, "johndoe");
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         let validation_result = register_dto.validate();
@@ -220,7 +220,7 @@ mod tests {
             password: "12".to_string(), // Less than 3 characters
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         let validation_result = register_dto.validate();
@@ -237,7 +237,7 @@ mod tests {
             password: "a".repeat(51), // More than 50 characters
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         let validation_result = register_dto.validate();
@@ -254,14 +254,14 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "ab".to_string(), // Less than 3 characters
+            username: "ab".to_string(), // Less than 3 characters
         };
 
         let validation_result = register_dto.validate();
         assert!(validation_result.is_err());
         
         let errors = validation_result.unwrap_err();
-        assert!(errors.field_errors().contains_key("user_name"));
+        assert!(errors.field_errors().contains_key("username"));
     }
 
     #[test]
@@ -271,14 +271,14 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "a".repeat(51), // More than 50 characters
+            username: "a".repeat(51), // More than 50 characters
         };
 
         let validation_result = register_dto.validate();
         assert!(validation_result.is_err());
         
         let errors = validation_result.unwrap_err();
-        assert!(errors.field_errors().contains_key("user_name"));
+        assert!(errors.field_errors().contains_key("username"));
     }
 
     #[test]
@@ -301,7 +301,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         let debug_string = format!("{:?}", register_dto);
@@ -332,7 +332,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         let cloned_dto = register_dto.clone();
@@ -340,7 +340,7 @@ mod tests {
         assert_eq!(register_dto.password, cloned_dto.password);
         assert_eq!(register_dto.first_name, cloned_dto.first_name);
         assert_eq!(register_dto.last_name, cloned_dto.last_name);
-        assert_eq!(register_dto.user_name, cloned_dto.user_name);
+        assert_eq!(register_dto.username, cloned_dto.username);
     }
 
     #[test]
@@ -368,7 +368,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            user_name: "johndoe".to_string(),
+            username: "johndoe".to_string(),
         };
 
         // Test serialization
@@ -381,6 +381,6 @@ mod tests {
         assert_eq!(register_dto.email, deserialized.email);
         assert_eq!(register_dto.first_name, deserialized.first_name);
         assert_eq!(register_dto.last_name, deserialized.last_name);
-        assert_eq!(register_dto.user_name, deserialized.user_name);
+        assert_eq!(register_dto.username, deserialized.username);
     }
 }

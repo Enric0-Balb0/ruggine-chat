@@ -44,7 +44,7 @@ impl UserService {
         let new_user = NewUser {
             first_name: payload.first_name,
             last_name: payload.last_name,
-            user_name: payload.user_name,
+            username: payload.username,
             email: payload.email,
             password: hashed_password,
             is_active: 1,
@@ -113,7 +113,7 @@ mod tests {
             id: 1,
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
@@ -151,7 +151,7 @@ mod tests {
         let dto = UserRegisterDto {
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
         };
@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(user.email, "test@example.com");
         assert_eq!(user.first_name, "Test");
         assert_eq!(user.last_name, "User");
-        assert_eq!(user.user_name, "testuser");
+        assert_eq!(user.username, "testuser");
     }
 
     #[tokio::test]
@@ -177,7 +177,7 @@ mod tests {
             id: 1,
             first_name: "Existing".into(),
             last_name: "User".into(),
-            user_name: "existinguser".into(),
+            username: "existinguser".into(),
             email: "test@example.com".into(),
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
@@ -199,7 +199,7 @@ mod tests {
         let dto = UserRegisterDto {
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
         };
@@ -239,7 +239,7 @@ mod tests {
         let dto = UserRegisterDto {
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
         };
@@ -279,7 +279,7 @@ mod tests {
         let dto = UserRegisterDto {
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
         };
@@ -327,7 +327,7 @@ mod tests {
         let dto = UserRegisterDto {
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
         };
@@ -351,7 +351,7 @@ mod tests {
             id: 1,
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),
@@ -380,7 +380,7 @@ mod tests {
             id: 1,
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),
@@ -408,7 +408,7 @@ mod tests {
             id: 1,
             first_name: "Test".into(),
             last_name: "User".into(),
-            user_name: "testuser".into(),
+            username: "testuser".into(),
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),

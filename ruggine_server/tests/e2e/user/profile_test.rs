@@ -89,7 +89,7 @@ mod profile_e2e_tests {
         
         assert!(data.get("id").is_some(), "User data should contain id");
         assert!(data.get("email").is_some(), "User data should contain email");
-        assert!(data.get("user_name").is_some(), "User data should contain user_name");
+        assert!(data.get("username").is_some(), "User data should contain username");
         assert!(data.get("first_name").is_some(), "User data should contain first_name");
         assert!(data.get("last_name").is_some(), "User data should contain last_name");
         assert!(data.get("created_at").is_some(), "User data should contain created_at");
@@ -97,7 +97,7 @@ mod profile_e2e_tests {
 
         // Verify user data matches expected values
         assert_eq!(data["email"], user_dto.email);
-        assert_eq!(data["user_name"], user_dto.user_name);
+        assert_eq!(data["username"], user_dto.username);
         assert_eq!(data["first_name"], user_dto.first_name);
         assert_eq!(data["last_name"], user_dto.last_name);
         assert_eq!(data["is_active"], 1);
@@ -369,7 +369,7 @@ mod profile_e2e_tests {
         // Verify all expected fields are present and have correct types
         assert!(data["id"].is_number(), "id should be a number");
         assert!(data["email"].is_string(), "email should be a string");
-        assert!(data["user_name"].is_string(), "user_name should be a string");
+        assert!(data["username"].is_string(), "username should be a string");
         assert!(data["first_name"].is_string(), "first_name should be a string");
         assert!(data["last_name"].is_string(), "last_name should be a string");
         assert!(data["created_at"].is_string(), "created_at should be a string");
@@ -378,7 +378,7 @@ mod profile_e2e_tests {
         // Verify field values are reasonable
         assert!(data["id"].as_i64().unwrap() > 0, "id should be positive");
         assert!(data["email"].as_str().unwrap().contains('@'), "email should be valid format");
-        assert!(!data["user_name"].as_str().unwrap().is_empty(), "user_name should not be empty");
+        assert!(!data["username"].as_str().unwrap().is_empty(), "username should not be empty");
         assert!(!data["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
         assert!(!data["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
         assert!(data["is_active"].as_i64().unwrap() >= 0, "is_active should be 0 or 1");

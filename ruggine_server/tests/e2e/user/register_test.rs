@@ -27,7 +27,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
-            "user_name": register_dto.user_name,
+            "username": register_dto.username,
             "first_name": register_dto.first_name,
             "last_name": register_dto.last_name
         });
@@ -52,7 +52,7 @@ mod register_e2e_tests {
         // Verify response contains user data (not wrapped in data field for register)
         assert!(response_json.get("id").is_some(), "Response should contain id");
         assert!(response_json.get("email").is_some(), "Response should contain email");
-        assert!(response_json.get("user_name").is_some(), "Response should contain user_name");
+        assert!(response_json.get("username").is_some(), "Response should contain username");
         assert!(response_json.get("first_name").is_some(), "Response should contain first_name");
         assert!(response_json.get("last_name").is_some(), "Response should contain last_name");
         assert!(response_json.get("created_at").is_some(), "Response should contain created_at");
@@ -60,7 +60,7 @@ mod register_e2e_tests {
 
         // Verify user data matches input
         assert_eq!(response_json["email"], register_dto.email);
-        assert_eq!(response_json["user_name"], register_dto.user_name);
+        assert_eq!(response_json["username"], register_dto.username);
         assert_eq!(response_json["first_name"], register_dto.first_name);
         assert_eq!(response_json["last_name"], register_dto.last_name);
         assert_eq!(response_json["is_active"], 1);
@@ -84,7 +84,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
-            "user_name": register_dto.user_name,
+            "username": register_dto.username,
             "first_name": register_dto.first_name,
             "last_name": register_dto.last_name
         });
@@ -109,7 +109,7 @@ mod register_e2e_tests {
         let stored_user = stored_user.unwrap();
 
         assert_eq!(stored_user.email, register_dto.email);
-        assert_eq!(stored_user.user_name, register_dto.user_name);
+        assert_eq!(stored_user.username, register_dto.username);
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
         assert_eq!(stored_user.is_active, 1);
@@ -130,7 +130,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
-            "user_name": register_dto.user_name,
+            "username": register_dto.username,
             "first_name": register_dto.first_name,
             "last_name": register_dto.last_name
         });
@@ -201,7 +201,7 @@ mod register_e2e_tests {
         let incomplete_payload = json!({
             "email": "test@example.com",
             "password": "password123"
-            // Missing user_name, first_name, last_name
+            // Missing username, first_name, last_name
         });
 
         // Act: Send POST request to /register with missing fields
@@ -235,7 +235,7 @@ mod register_e2e_tests {
         let invalid_email_payload = json!({
             "email": "invalid-email-format",
             "password": "password123",
-            "user_name": "testuser",
+            "username": "testuser",
             "first_name": "Test",
             "last_name": "User"
         });
@@ -271,7 +271,7 @@ mod register_e2e_tests {
         let empty_fields_payload = json!({
             "email": "",
             "password": "",
-            "user_name": "",
+            "username": "",
             "first_name": "",
             "last_name": ""
         });
@@ -307,7 +307,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": "test@example.com",
             "password": "password123",
-            "user_name": "testuser",
+            "username": "testuser",
             "first_name": "Test",
             "last_name": "User"
         });
@@ -334,7 +334,7 @@ mod register_e2e_tests {
         let special_chars_payload = json!({
             "email": "special.chars+test@example.com",
             "password": "P@ssw0rd!#$%",
-            "user_name": "user_with_underscore_123",
+            "username": "user_with_underscore_123",
             "first_name": "José María",
             "last_name": "García-López"
         });
@@ -358,7 +358,7 @@ mod register_e2e_tests {
 
         // Verify special characters are preserved
         assert_eq!(response_json["email"], "special.chars+test@example.com");
-        assert_eq!(response_json["user_name"], "user_with_underscore_123");
+        assert_eq!(response_json["username"], "user_with_underscore_123");
         assert_eq!(response_json["first_name"], "José María");
         assert_eq!(response_json["last_name"], "García-López");
 
@@ -375,7 +375,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
-            "user_name": register_dto.user_name,
+            "username": register_dto.username,
             "first_name": register_dto.first_name,
             "last_name": register_dto.last_name
         });
@@ -413,7 +413,7 @@ mod register_e2e_tests {
         let payload1 = json!({
             "email": register_dto1.email,
             "password": register_dto1.password,
-            "user_name": register_dto1.user_name,
+            "username": register_dto1.username,
             "first_name": register_dto1.first_name,
             "last_name": register_dto1.last_name
         });
@@ -421,7 +421,7 @@ mod register_e2e_tests {
         let payload2 = json!({
             "email": register_dto2.email,
             "password": register_dto2.password,
-            "user_name": register_dto2.user_name,
+            "username": register_dto2.username,
             "first_name": register_dto2.first_name,
             "last_name": register_dto2.last_name
         });
@@ -476,7 +476,7 @@ mod register_e2e_tests {
         let register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
-            "user_name": register_dto.user_name,
+            "username": register_dto.username,
             "first_name": register_dto.first_name,
             "last_name": register_dto.last_name
         });
@@ -501,7 +501,7 @@ mod register_e2e_tests {
         // Verify all expected fields are present and have correct types
         assert!(response_json["id"].is_number(), "id should be a number");
         assert!(response_json["email"].is_string(), "email should be a string");
-        assert!(response_json["user_name"].is_string(), "user_name should be a string");
+        assert!(response_json["username"].is_string(), "username should be a string");
         assert!(response_json["first_name"].is_string(), "first_name should be a string");
         assert!(response_json["last_name"].is_string(), "last_name should be a string");
         assert!(response_json["created_at"].is_string(), "created_at should be a string");
@@ -510,7 +510,7 @@ mod register_e2e_tests {
         // Verify field values are reasonable
         assert!(response_json["id"].as_i64().unwrap() > 0, "id should be positive");
         assert!(response_json["email"].as_str().unwrap().contains('@'), "email should be valid format");
-        assert!(!response_json["user_name"].as_str().unwrap().is_empty(), "user_name should not be empty");
+        assert!(!response_json["username"].as_str().unwrap().is_empty(), "username should not be empty");
         assert!(!response_json["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
         assert!(!response_json["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
         assert_eq!(response_json["is_active"].as_i64().unwrap(), 1, "is_active should be 1 for new users");
