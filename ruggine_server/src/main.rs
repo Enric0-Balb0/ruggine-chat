@@ -4,6 +4,7 @@ use crate::config::database::DatabaseTrait;
 use tokio::net::TcpListener;
 
 mod config;
+mod docs;
 mod routes;
 mod dto;
 mod error;

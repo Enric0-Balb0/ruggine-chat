@@ -2,6 +2,7 @@
 // This file exposes the modules for testing and external use
 
 pub mod config;
+pub mod docs;
 pub mod dto;
 pub mod entity;
 pub mod error;

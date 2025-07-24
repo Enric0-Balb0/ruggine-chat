@@ -3,6 +3,17 @@ use crate::error::{api_error::ApiError, request_error::ValidatedRequest};
 use crate::state::user_state::UserState;
 use axum::{extract::State, Json};
 
+#[utoipa::path(
+    post,
+    path = "/api/user/register",
+    request_body = UserRegisterDto,
+    responses(
+        (status = 200, description = "User registered successfully", body = UserReadDto),
+        (status = 400, description = "Invalid request data"),
+        (status = 409, description = "User already exists")
+    ),
+    tag = "User"
+)]
 pub async fn register(
     State(state): State<UserState>,
     ValidatedRequest(payload): ValidatedRequest<UserRegisterDto>,

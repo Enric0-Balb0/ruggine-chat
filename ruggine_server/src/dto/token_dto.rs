@@ -1,8 +1,19 @@
 use serde::{Deserialize, Serialize};
-#[derive(Clone, Serialize, Deserialize, Debug)]
+use serde_json::json;
+use utoipa::ToSchema;
+
+#[derive(Clone, Serialize, Deserialize, Debug, ToSchema)]
+#[schema(example = json!({
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "iat": 1640995200,
+    "exp": 1641081600
+}))]
 pub struct TokenReadDto {
+    #[schema(example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")]
     pub token: String,
+    #[schema(example = 1640995200)]
     pub iat: i64,
+    #[schema(example = 1641081600)]
     pub exp: i64,
 }
 

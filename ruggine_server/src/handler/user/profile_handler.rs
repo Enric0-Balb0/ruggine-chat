@@ -3,6 +3,18 @@ use crate::entity::user::User;
 use crate::response::api_response::ApiSuccessResponse;
 use axum::{Extension, Json};
 
+#[utoipa::path(
+    get,
+    path = "/api/user/profile",
+    responses(
+        (status = 200, description = "User profile retrieved successfully", body = UserReadDto),
+        (status = 401, description = "Unauthorized - Invalid or missing token")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    tag = "User"
+)]
 pub async fn profile(
     Extension(current_user): Extension<User>,
 ) -> Json<ApiSuccessResponse<UserReadDto>> {

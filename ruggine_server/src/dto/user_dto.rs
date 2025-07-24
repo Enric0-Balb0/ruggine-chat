@@ -1,49 +1,87 @@
 use crate::entity::user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use validator::Validate;
+use utoipa::ToSchema;
 
-#[derive(Clone, Serialize, Deserialize, Validate)]
+#[derive(Clone, Serialize, Deserialize, Validate, ToSchema)]
+#[schema(example = json!({
+    "email": "user@example.com",
+    "password": "securepassword123"
+}))]
 pub struct UserLoginDto {
     #[validate(email(message = "Email is not valid"))]
+    #[schema(example = "user@example.com")]
     pub email: String,
     #[validate(length(
         min = 3,
         max = 50,
         message = "Password must be between 3 and 50 characters"
     ))]
+    #[schema(example = "securepassword123")]
     pub password: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq, ToSchema)]
+#[schema(example = json!({
+    "email": "newuser@example.com",
+    "password": "securepassword123",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_name": "johndoe"
+}))]
 pub struct UserRegisterDto {
     #[validate(email(message = "Email is not valid"))]
+    #[schema(example = "newuser@example.com")]
     pub email: String,
     #[validate(length(
         min = 3,
         max = 50,
         message = "Password must be between 3 and 50 characters"
     ))]
+    #[schema(example = "securepassword123")]
     pub password: String,
+    #[schema(example = "John")]
     pub first_name: String,
+    #[schema(example = "Doe")]
     pub last_name: String,
     #[validate(length(
         min = 3,
         max = 50,
         message = "Username must be between 3 and 50 characters"
     ))]
+    #[schema(example = "johndoe")]
     pub user_name: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
+#[schema(example = json!({
+    "id": 1,
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_name": "johndoe",
+    "email": "user@example.com",
+    "created_at": "2023-01-01T00:00:00Z",
+    "updated_at": "2023-01-01T00:00:00Z",
+    "is_active": 1
+}))]
 pub struct UserReadDto {
+    #[schema(example = 1)]
     pub id: i32,
+    #[schema(example = "John")]
     pub first_name: String,
+    #[schema(example = "Doe")]
     pub last_name: String,
+    #[schema(example = "johndoe")]
     pub user_name: String,
+    #[schema(example = "user@example.com")]
     pub email: String,
+    #[schema(example = "2023-01-01T00:00:00Z")]
     pub created_at: DateTime<Utc>,
+    #[schema(example = "2023-01-01T00:00:00Z")]
     pub updated_at: Option<DateTime<Utc>>,
+    #[schema(example = 1)]
     pub is_active: i8,
 }
 

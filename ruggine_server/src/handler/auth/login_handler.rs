@@ -3,6 +3,19 @@ use crate::error::{api_error::ApiError,request_error::ValidatedRequest, user_err
 use crate::state::auth_state::AuthState;
 use axum::{extract::State, Json};
 
+#[utoipa::path(
+    post,
+    path = "/api/auth/login",
+    request_body = UserLoginDto,
+    responses(
+        (status = 200, description = "Login successful", body = TokenReadDto),
+        (status = 400, description = "Invalid request"),
+        (status = 401, description = "Invalid credentials"),
+        (status =404, description = "User not found"),
+        (status = 403, description = "User not active")
+    ),
+    tag = "Authentication"
+)]
 pub async fn login(
     State(state): State<AuthState>,
     ValidatedRequest(payload): ValidatedRequest<UserLoginDto>,
