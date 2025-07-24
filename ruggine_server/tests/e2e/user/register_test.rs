@@ -10,6 +10,7 @@ use ruggine_server::state::{token_state::TokenState, user_state::UserState};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
+use axum::body::to_bytes;
 use crate::common::{cleanup_user, create_user_router};
 
 #[cfg(test)]
@@ -44,7 +45,7 @@ mod register_e2e_tests {
         // Assert: Should return 200 OK with user data
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -158,7 +159,7 @@ mod register_e2e_tests {
         // Assert: Should return 409 Conflict (user already exists)
         assert_eq!(response2.status(), StatusCode::CONFLICT);
 
-        let body = hyper::body::to_bytes(response2.into_body()).await.unwrap();
+        let body = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -216,7 +217,7 @@ mod register_e2e_tests {
         // Assert: Should return 400 Bad Request (validation error)
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -252,7 +253,7 @@ mod register_e2e_tests {
         // Assert: Should return 400 Bad Request (validation error)
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -288,7 +289,7 @@ mod register_e2e_tests {
         // Assert: Should return 400 Bad Request (validation error)
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -351,7 +352,7 @@ mod register_e2e_tests {
         // Assert: Should succeed with special characters
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -452,9 +453,9 @@ mod register_e2e_tests {
         assert_eq!(response2.status(), StatusCode::OK);
 
         // Verify both users have different IDs
-        let body1 = hyper::body::to_bytes(response1.into_body()).await.unwrap();
-        let body2 = hyper::body::to_bytes(response2.into_body()).await.unwrap();
-        
+        let body1 = to_bytes(response1.into_body(), usize::MAX).await.unwrap();
+        let body2 = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
+
         let response1_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body1.to_vec()).unwrap()).unwrap();
         let response2_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body2.to_vec()).unwrap()).unwrap();
 
@@ -493,7 +494,7 @@ mod register_e2e_tests {
         // Assert: Verify response structure is consistent and complete
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 

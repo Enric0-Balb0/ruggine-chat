@@ -12,6 +12,7 @@ use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
 use crate::common::{cleanup_user, create_auth_router};
+use axum::body::to_bytes;
 
 #[cfg(test)]
 mod login_e2e_tests {
@@ -56,7 +57,7 @@ mod login_e2e_tests {
         // Assert: Should return 200 OK with token
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -96,7 +97,7 @@ mod login_e2e_tests {
         // Assert: Should return 404 Not Found (user not found)
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -134,7 +135,7 @@ mod login_e2e_tests {
             response.status()
         );
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -180,7 +181,7 @@ mod login_e2e_tests {
         // Assert: Should return 403 Forbidden (user not active)
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -237,7 +238,7 @@ mod login_e2e_tests {
         // Assert: Should return 400 Bad Request (validation error)
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -355,7 +356,7 @@ mod login_e2e_tests {
         // Assert: Verify token structure and validity
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 

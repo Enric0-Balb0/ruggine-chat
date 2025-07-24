@@ -1,25 +1,25 @@
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
 use axum::extract::State;
-use axum::{http, http::Request, middleware::Next, response::IntoResponse};
+use axum::{http, http::Request, middleware::Next, response::IntoResponse, body::Body};
 use jsonwebtoken::errors::ErrorKind;
-use axum::headers::authorization::{Authorization, Bearer};
-use axum::headers::Header;
+use headers::authorization::{Authorization, Bearer};
+use headers::Header;
 
 /// Middleware principale: chiama la logica di auth_inner e poi next.run
-pub async fn auth<B>(
+pub async fn auth(
     State(state): State<TokenState>,
-    req: Request<B>,
-    next: Next<B>,
+    req: Request<Body>,
+    next: Next,
 ) -> Result<impl IntoResponse, ApiError> {
     let req = auth_inner(&state, req).await?;
     Ok(next.run(req).await)
 }
 
-pub async fn auth_inner<B>(
+pub async fn auth_inner(
     state: &TokenState,
-    mut req: Request<B>,
-) -> Result<Request<B>, ApiError> {
+    mut req: Request<Body>,
+) -> Result<Request<Body>, ApiError> {
     let auth_header = req
         .headers()
         .get(http::header::AUTHORIZATION)
@@ -59,7 +59,7 @@ pub async fn auth_inner<B>(
 mod tests {
     use super::*;
     use axum::{
-        body::{Body, BoxBody},
+        body::Body,
         http::{Request, header},
         response::{IntoResponse, Response},
     };
@@ -78,10 +78,10 @@ mod tests {
     struct FakeNext;
 
     impl FakeNext {
-        fn run<B: Send + 'static>(&self, req: Request<B>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<BoxBody>> + Send>> {
+        fn run<B: Send + 'static>(&self, req: Request<B>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response<Body>> + Send>> {
             Box::pin(async move {
                 assert!(req.extensions().get::<User>().is_some(), "User not injected");
-                // Risposta convertita con IntoResponse per ottenere il corretto tipo BoxBody
+                // Risposta convertita con IntoResponse per ottenere il corretto tipo Body
                 ("passed").into_response()
             })
         }
@@ -119,7 +119,7 @@ mod tests {
         let next = FakeNext;
         let response = next.run(req_with_user).await;
 
-        let bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_str = std::str::from_utf8(&bytes).unwrap();
 
         assert_eq!(body_str, "passed");

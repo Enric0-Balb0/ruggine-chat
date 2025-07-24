@@ -1,8 +1,10 @@
 use crate::response::api_response::ApiErrorResponse;
 use async_trait::async_trait;
-use axum::{body::HttpBody,http::Request, BoxError, Json};
+use axum::body::Body;
+use axum::http::Request;
 use axum::extract::{rejection::JsonRejection, FromRequest};
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::de::DeserializeOwned;
 use thiserror::Error;
 use validator::Validate;
@@ -19,17 +21,14 @@ pub enum RequestError {
 pub struct ValidatedRequest<T>(pub T);
 
 #[async_trait]
-impl<T, S, B> FromRequest<S, B> for ValidatedRequest<T>
+impl<T, S> FromRequest<S, Body> for ValidatedRequest<T>
 where
     T: DeserializeOwned + Validate,
     S: Send + Sync,
-    B: HttpBody + Send + 'static,
-    B::Data: Send,
-    B::Error: Into<BoxError>,
 {
     type Rejection = RequestError;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state).await?;
         value.validate()?;
         Ok(ValidatedRequest(value))

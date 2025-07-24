@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use crate::config::{database, parameter};
 use crate::config::database::DatabaseTrait;
+use tokio::net::TcpListener;
 
 mod config;
 mod routes;
@@ -27,8 +28,11 @@ async fn main() {
     let host = format!("127.0.0.1:{}", parameter::get("PORT"));
     println!("🚀 Server is running on {}", host);
     tracing_subscriber::fmt::init();
-    axum::Server::bind(&host.parse().unwrap())
-        .serve(routes::root::routes(Arc::new(connection)))
+    
+    let listener = TcpListener::bind(&host).await
+        .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", host, e));
+    
+    axum::serve(listener, routes::root::routes(Arc::new(connection)))
         .await
         .unwrap_or_else(|e| panic!("Server error: {}", e.to_string()));
 }

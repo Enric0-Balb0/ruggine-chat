@@ -11,6 +11,7 @@ use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
+use axum::body::to_bytes;
 use crate::common::{cleanup_user, create_user_router, create_auth_router};
 
 #[cfg(test)]
@@ -51,7 +52,7 @@ mod profile_e2e_tests {
         let response = auth_app.oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK, "Login should succeed");
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -78,7 +79,7 @@ mod profile_e2e_tests {
         // Assert: Should return 200 OK with user data
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -125,7 +126,7 @@ mod profile_e2e_tests {
         // Assert: Should return 401 Unauthorized (missing token)
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -153,7 +154,7 @@ mod profile_e2e_tests {
         // Assert: Should return 401 Unauthorized (invalid token)
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -181,7 +182,7 @@ mod profile_e2e_tests {
         // Assert: Should return 401 Unauthorized (malformed token)
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -209,7 +210,7 @@ mod profile_e2e_tests {
         // Assert: Should return 401 Unauthorized (empty token)
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -248,7 +249,7 @@ mod profile_e2e_tests {
         // Assert: Should return 403 Forbidden (user not active)
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -323,7 +324,7 @@ mod profile_e2e_tests {
         // Assert: Should return 200 OK with updated user data
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -359,7 +360,7 @@ mod profile_e2e_tests {
         // Assert: Verify response structure is consistent and complete
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
@@ -421,9 +422,9 @@ mod profile_e2e_tests {
         assert_eq!(response2.status(), StatusCode::OK);
 
         // Verify both responses contain the same user data
-        let body1 = hyper::body::to_bytes(response1.into_body()).await.unwrap();
-        let body2 = hyper::body::to_bytes(response2.into_body()).await.unwrap();
-        
+        let body1 = to_bytes(response1.into_body(), usize::MAX).await.unwrap();
+        let body2 = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
+
         let response1_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body1.to_vec()).unwrap()).unwrap();
         let response2_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body2.to_vec()).unwrap()).unwrap();
 

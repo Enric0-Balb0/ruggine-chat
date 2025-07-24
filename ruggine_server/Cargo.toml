@@ -8,11 +8,13 @@ name = "ruggine_server"
 path = "src/lib.rs"
 
 [dependencies]
-axum = { version = "0.6.3", features = ["headers"] }
-hyper = { version = "0.14.23", features = ["http1", "http2", "server", "client", "tcp"] }
+axum = { version = "0.7", features = ["macros"] }
+headers = "0.4"
+hyper = { version = "1.0", features = ["http1", "http2", "server", "client"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
 tokio = { version = "1.24.2", features = ["macros", "rt-multi-thread", "time"] }
 tower = { version = "0.4.13", features = ["util"] }
-tower-http = { version = "0.4.0", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
 dotenv = "0.15.0"
 serde =  { version = "1.0.152", features = ["derive"] }
 jsonwebtoken = "8.3.0"
