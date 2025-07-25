@@ -79,7 +79,7 @@ pub struct UserReadDto {
     #[schema(example = "2023-01-01T00:00:00Z")]
     pub created_at: DateTime<Utc>,
     #[schema(example = "2023-01-01T00:00:00Z")]
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
     #[schema(example = 1)]
     pub is_active: i8,
 }

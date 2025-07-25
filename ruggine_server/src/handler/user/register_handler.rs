@@ -55,7 +55,7 @@ mod tests {
             first_name: input.first_name.clone(),
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
-            updated_at: Some(Utc::now()),
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -132,7 +132,7 @@ mod tests {
             first_name: input.first_name.clone(),
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 

@@ -84,7 +84,7 @@ mod login_tests {
             email: "john@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active, // This determines if user is active or not
         }
     }

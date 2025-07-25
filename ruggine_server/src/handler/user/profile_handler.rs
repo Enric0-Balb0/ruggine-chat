@@ -76,7 +76,7 @@ mod tests {
             email: "jane.smith@test.com".to_string(),
             password: "secret_hash".to_string(),
             created_at: chrono::Utc::now(),
-            updated_at: Some(chrono::Utc::now()),
+            updated_at: chrono::Utc::now(),
             is_active: 1,
         };
 

@@ -40,6 +40,7 @@ impl UserService {
 
     async fn add_user(&self, payload: UserRegisterDto) -> Result<User, SqlxError> {
         let hashed_password = bcrypt::hash(payload.password, 4).unwrap();
+        let now = chrono::Utc::now();
 
         let new_user = NewUser {
             first_name: payload.first_name,
@@ -48,6 +49,8 @@ impl UserService {
             email: payload.email,
             password: hashed_password,
             is_active: 1,
+            created_at: now,
+            updated_at: now,
         };
 
         let user_id = self.user_repo.insert(new_user).await?;
@@ -117,7 +120,7 @@ mod tests {
             email: "test@example.com".into(),
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -181,7 +184,7 @@ mod tests {
             email: "test@example.com".into(),
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -355,7 +358,7 @@ mod tests {
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -384,7 +387,7 @@ mod tests {
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -412,7 +415,7 @@ mod tests {
             email: "test@example.com".into(),
             password: hashed_password,
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 

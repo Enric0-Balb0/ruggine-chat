@@ -10,6 +10,7 @@ use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod profile_handler_integration_tests {
+    use chrono::Utc;
     use crate::get_database;
     use super::*;
 
@@ -167,14 +168,16 @@ mod profile_handler_integration_tests {
         let pool = db.get_pool();
         let new_first_name = "UpdatedFirstName";
         let new_last_name = "UpdatedLastName";
-        let update_time = chrono::Utc::now();
+        let old_now = chrono::Utc::now();
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        let new_now = chrono::Utc::now(); // Questo è ciò che scriverai nel DB
         
         let update_result = sqlx::query(
             "UPDATE user SET first_name = ?, last_name = ?, updated_at = ? WHERE email = ?"
         )
         .bind(new_first_name)
         .bind(new_last_name)
-        .bind(update_time)
+        .bind(new_now.clone())
         .bind(&user.email)
         .execute(pool)
         .await;
@@ -193,7 +196,17 @@ mod profile_handler_integration_tests {
         assert_eq!(data.first_name, new_first_name);
         assert_eq!(data.last_name, new_last_name);
         assert_eq!(data.email, updated_user.email);
-        assert!(data.updated_at.is_some(), "Updated timestamp should be set");
+        let updated_at = data.updated_at;
+
+        let difference = updated_at - old_now.clone();
+
+        assert!(
+            difference.num_milliseconds().abs() < 500,
+            "Timestamp too far off: updated_at = {}, expected ~{} (difference: {}ms)",
+            updated_at,
+            old_now.clone(),
+            difference.num_milliseconds()
+        );
         
         // Cleanup
         cleanup_user(updated_user.email).await;

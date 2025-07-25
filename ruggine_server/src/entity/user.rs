@@ -10,7 +10,7 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
     pub is_active: i8,
 }
 
@@ -22,4 +22,6 @@ pub struct NewUser {
     pub email: String,
     pub password: String,
     pub is_active: i8,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

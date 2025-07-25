@@ -9,6 +9,8 @@ use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_service_integration_tests {
+    use chrono::Utc;
+
     use crate::get_database;
     use super::*;
 
@@ -199,7 +201,7 @@ mod user_service_integration_tests {
         assert_eq!(user_dto.email, dto.email);
         assert_eq!(user_dto.is_active, 1);
         assert!(user_dto.created_at <= chrono::Utc::now());
-        assert!(user_dto.updated_at.is_none());
+        assert!(user_dto.updated_at <= chrono::Utc::now());
 
         // Verify password is properly hashed by trying to verify it
         let user_option = repository.find_by_email(dto.email.clone()).await;

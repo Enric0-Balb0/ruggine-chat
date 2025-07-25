@@ -41,17 +41,21 @@ impl UserFactory {
 
     pub fn unique_fake_new_user(prefix: &str, is_active: i8) -> NewUser {
         let (email, username, full_name) = Self::get_unique_user_information(prefix);
+        let now = Utc::now();
         NewUser {
             email,
             username,
             first_name: full_name.clone(),
             last_name: "Test".to_string(),
             password: "hashed_password".to_string(), // Placeholder for hashed password
-            is_active
+            is_active,
+            created_at: now,
+            updated_at: now,
         }
     }
 
     pub fn fake_new_user() -> NewUser {
+        let now = Utc::now();
         NewUser {
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
@@ -59,6 +63,8 @@ impl UserFactory {
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
             is_active: 1,
+            created_at: now,
+            updated_at: now,
         }
     }
 
@@ -71,7 +77,7 @@ impl UserFactory {
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         }
     }
@@ -84,7 +90,7 @@ impl UserFactory {
             username: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         }
     }

@@ -59,17 +59,20 @@ impl UserRepositoryTrait for UserRepository {
     }
 
     async fn insert(&self, new_user: NewUser) -> Result<u64, SqlxError> {
+        let now = chrono::Utc::now();
         let result = sqlx::query!(
             r#"
-            INSERT INTO user (first_name, last_name, username, email, password, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO user (first_name, last_name, username, email, password, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             new_user.first_name,
             new_user.last_name,
             new_user.username,
             new_user.email,
             new_user.password,
-            new_user.is_active
+            new_user.is_active,
+            now,
+            now
         )
         .execute(self.db_conn.get_pool())
         .await?;
@@ -100,7 +103,7 @@ mod user_repository_unit_tests {
             email: test_email.clone(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -157,7 +160,7 @@ mod user_repository_unit_tests {
             email: "jane.smith@example.com".to_string(),
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
-            updated_at: None,
+            updated_at: Utc::now(),
             is_active: 1,
         };
 
@@ -317,7 +320,7 @@ mod user_repository_unit_tests {
                         email: email1_clone,
                         password: "hashed_password".to_string(),
                         created_at: Utc::now(),
-                        updated_at: None,
+                        updated_at: Utc::now(),
                         is_active: 1,
                     })
                 })
