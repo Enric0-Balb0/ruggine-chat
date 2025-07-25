@@ -236,7 +236,7 @@ jobs:
 # Reset test database
 mysql -u root -p -e "DROP DATABASE IF EXISTS ruggine_test; CREATE DATABASE ruggine_test;"
 
-# Run migrations
+# Run seeds
 sqlx migrate run --database-url="mysql://root:password@localhost/ruggine_test"
 ```
 
