@@ -9,8 +9,8 @@ use thiserror::Error;
 pub enum UserError {
     #[error("User not found")]
     UserNotFound,
-    #[error("User already exists")]
-    UserAlreadyExists,
+    #[error("User already exists: {0}")]
+    UserAlreadyExists(String),
     #[error("Invalid password")]
     InvalidPassword,
     #[error("User is not active")]
@@ -21,7 +21,7 @@ impl IntoResponse for UserError {
     fn into_response(self) -> Response {
         let status_code = match self {
             UserError::UserNotFound => StatusCode::NOT_FOUND,
-            UserError::UserAlreadyExists => StatusCode::CONFLICT,
+            UserError::UserAlreadyExists(_) => StatusCode::CONFLICT,
             UserError::InvalidPassword => StatusCode::UNAUTHORIZED,
             UserError::UserNotActive => StatusCode::FORBIDDEN,
         };

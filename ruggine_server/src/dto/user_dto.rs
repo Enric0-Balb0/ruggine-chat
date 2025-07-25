@@ -1,7 +1,6 @@
 use crate::entity::user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use validator::Validate;
 use utoipa::ToSchema;
 

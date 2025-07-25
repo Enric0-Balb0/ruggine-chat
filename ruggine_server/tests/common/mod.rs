@@ -2,10 +2,17 @@ use std::sync::{Arc};
 use tokio::sync::OnceCell;
 use ruggine_server::{config::database::{Database}};
 use std::sync::Once;
+use axum::body::{to_bytes, Body};
+use axum::http::{Request, StatusCode};
 use axum::Router;
+use serde_json::json;
+use tower::ServiceExt;
 use ruggine_server::config::database::DatabaseTrait;
-use ruggine_server::repository::user_repository::UserRepository;
+use ruggine_server::entity::user::User;
+use ruggine_server::factory::user_factory::UserFactory;
+use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::routes::{auth, user};
+use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
@@ -47,6 +54,50 @@ pub async fn create_auth_router() -> Router {
     let auth_state = AuthState::new(&db);
     auth::routes().with_state(auth_state)
 }
+
+/// Helper function to create a real user in the database
+async fn create_test_user_with_password(prefix: &str, password: String) -> User {
+    let db = get_database().await;
+    let user_service = UserService::new(&db);
+    let repository = UserRepository::new(&db);
+
+    let mut user_dto = UserFactory::unique_fake_user_register_dto(prefix);
+    user_dto.password = password;
+    let create_result = user_service.create_user(user_dto.clone()).await;
+    assert!(create_result.is_ok(), "Failed to create user for profile test");
+
+    // Get the created user from database
+    let user_option = repository.find_by_email(user_dto.email.clone()).await;
+    assert!(user_option.is_some(), "User not found in database");
+    user_option.unwrap()
+}
+
+// Helper function to log in and get token
+async fn login_and_get_token(email: String, password: String) -> String {
+    let auth_app = create_auth_router().await;
+
+    let login_payload = json!({
+            "email": email,
+            "password": password
+        });
+
+    let request = Request::builder()
+        .method("POST")
+        .uri("/login")
+        .header("content-type", "application/json")
+        .body(Body::from(login_payload.to_string()))
+        .unwrap();
+
+    let response = auth_app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK, "Login should succeed");
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_text = String::from_utf8(body.to_vec()).unwrap();
+    let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+
+    response_json["token"].as_str().unwrap().to_string()
+}
+
 
 fn init_test_logging() {
     INIT_LOG.call_once(|| {

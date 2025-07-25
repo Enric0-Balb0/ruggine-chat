@@ -103,7 +103,7 @@ mod tests {
             .with(eq(input.clone()))
             .returning(move |_| {
                 Box::pin(async move { 
-                    Err(ApiError::UserError(UserError::UserAlreadyExists))
+                    Err(ApiError::UserError(UserError::UserAlreadyExists("Username or email already taken".to_string())))
                 })
             });
 
@@ -118,7 +118,7 @@ mod tests {
         // Assert: should return error
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists)));
+        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))));
     }
 
     #[tokio::test]

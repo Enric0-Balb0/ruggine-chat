@@ -76,7 +76,7 @@ mod register_handler_integration_tests {
         // Assert: Should fail with UserAlreadyExists error
         assert!(result.is_err(), "Second registration should fail");
         match result.unwrap_err() {
-            ApiError::UserError(UserError::UserAlreadyExists) => {
+            ApiError::UserError(UserError::UserAlreadyExists(_)) => {
                 // Expected error
             }
             other => panic!("Expected UserError::UserAlreadyExists, got {:?}", other),

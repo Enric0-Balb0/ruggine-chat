@@ -67,7 +67,7 @@ mod user_service_integration_tests {
         // Assert: Should return UserAlreadyExists error
         assert!(result.is_err(), "Expected error but got success");
         let error = result.unwrap_err();
-        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists)), "Expected UserAlreadyExists error, got: {:?}", error);
+        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))), "Expected UserAlreadyExists error, got: {:?}", error);
 
         // Cleanup: Delete the test user
         if let Err(e) = repository.delete_by_email(first_user.email.clone()).await {

@@ -62,7 +62,7 @@ impl UserService {
 impl UserServiceTrait for UserService {
     async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
         return match self.user_repo.find_by_email(payload.email.to_owned()).await {
-            Some(_) => Err(UserError::UserAlreadyExists)?,
+            Some(_) => Err(UserError::UserAlreadyExists("Username or email already taken".to_string()))?,
             None => {
                 let user = self.add_user(payload).await;
 
@@ -210,7 +210,7 @@ mod tests {
         // Assert: Should return UserAlreadyExists error
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists)));
+        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))));
     }
 
     #[tokio::test]
