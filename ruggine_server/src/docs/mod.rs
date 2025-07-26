@@ -1,7 +1,6 @@
 use utoipa::OpenApi;
 use crate::dto::{
-    user_dto::{UserLoginDto, UserRegisterDto, UserReadDto},
-    token_dto::TokenReadDto
+    token_dto::TokenReadDto, user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto, ApiSuccessResponseUserRegisterDto
 };
 use crate::handler::{
     auth::login_handler,
@@ -19,8 +18,9 @@ use crate::handler::{
         schemas(
             UserLoginDto,
             UserRegisterDto,
-            UserReadDto,
-            TokenReadDto
+            ApiSuccessResponseUserReadDto,
+            ApiSuccessResponseUserRegisterDto,
+            ApiSuccessResponseTokenReadDto
         )
     ),
     modifiers(&SecurityAddon),

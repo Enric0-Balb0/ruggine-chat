@@ -2,22 +2,16 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 pub struct ApiSuccessResponse<T: Serialize> {
     data: T,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct ApiErrorResponse {
-    message: Option<String>,
-    #[serde(rename = "code")]
-    status: u16,
-}
-
 impl<T: Serialize> ApiSuccessResponse<T>
 where
-    T: Serialize,
+    T: Serialize + for<'s> ToSchema<'s>,
 {
     pub(crate) fn send(data: T) -> Self {
         return ApiSuccessResponse { data };
@@ -26,6 +20,13 @@ where
     pub fn data(&self) -> &T {
         &self.data
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ApiErrorResponse {
+    message: Option<String>,
+    #[serde(rename = "code")]
+    status: u16,
 }
 
 impl ApiErrorResponse {

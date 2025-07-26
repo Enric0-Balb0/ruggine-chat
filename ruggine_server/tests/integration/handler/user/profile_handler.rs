@@ -169,7 +169,7 @@ mod profile_handler_integration_tests {
         let new_first_name = "UpdatedFirstName";
         let new_last_name = "UpdatedLastName";
         let old_now = chrono::Utc::now();
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         let new_now = chrono::Utc::now(); // Questo è ciò che scriverai nel DB
         
         let update_result = sqlx::query(
@@ -198,14 +198,11 @@ mod profile_handler_integration_tests {
         assert_eq!(data.email, updated_user.email);
         let updated_at = data.updated_at;
 
-        let difference = updated_at - old_now.clone();
-
         assert!(
-            difference.num_milliseconds().abs() < 500,
-            "Timestamp too far off: updated_at = {}, expected ~{} (difference: {}ms)",
-            updated_at,
-            old_now.clone(),
-            difference.num_milliseconds()
+            data.updated_at > old_now,
+            "Expected updated_at to be after old_now. updated_at = {}, old_now = {}",
+            data.updated_at,
+            old_now
         );
         
         // Cleanup

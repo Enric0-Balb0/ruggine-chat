@@ -61,12 +61,16 @@ mod login_e2e_tests {
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
-        // Verify response structure
-        assert!(response_json.get("token").is_some(), "Response should contain token");
-        assert!(response_json.get("iat").is_some(), "Response should contain iat");
-        assert!(response_json.get("exp").is_some(), "Response should contain exp");
+        // Verify response structure contains user data
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        let data = &response_json["data"];
 
-        let token = response_json["token"].as_str().unwrap();
+        // Verify response structure
+        assert!(data.get("token").is_some(), "Response should contain token");
+        assert!(data.get("iat").is_some(), "Response should contain iat");
+        assert!(data.get("exp").is_some(), "Response should contain exp");
+
+        let token = data["token"].as_str().unwrap();
         assert!(!token.is_empty(), "Token should not be empty");
         assert!(token.len() > 50, "Token should be substantial length");
 
@@ -360,10 +364,14 @@ mod login_e2e_tests {
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
+        // Verify response structure contains user data
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        let data = &response_json["data"];
+
         // Verify token structure
-        let token = response_json["token"].as_str().unwrap();
-        let iat = response_json["iat"].as_i64().unwrap();
-        let exp = response_json["exp"].as_i64().unwrap();
+        let token = data["token"].as_str().unwrap();
+        let iat = data["iat"].as_i64().unwrap();
+        let exp = data["exp"].as_i64().unwrap();
 
         // Token should be a JWT (3 parts separated by dots)
         let token_parts: Vec<&str> = token.split('.').collect();

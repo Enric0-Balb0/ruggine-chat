@@ -1,5 +1,6 @@
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
 use crate::error::{api_error::ApiError, request_error::ValidatedRequest};
+use crate::response::api_response::ApiSuccessResponse;
 use crate::state::user_state::UserState;
 use axum::{extract::State, Json};
 
@@ -8,7 +9,7 @@ use axum::{extract::State, Json};
     path = "/api/user/register",
     request_body = UserRegisterDto,
     responses(
-        (status = 200, description = "User registered successfully", body = UserReadDto),
+        (status = 200, description = "User registered successfully", body = ApiSuccessResponseUserRegisterDto),
         (status = 400, description = "Invalid request data"),
         (status = 409, description = "User already exists")
     ),
@@ -17,9 +18,9 @@ use axum::{extract::State, Json};
 pub async fn register(
     State(state): State<UserState>,
     ValidatedRequest(payload): ValidatedRequest<UserRegisterDto>,
-) -> Result<Json<UserReadDto>, ApiError> {
+) -> Result<Json<ApiSuccessResponse<UserReadDto>>, ApiError> {
     let user = state.user_service.create_user(payload).await?;
-    Ok(Json(user))
+    Ok(Json(ApiSuccessResponse::send(user)))
 }
 
 #[cfg(test)]
@@ -81,7 +82,7 @@ mod tests {
         // Assert
         assert!(result.is_ok());
         let Json(user) = result.unwrap();
-        assert_eq!(user, expected_output);
+        assert_eq!(*user.data(), expected_output);
     }
 
     #[tokio::test]
@@ -159,10 +160,10 @@ mod tests {
         // Assert: verify successful registration
         assert!(result.is_ok());
         let Json(user) = result.unwrap();
-        assert_eq!(user.email, expected_output.email);
-        assert_eq!(user.username, expected_output.username);
-        assert_eq!(user.first_name, expected_output.first_name);
-        assert_eq!(user.last_name, expected_output.last_name);
+        assert_eq!(user.data().email, expected_output.email);
+        assert_eq!(user.data().username, expected_output.username);
+        assert_eq!(user.data().first_name, expected_output.first_name);
+        assert_eq!(user.data().last_name, expected_output.last_name);
     }
 
     #[tokio::test]

@@ -1,5 +1,6 @@
 use crate::dto::{token_dto::TokenReadDto, user_dto::UserLoginDto};
 use crate::error::{api_error::ApiError,request_error::ValidatedRequest, user_error::UserError};
+use crate::response::api_response::ApiSuccessResponse;
 use crate::state::auth_state::AuthState;
 use axum::{extract::State, Json};
 
@@ -8,7 +9,7 @@ use axum::{extract::State, Json};
     path = "/api/auth/login",
     request_body = UserLoginDto,
     responses(
-        (status = 200, description = "Login successful", body = TokenReadDto),
+        (status = 200, description = "Login successful", body = ApiSuccessResponseTokenReadDto),
         (status = 400, description = "Invalid request"),
         (status = 401, description = "Invalid credentials"),
         (status =404, description = "User not found"),
@@ -19,7 +20,7 @@ use axum::{extract::State, Json};
 pub async fn login(
     State(state): State<AuthState>,
     ValidatedRequest(payload): ValidatedRequest<UserLoginDto>,
-) -> Result<Json<TokenReadDto>, ApiError> {
+) -> Result<Json<ApiSuccessResponse<TokenReadDto>>, ApiError> {
     let user = state
         .user_repo()
         .find_by_email(payload.email)
@@ -31,7 +32,7 @@ pub async fn login(
     }
 
     match state.user_service().verify_password(&user, &payload.password) {
-        true => Ok(Json(state.token_service().generate_token(user)?)),
+        true => Ok(Json(ApiSuccessResponse::send(state.token_service().generate_token(user)?))),
         false => Err(UserError::InvalidPassword)?,
     }
 }
@@ -174,9 +175,9 @@ mod login_tests {
         // ASSERT - Verify the results are what we expect
         assert!(result.is_ok(), "Login should succeed with valid credentials");
         let token_response = result.unwrap().0;
-        assert_eq!(token_response.token, "test_token", "Should return the expected token");
-        assert!(token_response.iat > 0, "Token should have a valid issued-at timestamp");
-        assert!(token_response.exp > token_response.iat, "Token should expire after it was issued");
+        assert_eq!(token_response.data().token, "test_token", "Should return the expected token");
+        assert!(token_response.data().iat > 0, "Token should have a valid issued-at timestamp");
+        assert!(token_response.data().exp > token_response.data().iat, "Token should expire after it was issued");
     }
 
     // TEST CASE 2: User Not Found

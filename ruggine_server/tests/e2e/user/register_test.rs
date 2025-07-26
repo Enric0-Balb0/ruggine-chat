@@ -49,27 +49,29 @@ mod register_e2e_tests {
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
+        let data = response_json.get("data").expect("Missing 'data' in response");
+
         // Verify response contains user data (not wrapped in data field for register)
-        assert!(response_json.get("id").is_some(), "Response should contain id");
-        assert!(response_json.get("email").is_some(), "Response should contain email");
-        assert!(response_json.get("username").is_some(), "Response should contain username");
-        assert!(response_json.get("first_name").is_some(), "Response should contain first_name");
-        assert!(response_json.get("last_name").is_some(), "Response should contain last_name");
-        assert!(response_json.get("created_at").is_some(), "Response should contain created_at");
-        assert!(response_json.get("is_active").is_some(), "Response should contain is_active");
+        assert!(data.get("id").is_some(), "Response should contain id");
+        assert!(data.get("email").is_some(), "Response should contain email");
+        assert!(data.get("username").is_some(), "Response should contain username");
+        assert!(data.get("first_name").is_some(), "Response should contain first_name");
+        assert!(data.get("last_name").is_some(), "Response should contain last_name");
+        assert!(data.get("created_at").is_some(), "Response should contain created_at");
+        assert!(data.get("is_active").is_some(), "Response should contain is_active");
 
         // Verify user data matches input
-        assert_eq!(response_json["email"], register_dto.email);
-        assert_eq!(response_json["username"], register_dto.username);
-        assert_eq!(response_json["first_name"], register_dto.first_name);
-        assert_eq!(response_json["last_name"], register_dto.last_name);
-        assert_eq!(response_json["is_active"], 1);
+        assert_eq!(data["email"], register_dto.email);
+        assert_eq!(data["username"], register_dto.username);
+        assert_eq!(data["first_name"], register_dto.first_name);
+        assert_eq!(data["last_name"], register_dto.last_name);
+        assert_eq!(data["is_active"], 1);
 
         // Verify password is not included in response
-        assert!(response_json.get("password").is_none(), "Response should not contain password");
+        assert!(data.get("password").is_none(), "Response should not contain password");
 
         // Verify user ID is positive
-        assert!(response_json["id"].as_i64().unwrap() > 0, "User ID should be positive");
+        assert!(data["id"].as_i64().unwrap() > 0, "User ID should be positive");
 
         // Cleanup
         cleanup_user(register_dto.email).await;
@@ -356,11 +358,13 @@ mod register_e2e_tests {
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
+        let data = response_json.get("data").expect("Missing 'data' in response");
+
         // Verify special characters are preserved
-        assert_eq!(response_json["email"], "special.chars+test@example.com");
-        assert_eq!(response_json["username"], "user_with_underscore_123");
-        assert_eq!(response_json["first_name"], "José María");
-        assert_eq!(response_json["last_name"], "García-López");
+        assert_eq!(data["email"], "special.chars+test@example.com");
+        assert_eq!(data["username"], "user_with_underscore_123");
+        assert_eq!(data["first_name"], "José María");
+        assert_eq!(data["last_name"], "García-López");
 
         // Cleanup
         cleanup_user("special.chars+test@example.com".to_string()).await;
@@ -459,8 +463,11 @@ mod register_e2e_tests {
         let response1_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body1.to_vec()).unwrap()).unwrap();
         let response2_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body2.to_vec()).unwrap()).unwrap();
 
-        assert_ne!(response1_json["id"], response2_json["id"], "Users should have different IDs");
-        assert_ne!(response1_json["email"], response2_json["email"], "Users should have different emails");
+        let data1 = response1_json.get("data").expect("Missing 'data' in response");
+        let data2 = response2_json.get("data").expect("Missing 'data' in response");
+
+        assert_ne!(data1["id"], data2["id"], "Users should have different IDs");
+        assert_ne!(data1["email"], data2["email"], "Users should have different emails");
 
         // Cleanup
         cleanup_user(register_dto1.email).await;
@@ -498,25 +505,27 @@ mod register_e2e_tests {
         let response_text = String::from_utf8(body.to_vec()).unwrap();
         let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
+        let data = response_json.get("data").expect("Missing 'data' in response");
+
         // Verify all expected fields are present and have correct types
-        assert!(response_json["id"].is_number(), "id should be a number");
-        assert!(response_json["email"].is_string(), "email should be a string");
-        assert!(response_json["username"].is_string(), "username should be a string");
-        assert!(response_json["first_name"].is_string(), "first_name should be a string");
-        assert!(response_json["last_name"].is_string(), "last_name should be a string");
-        assert!(response_json["created_at"].is_string(), "created_at should be a string");
-        assert!(response_json["is_active"].is_number(), "is_active should be a number");
+        assert!(data["id"].is_number(), "id should be a number");
+        assert!(data["email"].is_string(), "email should be a string");
+        assert!(data["username"].is_string(), "username should be a string");
+        assert!(data["first_name"].is_string(), "first_name should be a string");
+        assert!(data["last_name"].is_string(), "last_name should be a string");
+        assert!(data["created_at"].is_string(), "created_at should be a string");
+        assert!(data["is_active"].is_number(), "is_active should be a number");
 
         // Verify field values are reasonable
-        assert!(response_json["id"].as_i64().unwrap() > 0, "id should be positive");
-        assert!(response_json["email"].as_str().unwrap().contains('@'), "email should be valid format");
-        assert!(!response_json["username"].as_str().unwrap().is_empty(), "username should not be empty");
-        assert!(!response_json["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
-        assert!(!response_json["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
-        assert_eq!(response_json["is_active"].as_i64().unwrap(), 1, "is_active should be 1 for new users");
+        assert!(data["id"].as_i64().unwrap() > 0, "id should be positive");
+        assert!(data["email"].as_str().unwrap().contains('@'), "email should be valid format");
+        assert!(!data["username"].as_str().unwrap().is_empty(), "username should not be empty");
+        assert!(!data["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
+        assert!(!data["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
+        assert_eq!(data["is_active"].as_i64().unwrap(), 1, "is_active should be 1 for new users");
 
         // Verify sensitive fields are not included
-        assert!(response_json.get("password").is_none(), "password should not be in response");
+        assert!(data.get("password").is_none(), "password should not be in response");
 
         // Cleanup
         cleanup_user(register_dto.email).await;

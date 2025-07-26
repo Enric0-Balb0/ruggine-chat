@@ -7,7 +7,7 @@ use axum::{Extension, Json};
     get,
     path = "/api/user/profile",
     responses(
-        (status = 200, description = "User profile retrieved successfully", body = UserReadDto),
+        (status = 200, description = "User profile retrieved successfully", body = ApiSuccessResponseUserReadDto),
         (status = 401, description = "Unauthorized - Invalid or missing token")
     ),
     security(

@@ -72,10 +72,10 @@ mod login_handler_integration_tests {
         assert!(result.is_ok(), "Login should succeed with valid credentials");
         let token_response = result.unwrap().0;
         
-        assert!(!token_response.token.is_empty(), "Token should not be empty");
-        assert!(token_response.iat > 0, "Token should have a valid issued-at timestamp");
-        assert!(token_response.exp > token_response.iat, "Token should expire after it was issued");
-        assert!(token_response.exp > chrono::Utc::now().timestamp(), "Token should not be expired");
+        assert!(!token_response.data().token.is_empty(), "Token should not be empty");
+        assert!(token_response.data().iat > 0, "Token should have a valid issued-at timestamp");
+        assert!(token_response.data().exp > token_response.data().iat, "Token should expire after it was issued");
+        assert!(token_response.data().exp > chrono::Utc::now().timestamp(), "Token should not be expired");
 
         // Cleanup
         cleanup_user(user.email).await;
@@ -300,8 +300,8 @@ mod login_handler_integration_tests {
         
         let token1 = result1.unwrap().0;
         let token2 = result2.unwrap().0;
-        
-        assert_ne!(token1.token, token2.token, "Different users should get different tokens");
+
+        assert_ne!(token1.data().token, token2.data().token, "Different users should get different tokens");
 
         // Cleanup
         cleanup_user(user1.email).await;

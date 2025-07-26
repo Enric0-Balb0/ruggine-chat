@@ -95,7 +95,11 @@ async fn login_and_get_token(email: String, password: String) -> String {
     let response_text = String::from_utf8(body.to_vec()).unwrap();
     let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
 
-    response_json["token"].as_str().unwrap().to_string()
+    // Verify response structure contains user data
+    assert!(response_json.get("data").is_some(), "Response should contain data field");
+    let data = &response_json["data"];
+
+    data["token"].as_str().unwrap().to_string()
 }
 
 

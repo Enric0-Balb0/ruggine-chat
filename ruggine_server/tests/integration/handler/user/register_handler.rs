@@ -42,13 +42,13 @@ mod register_handler_integration_tests {
         assert!(result.is_ok(), "Registration should succeed with valid data");
         let user_response = result.unwrap().0;
         
-        assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.username, register_dto.username);
-        assert_eq!(user_response.first_name, register_dto.first_name);
-        assert_eq!(user_response.last_name, register_dto.last_name);
-        assert_eq!(user_response.is_active, 1);
-        assert!(user_response.id > 0, "User should have a valid ID");
-        assert!(user_response.created_at <= chrono::Utc::now(), "Created date should not be in future");
+        assert_eq!(user_response.data().email, register_dto.email);
+        assert_eq!(user_response.data().username, register_dto.username);
+        assert_eq!(user_response.data().first_name, register_dto.first_name);
+        assert_eq!(user_response.data().last_name, register_dto.last_name);
+        assert_eq!(user_response.data().is_active, 1);
+        assert!(user_response.data().id > 0, "User should have a valid ID");
+        assert!(user_response.data().created_at <= chrono::Utc::now(), "Created date should not be in future");
 
         // Cleanup
         cleanup_user(register_dto.email).await;
@@ -113,7 +113,7 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
         assert_eq!(stored_user.is_active, 1);
-        assert_eq!(stored_user.id, user_response.id);
+        assert_eq!(stored_user.id, user_response.data().id);
 
         // Cleanup
         cleanup_user(register_dto.email).await;
@@ -173,10 +173,10 @@ mod register_handler_integration_tests {
         assert!(result.is_ok(), "Registration should succeed with special characters");
         let user_response = result.unwrap().0;
         
-        assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.username, register_dto.username);
-        assert_eq!(user_response.first_name, register_dto.first_name);
-        assert_eq!(user_response.last_name, register_dto.last_name);
+        assert_eq!(user_response.data().email, register_dto.email);
+        assert_eq!(user_response.data().username, register_dto.username);
+        assert_eq!(user_response.data().first_name, register_dto.first_name);
+        assert_eq!(user_response.data().last_name, register_dto.last_name);
 
         // Cleanup
         cleanup_user(register_dto.email).await;
@@ -203,8 +203,8 @@ mod register_handler_integration_tests {
         let user2 = result2.unwrap().0;
         
         // Users should have different IDs
-        assert_ne!(user1.id, user2.id, "Users should have different IDs");
-        assert_ne!(user1.email, user2.email, "Users should have different emails");
+        assert_ne!(user1.data().id, user2.data().id, "Users should have different IDs");
+        assert_ne!(user1.data().email, user2.data().email, "Users should have different emails");
 
         // Cleanup
         cleanup_user(register_dto1.email).await;
@@ -233,15 +233,15 @@ mod register_handler_integration_tests {
         assert!(result.is_ok(), "Registration should succeed");
         let user_response = result.unwrap().0;
         
-        assert_eq!(user_response.email, register_dto.email);
-        assert_eq!(user_response.username, register_dto.username);
-        assert_eq!(user_response.first_name, register_dto.first_name);
-        assert_eq!(user_response.last_name, register_dto.last_name);
+        assert_eq!(user_response.data().email, register_dto.email);
+        assert_eq!(user_response.data().username, register_dto.username);
+        assert_eq!(user_response.data().first_name, register_dto.first_name);
+        assert_eq!(user_response.data().last_name, register_dto.last_name);
         
         // Verify response structure
-        assert!(user_response.id > 0);
-        assert_eq!(user_response.is_active, 1);
-        assert!(user_response.created_at <= chrono::Utc::now());
+        assert!(user_response.data().id > 0);
+        assert_eq!(user_response.data().is_active, 1);
+        assert!(user_response.data().created_at <= chrono::Utc::now());
 
         // Cleanup
         cleanup_user(register_dto.email).await;
@@ -263,7 +263,7 @@ mod register_handler_integration_tests {
         assert!(result.is_ok(), "Registration should succeed");
         let user_response = result.unwrap().0;
         
-        assert_eq!(user_response.is_active, 1, "User should be active by default");
+        assert_eq!(user_response.data().is_active, 1, "User should be active by default");
 
         // Verify in database as well
         let db = get_database().await;
