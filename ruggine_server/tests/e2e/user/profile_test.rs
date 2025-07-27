@@ -234,7 +234,7 @@ mod profile_e2e_tests {
         // Deactivate the user after getting the token
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE user SET is_active = 0 WHERE email = ?")
+        let update_result = sqlx::query(r#"UPDATE "user" SET is_active = 0 WHERE email = $1"#)
             .bind(&user_dto.email)
             .execute(pool)
             .await;
@@ -305,7 +305,7 @@ mod profile_e2e_tests {
         let update_time = chrono::Utc::now();
 
         let update_result = sqlx::query(
-            "UPDATE user SET first_name = ?, last_name = ?, updated_at = ? WHERE email = ?"
+            r#"UPDATE "user" SET first_name = $1, last_name = $2, updated_at = $3 WHERE email = $4"#
         )
         .bind(new_first_name)
         .bind(new_last_name)

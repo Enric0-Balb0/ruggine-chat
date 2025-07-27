@@ -118,7 +118,7 @@ mod login_handler_integration_tests {
         // Deactivate the user using direct database access
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE user SET is_active = 0 WHERE email = ?")
+        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
             .bind(&user.email)
             .execute(pool)
             .await;
@@ -256,8 +256,8 @@ mod login_handler_integration_tests {
             ValidatedRequest(login_dto),
         ).await;
 
-        // Assert: Should be ok (assuming no case-sensitive email lookup)
-        assert!(result.is_ok(), "Login should pass with different case email");
+        // Assert: Should be ok (assuming case-sensitive email lookup)
+        assert!(result.is_err(), "Login should not pass with different case email");
 
         // Cleanup
         cleanup_user(user.email).await;

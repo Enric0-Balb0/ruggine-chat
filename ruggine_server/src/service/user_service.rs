@@ -1,6 +1,6 @@
 use crate::config::database::{Database};
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-use crate::entity::user::{NewUser, User};
+use crate::entity::user::{NewUser, User, UserType};
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::user_error::UserError;
@@ -51,6 +51,7 @@ impl UserService {
             is_active: 1,
             created_at: now,
             updated_at: now,
+            user_type: UserType::EndUser, // Default user type
         };
 
         let user_id = self.user_repo.insert(new_user).await?;
@@ -74,6 +75,7 @@ impl UserServiceTrait for UserService {
                     Err(e) => match e {
                         SqlxError::Database(e) => match e.code() {
                             Some(code) => {
+                                println!("{}", e.to_string());
                                 if code == "23000" {
                                     Err(DbError::UniqueConstraintViolation(e.to_string()))?
                                 } else {
@@ -82,7 +84,10 @@ impl UserServiceTrait for UserService {
                             }
                             _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
                         },
-                        _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
+                        _ => {
+                            println!("{}", e.to_string());
+                            Err(DbError::SomethingWentWrong(e.to_string()))?
+                        }
                     },
                 };
             }
@@ -98,7 +103,7 @@ impl UserServiceTrait for UserService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity::user::User;
+    use crate::entity::user::{User, UserType};
     use crate::dto::user_dto::UserRegisterDto;
     use crate::repository::user_repository::MockUserRepositoryTrait;
     use chrono::Utc;
@@ -122,6 +127,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         // Mock: find_by_email should return None (user not found)
@@ -136,7 +142,7 @@ mod tests {
         mock_repo
             .expect_insert()
             .returning(|_| {
-                Box::pin(async { Ok(1_u64) }) as Pin<Box<dyn Future<Output = Result<u64, sqlx::Error>> + Send>>
+                Box::pin(async { Ok(1_i32) }) as Pin<Box<dyn Future<Output = Result<i32, sqlx::Error>> + Send>>
             });
 
         // Mock: find should return the created user
@@ -186,6 +192,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         // Mock: find_by_email should return Some(user) indicating user already exists
@@ -234,7 +241,7 @@ mod tests {
             .expect_insert()
             .returning(|_| {
                 let db_error = sqlx::Error::Database(Box::new(MockDatabaseError::new("23000".to_string())));
-                Box::pin(async move { Err(db_error) }) as Pin<Box<dyn Future<Output = Result<u64, sqlx::Error>> + Send>>
+                Box::pin(async move { Err(db_error) }) as Pin<Box<dyn Future<Output = Result<i32, sqlx::Error>> + Send>>
             });
 
         let service = UserService::with_repo(Arc::new(mock_repo));
@@ -274,7 +281,7 @@ mod tests {
             .expect_insert()
             .returning(|_| {
                 let db_error = sqlx::Error::Database(Box::new(MockDatabaseError::new("42000".to_string())));
-                Box::pin(async move { Err(db_error) }) as Pin<Box<dyn Future<Output = Result<u64, sqlx::Error>> + Send>>
+                Box::pin(async move { Err(db_error) }) as Pin<Box<dyn Future<Output = Result<i32, sqlx::Error>> + Send>>
             });
 
         let service = UserService::with_repo(Arc::new(mock_repo));
@@ -313,7 +320,7 @@ mod tests {
         mock_repo
             .expect_insert()
             .returning(|_| {
-                Box::pin(async { Ok(1_u64) }) as Pin<Box<dyn Future<Output = Result<u64, sqlx::Error>> + Send>>
+                Box::pin(async { Ok(1_i32) }) as Pin<Box<dyn Future<Output = Result<i32, sqlx::Error>> + Send>>
             });
 
         // Mock: find should fail with a database error
@@ -360,6 +367,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let mock_repo = MockUserRepositoryTrait::new();
@@ -389,6 +397,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let mock_repo = MockUserRepositoryTrait::new();
@@ -417,6 +426,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let mock_repo = MockUserRepositoryTrait::new();

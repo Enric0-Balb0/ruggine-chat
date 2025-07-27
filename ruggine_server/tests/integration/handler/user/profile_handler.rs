@@ -83,7 +83,7 @@ mod profile_handler_integration_tests {
         // Deactivate the user directly in database
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE user SET is_active = 0 WHERE email = ?")
+        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
             .bind(&user.email)
             .execute(pool)
             .await;
@@ -173,7 +173,7 @@ mod profile_handler_integration_tests {
         let new_now = chrono::Utc::now(); // Questo è ciò che scriverai nel DB
         
         let update_result = sqlx::query(
-            "UPDATE user SET first_name = ?, last_name = ?, updated_at = ? WHERE email = ?"
+            r#"UPDATE "user" SET first_name = $1, last_name = $2, updated_at = $3 WHERE email = $4"#
         )
         .bind(new_first_name)
         .bind(new_last_name)

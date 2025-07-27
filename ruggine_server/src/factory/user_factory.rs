@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::Utc;
 
-use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User}};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User, UserType}};
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -39,7 +39,7 @@ impl UserFactory {
         (email, username, full_name)
     }
 
-    pub fn unique_fake_new_user(prefix: &str, is_active: i8) -> NewUser {
+    pub fn unique_fake_new_user(prefix: &str, is_active: i32) -> NewUser {
         let (email, username, full_name) = Self::get_unique_user_information(prefix);
         let now = Utc::now();
         NewUser {
@@ -51,6 +51,7 @@ impl UserFactory {
             is_active,
             created_at: now,
             updated_at: now,
+            user_type: Default::default(), // Default user type
         }
     }
 
@@ -65,6 +66,7 @@ impl UserFactory {
             is_active: 1,
             created_at: now,
             updated_at: now,
+            user_type: Default::default(), // Default user type
         }
     }
 
@@ -79,6 +81,7 @@ impl UserFactory {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         }
     }
 
@@ -92,6 +95,7 @@ impl UserFactory {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         }
     }
 

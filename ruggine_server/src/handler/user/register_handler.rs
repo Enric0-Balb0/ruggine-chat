@@ -9,7 +9,7 @@ use axum::{extract::State, Json};
     path = "/api/user/register",
     request_body = UserRegisterDto,
     responses(
-        (status = 200, description = "User registered successfully", body = ApiSuccessResponseUserRegisterDto),
+        (status = 200, description = "User registered successfully", body = ApiSuccessResponseUserReadDto),
         (status = 400, description = "Invalid request data"),
         (status = 409, description = "User already exists")
     ),
@@ -58,6 +58,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let mut mock_service = MockUserServiceTrait::new();
@@ -135,6 +136,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let mut mock_service = MockUserServiceTrait::new();

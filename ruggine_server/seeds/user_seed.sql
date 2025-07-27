@@ -1,54 +1,68 @@
--- 1. CREA DATABASE
-CREATE DATABASE IF NOT EXISTS ruggine CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-CREATE DATABASE IF NOT EXISTS ruggine_test CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+-- Vai su pgAdmin, connettiti al tuo server
+-- Poi esegui una alla volta:
 
--- 2. CREA TABELLA IN ruggine
-USE ruggine;
+CREATE DATABASE ruggine;
+CREATE DATABASE ruggine_test;
 
--- ⚠️ Drop se esiste già
-DROP TABLE IF EXISTS `user`;
+-- Connettiti al database ruggine
 
-CREATE TABLE `user` (
-    `id` INT NOT NULL AUTO_INCREMENT,
-    `first_name` VARCHAR(255) NOT NULL,
-    `last_name` VARCHAR(255) NOT NULL,
-    `username` VARCHAR(255) NOT NULL,
-    `email` VARCHAR(255) NOT NULL,
-    `password` VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `username` (`username`),
-    UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Crea ENUM user_type solo se non esiste già
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type') THEN
+        CREATE TYPE user_type AS ENUM ('end_user', 'developer', 'admin');
+    END IF;
+END$$;
 
--- Dati iniziali
-INSERT INTO `user` (first_name, last_name, username, email, password, is_active) VALUES
-('Mario', 'Rossi', 'mariorossi', 'mario.rossi@example.com', '$2b$04$somethinghashed', 1),
-('Luigi', 'Verdi', 'luigiverdi', 'luigi.verdi@example.com', '$2b$04$somethinghashed', 1);
+-- Drop della tabella se esiste già
+DROP TABLE IF EXISTS "user";
 
--- 3. CREA TABELLA IN ruggine_test
-USE ruggine_test;
+-- Creazione tabella "user" con is_active come INTEGER
+CREATE TABLE "user" (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    user_type user_type NOT NULL DEFAULT 'end_user',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER NOT NULL DEFAULT 1
+);
 
--- ⚠️ Drop se esiste già
-DROP TABLE IF EXISTS `user`;
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, is_active)
+VALUES
+('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 1);
 
-CREATE TABLE `user` (
-    `id` INT NOT NULL AUTO_INCREMENT,
-    `first_name` VARCHAR(255) NOT NULL,
-    `last_name` VARCHAR(255) NOT NULL,
-    `username` VARCHAR(255) NOT NULL,
-    `email` VARCHAR(255) NOT NULL,
-    `password` VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `username` (`username`),
-    UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dato iniziale per test
-INSERT INTO `user` (first_name, last_name, username, email, password, is_active) VALUES
-('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 1);
+-- Connettiti al database ruggine_test
+
+-- Crea ENUM user_type solo se non esiste già
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type') THEN
+        CREATE TYPE user_type AS ENUM ('end_user', 'developer', 'admin');
+    END IF;
+END$$;
+
+-- Drop della tabella se esiste già
+DROP TABLE IF EXISTS "user";
+
+-- Creazione tabella "user" con is_active come INTEGER
+CREATE TABLE "user" (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    user_type user_type NOT NULL DEFAULT 'end_user',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER NOT NULL DEFAULT 1
+);
+
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, is_active)
+VALUES
+('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 1);

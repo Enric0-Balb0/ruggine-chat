@@ -565,7 +565,7 @@ enum InvitationStatus {
   DECLINED
 }
 
-class User {
+abstract class User {
   - userId: String
   - username: String
   - passwordHash: String
@@ -573,6 +573,18 @@ class User {
   + register()
   + authenticate()
   + retrieveInfo()
+}
+
+class EndUser {
+  + joinChat()
+  + leaveChat()
+}
+
+class Admin {
+  + accessLogs()
+  + notifyCPUAbnormal()
+  + logCPUUsage()
+  + deployCrossPlatform()
 }
 
 class GroupChat {
@@ -612,23 +624,20 @@ class CPUUsageLog {
   + logUsage()
 }
 
-User "1" -- "*" GroupChat : "member of"
+User <|-- EndUser
+User <|-- Admin
+
+EndUser "1" -- "*" GroupChat : "member of"
 GroupChat "1" -- "*" Message : "contains"
-User "1" -- "*" Message : "sends"
-User "1" -- "*" Invitation : "sends"
-User "1" -- "*" Invitation : "receives"
+EndUser "1" -- "*" Message : "sends"
+EndUser "1" -- "*" Invitation : "sends"
+EndUser "1" -- "*" Invitation : "receives"
 GroupChat "1" -- "*" Invitation : "related to"
 Invitation --> InvitationStatus : "has"
 CPUUsageLog --> Admin : "monitored by"
 
-class Admin {
-  + accessLogs()
-  + notifyCPUAbnormal()
-  + logCPUUsage()
-  + deployCrossPlatform()
-}
-
 @enduml
+
 ```
 
 ---

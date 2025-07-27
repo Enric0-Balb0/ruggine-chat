@@ -1,7 +1,7 @@
 use utoipa::OpenApi;
-use crate::dto::{
-    token_dto::TokenReadDto, user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto, ApiSuccessResponseUserRegisterDto
-};
+use crate::{dto::{
+    token_dto::TokenReadDto, user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto
+}, entity::user::UserType};
 use crate::handler::{
     auth::login_handler,
     user::{profile_handler, register_handler}
@@ -19,8 +19,8 @@ use crate::handler::{
             UserLoginDto,
             UserRegisterDto,
             ApiSuccessResponseUserReadDto,
-            ApiSuccessResponseUserRegisterDto,
-            ApiSuccessResponseTokenReadDto
+            ApiSuccessResponseTokenReadDto,
+            UserType
         )
     ),
     modifiers(&SecurityAddon),

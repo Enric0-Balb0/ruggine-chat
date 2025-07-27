@@ -1,5 +1,5 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::user::{User, NewUser};
+use crate::entity::user::{User, NewUser, UserType};
 use async_trait::async_trait;
 use sqlx;
 use sqlx::Error;
@@ -16,8 +16,8 @@ pub struct UserRepository {
 #[automock]
 pub trait UserRepositoryTrait: Send + Sync {
     async fn find_by_email(&self, email: String) -> Option<User>;
-    async fn find(&self, id: u64) -> Result<User, Error>;
-    async fn insert(&self, new_user: NewUser) -> Result<u64, SqlxError>;
+    async fn find(&self, id: i32) -> Result<User, Error>;
+    async fn insert(&self, new_user: NewUser) -> Result<i32, SqlxError>;
 }
 
 impl UserRepository {
@@ -27,22 +27,22 @@ impl UserRepository {
         }
     }
 
-    pub async fn delete_by_email(&self, email: String) -> Result<u64, SqlxError> {
+    pub async fn delete_by_email(&self, email: String) -> Result<i32, SqlxError> {
         let result = sqlx::query!(
-            "DELETE FROM user WHERE email = ?",
+            "DELETE FROM \"user\" WHERE email = $1",
             email
         )
         .execute(self.db_conn.get_pool())
         .await?;
 
-        Ok(result.rows_affected())
+        Ok(result.rows_affected() as i32)
     }
 }
 
 #[async_trait]
 impl UserRepositoryTrait for UserRepository {
     async fn find_by_email(&self, email: String) -> Option<User> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM user WHERE email = ?")
+        let user = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email = $1")
             .bind(email)
             .fetch_optional(self.db_conn.get_pool())
             .await
@@ -50,34 +50,36 @@ impl UserRepositoryTrait for UserRepository {
         user
     }
 
-    async fn find(&self, id: u64) -> Result<User, Error> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM user WHERE id = ?")
+    async fn find(&self, id: i32) -> Result<User, Error> {
+        let user = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE id = $1")
             .bind(id)
             .fetch_one(self.db_conn.get_pool())
             .await;
         user
     }
 
-    async fn insert(&self, new_user: NewUser) -> Result<u64, SqlxError> {
+    async fn insert(&self, new_user: NewUser) -> Result<i32, SqlxError> {
         let now = chrono::Utc::now();
-        let result = sqlx::query!(
+        let rec = sqlx::query_scalar(
             r#"
-            INSERT INTO user (first_name, last_name, username, email, password, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            new_user.first_name,
-            new_user.last_name,
-            new_user.username,
-            new_user.email,
-            new_user.password,
-            new_user.is_active,
-            now,
-            now
+            INSERT INTO "user" (first_name, last_name, username, email, password, is_active, user_type, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id
+            "#
         )
-        .execute(self.db_conn.get_pool())
+        .bind(new_user.first_name)
+        .bind(new_user.last_name)
+        .bind(new_user.username)
+        .bind(new_user.email)
+        .bind(new_user.password)
+        .bind(new_user.is_active)
+        .bind(new_user.user_type)
+        .bind(now)
+        .bind(now)
+        .fetch_one(self.db_conn.get_pool())
         .await?;
 
-        Ok(result.last_insert_id())
+        Ok(rec)
     }
 }
 
@@ -105,6 +107,7 @@ mod user_repository_unit_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let expected_user_clone = expected_user.clone();
@@ -151,7 +154,7 @@ mod user_repository_unit_tests {
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let test_id = 1u64;
+        let test_id = 1i32;
         let expected_user = User {
             id: 1,
             first_name: "Jane".to_string(),
@@ -162,6 +165,7 @@ mod user_repository_unit_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         let expected_user_clone = expected_user.clone();
@@ -189,7 +193,7 @@ mod user_repository_unit_tests {
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let test_id = 999u64;
+        let test_id = 999i32;
 
         mock_user_repo
             .expect_find()
@@ -210,7 +214,7 @@ mod user_repository_unit_tests {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
         let new_user = UserFactory::unique_fake_new_user("insert_test", 1);
-        let expected_id = 123u64;
+        let expected_id = 123i32;
 
         mock_user_repo
             .expect_insert()
@@ -257,7 +261,7 @@ mod user_repository_unit_tests {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
         let inactive_user = UserFactory::unique_fake_new_user("inactive", 0);
-        let expected_id = 456u64;
+        let expected_id = 456i32;
 
         mock_user_repo
             .expect_insert()
@@ -295,13 +299,13 @@ mod user_repository_unit_tests {
             .expect_insert()
             .with(function(|arg: &NewUser| arg.email.contains("multi1")))
             .times(1)
-            .returning(|_| Box::pin(async move { Ok(100u64) }));
+            .returning(|_| Box::pin(async move { Ok(100i32) }));
             
         mock_user_repo
             .expect_insert()
             .with(function(|arg: &NewUser| arg.email.contains("multi2")))
             .times(1)
-            .returning(|_| Box::pin(async move { Ok(200u64) }));
+            .returning(|_| Box::pin(async move { Ok(200i32) }));
 
         // Setup expectations per find_by_email
         mock_user_repo
@@ -322,6 +326,7 @@ mod user_repository_unit_tests {
                         created_at: Utc::now(),
                         updated_at: Utc::now(),
                         is_active: 1,
+                        user_type: Default::default(), // Default user type
                     })
                 })
             });
@@ -329,11 +334,11 @@ mod user_repository_unit_tests {
         // Act & Assert
         let insert_result1 = mock_user_repo.insert(new_user1).await;
         assert!(insert_result1.is_ok());
-        assert_eq!(insert_result1.unwrap(), 100u64);
+        assert_eq!(insert_result1.unwrap(), 100i32);
 
         let insert_result2 = mock_user_repo.insert(new_user2).await;
         assert!(insert_result2.is_ok());
-        assert_eq!(insert_result2.unwrap(), 200u64);
+        assert_eq!(insert_result2.unwrap(), 200i32);
 
         let find_result = mock_user_repo.find_by_email(email1).await;
         assert!(find_result.is_some());

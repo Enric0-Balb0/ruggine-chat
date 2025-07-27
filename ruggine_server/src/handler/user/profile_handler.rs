@@ -78,6 +78,7 @@ mod tests {
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             is_active: 1,
+            user_type: Default::default(), // Default user type
         };
 
         // Act: call the profile handler

@@ -161,7 +161,7 @@ mod login_e2e_tests {
         // Deactivate the user directly in database
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE user SET is_active = 0 WHERE email = ?")
+        let update_result = sqlx::query(r#"UPDATE "user" SET is_active = 0 WHERE email = $1"#)
             .bind(&user_dto.email)
             .execute(pool)
             .await;

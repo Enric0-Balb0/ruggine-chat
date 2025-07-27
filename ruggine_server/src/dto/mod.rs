@@ -7,4 +7,3 @@ pub mod user_dto;
 
 api_success_response_alias!(ApiSuccessResponseUserReadDto, UserReadDto);
 api_success_response_alias!(ApiSuccessResponseTokenReadDto, TokenReadDto);
-api_success_response_alias!(ApiSuccessResponseUserRegisterDto, UserRegisterDto);

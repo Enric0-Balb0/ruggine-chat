@@ -76,7 +76,7 @@ mod login_tests {
     
     /// Creates a test user with the specified active status
     /// @param is_active: 1 for active user, 0 for inactive user
-    fn create_test_user(is_active: i8) -> User {
+    fn create_test_user(is_active: i32) -> User {
         User {
             id: 1,
             first_name: "John".to_string(),
@@ -87,6 +87,7 @@ mod login_tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             is_active, // This determines if user is active or not
+            user_type: Default::default(), // Default user type
         }
     }
 

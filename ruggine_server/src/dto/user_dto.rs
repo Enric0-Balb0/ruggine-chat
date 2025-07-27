@@ -1,4 +1,4 @@
-use crate::entity::user::User;
+use crate::entity::user::{User, UserType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -63,7 +63,8 @@ pub struct UserRegisterDto {
     "email": "user@example.com",
     "created_at": "2023-01-01T00:00:00Z",
     "updated_at": "2023-01-01T00:00:00Z",
-    "is_active": 1
+    "is_active": 1,
+    "user_type": "end_user"
 }))]
 pub struct UserReadDto {
     #[schema(example = 1)]
@@ -81,7 +82,9 @@ pub struct UserReadDto {
     #[schema(example = "2023-01-01T00:00:00Z")]
     pub updated_at: DateTime<Utc>,
     #[schema(example = 1)]
-    pub is_active: i8,
+    pub is_active: i32,
+    #[schema(example = "end_user")]
+    pub user_type: UserType,
 }
 
 impl UserReadDto {
@@ -95,6 +98,7 @@ impl UserReadDto {
             created_at: model.created_at,
             updated_at: model.updated_at,
             is_active: model.is_active,
+            user_type: model.user_type,
         }
     }
 }
@@ -120,6 +124,8 @@ impl std::fmt::Debug for UserRegisterDto {
 
 #[cfg(test)]
 mod tests {
+    use crate::entity::user::UserType;
+
     use super::*;
     use validator::Validate;
 

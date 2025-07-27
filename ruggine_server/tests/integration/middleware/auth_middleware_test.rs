@@ -203,7 +203,7 @@ mod auth_middleware_integration_tests {
         let pool = db.get_pool();
 
         // Disattiva l’utente (senza cancellarlo)
-        let update_result = sqlx::query("UPDATE user SET is_active = 0 WHERE email = ?")
+        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
             .bind(&user.email)
             .execute(pool)
             .await;
