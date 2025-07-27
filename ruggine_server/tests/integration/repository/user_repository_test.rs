@@ -6,6 +6,8 @@ use ruggine_server::factory::user_factory::UserFactory;
 #[cfg(test)]
 mod user_repository_integration_tests {
 
+    use ruggine_server::entity::user::{User, UserStatus};
+
     use crate::get_database;
 
     use super::*;
@@ -16,7 +18,7 @@ mod user_repository_integration_tests {
         let db = get_database().await;
         let repository = UserRepository::new(&db);
 
-        let new_user = UserFactory::unique_fake_new_user("insertfind", 1);
+        let new_user = UserFactory::unique_fake_new_user("insertfind", UserStatus::Active);
 
         // Act
         let insert_result = repository.insert(new_user.clone()).await;
@@ -47,8 +49,8 @@ mod user_repository_integration_tests {
         // Arrange
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        
-        let new_user = UserFactory::unique_fake_new_user("findbyid", 1);
+
+        let new_user = UserFactory::unique_fake_new_user("findbyid", UserStatus::Active);
 
         // Act - Insert user first
         let user_id = repository.insert(new_user.clone()).await.unwrap();
@@ -103,8 +105,8 @@ mod user_repository_integration_tests {
         let db = get_database().await;
         let repository = UserRepository::new(&db);
         
-        let user1 = UserFactory::unique_fake_new_user("duplicate", 1);
-        let mut user2 = UserFactory::unique_fake_new_user("duplicate", 1);
+        let user1 = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
+        let mut user2 = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
 
         user2.email = user1.email.clone(); // Same email
 
@@ -139,7 +141,7 @@ mod user_repository_integration_tests {
             let emails_clone = Arc::clone(&emails_to_cleanup);
 
             let handle = tokio::spawn(async move {
-                let new_user = UserFactory::unique_fake_new_user(&format!("concurrent_{}", i), i);
+                let new_user = UserFactory::unique_fake_new_user(&format!("concurrent_{}", i), UserStatus::Active);
                 {
                     let mut guard = emails_clone.lock().await;
                     guard.push(new_user.email.clone());

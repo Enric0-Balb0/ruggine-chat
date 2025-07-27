@@ -1,5 +1,5 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::user::{User, NewUser, UserType};
+use crate::entity::user::{User, NewUser};
 use async_trait::async_trait;
 use sqlx;
 use sqlx::Error;
@@ -62,7 +62,7 @@ impl UserRepositoryTrait for UserRepository {
         let now = chrono::Utc::now();
         let rec = sqlx::query_scalar(
             r#"
-            INSERT INTO "user" (first_name, last_name, username, email, password, is_active, user_type, created_at, updated_at)
+            INSERT INTO "user" (first_name, last_name, username, email, password, user_status, user_type, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
             "#
@@ -72,7 +72,7 @@ impl UserRepositoryTrait for UserRepository {
         .bind(new_user.username)
         .bind(new_user.email)
         .bind(new_user.password)
-        .bind(new_user.is_active)
+        .bind(new_user.user_status)
         .bind(new_user.user_type)
         .bind(now)
         .bind(now)
@@ -86,7 +86,7 @@ impl UserRepositoryTrait for UserRepository {
 #[cfg(test)]
 mod user_repository_unit_tests {
     use super::*;
-    use crate::entity::user::{User, NewUser};
+    use crate::entity::user::{NewUser, User, UserStatus};
     use chrono::{Utc};
     use mockall::predicate::*;
     use crate::factory::user_factory::UserFactory;
@@ -106,7 +106,7 @@ mod user_repository_unit_tests {
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(), // Default user status
             user_type: Default::default(), // Default user type
         };
 
@@ -164,7 +164,7 @@ mod user_repository_unit_tests {
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(), // Default user status
             user_type: Default::default(), // Default user type
         };
 
@@ -213,14 +213,14 @@ mod user_repository_unit_tests {
     async fn test_insert_success() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let new_user = UserFactory::unique_fake_new_user("insert_test", 1);
+        let new_user = UserFactory::unique_fake_new_user("insert_test", UserStatus::Active);
         let expected_id = 123i32;
 
         mock_user_repo
             .expect_insert()
             .with(function(|arg: &NewUser| {
                 arg.email.contains("insert_test") && 
-                arg.is_active == 1 &&
+                arg.user_status == UserStatus::Active &&
                 arg.password == "hashed_password"
             }))
             .times(1)
@@ -238,7 +238,7 @@ mod user_repository_unit_tests {
     async fn test_insert_with_duplicate_email() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let new_user = UserFactory::unique_fake_new_user("duplicate", 1);
+        let new_user = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
 
         mock_user_repo
             .expect_insert()
@@ -260,13 +260,13 @@ mod user_repository_unit_tests {
     async fn test_insert_inactive_user() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let inactive_user = UserFactory::unique_fake_new_user("inactive", 0);
+        let inactive_user = UserFactory::unique_fake_new_user("inactive", UserStatus::Deleted);
         let expected_id = 456i32;
 
         mock_user_repo
             .expect_insert()
             .with(function(|arg: &NewUser| {
-                arg.email.contains("inactive") && arg.is_active == 0
+                arg.email.contains("inactive") && arg.user_status == UserStatus::Deleted
             }))
             .times(1)
             .returning(move |_| Box::pin(async move { Ok(expected_id) }));
@@ -287,8 +287,8 @@ mod user_repository_unit_tests {
         // Test dati per operazioni multiple
         let (email1, username1, _) = UserFactory::get_unique_user_information("multi1");
 
-        let new_user1 = UserFactory::unique_fake_new_user("multi1", 1);
-        let new_user2 = UserFactory::unique_fake_new_user("multi2", 1);
+        let new_user1 = UserFactory::unique_fake_new_user("multi1", UserStatus::Active);
+        let new_user2 = UserFactory::unique_fake_new_user("multi2", UserStatus::Active);
         
         // Cloniamo le variabili per evitare problemi di ownership
         let email1_for_find = email1.clone();
@@ -325,7 +325,7 @@ mod user_repository_unit_tests {
                         password: "hashed_password".to_string(),
                         created_at: Utc::now(),
                         updated_at: Utc::now(),
-                        is_active: 1,
+                        user_status: Default::default(), // Default user status,
                         user_type: Default::default(), // Default user type
                     })
                 })

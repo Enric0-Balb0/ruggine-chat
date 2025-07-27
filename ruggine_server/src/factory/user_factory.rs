@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::Utc;
 
-use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User, UserType}};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User, UserStatus}};
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -39,33 +39,27 @@ impl UserFactory {
         (email, username, full_name)
     }
 
-    pub fn unique_fake_new_user(prefix: &str, is_active: i32) -> NewUser {
+    pub fn unique_fake_new_user(prefix: &str, user_status: UserStatus) -> NewUser {
         let (email, username, full_name) = Self::get_unique_user_information(prefix);
-        let now = Utc::now();
         NewUser {
             email,
             username,
             first_name: full_name.clone(),
             last_name: "Test".to_string(),
             password: "hashed_password".to_string(), // Placeholder for hashed password
-            is_active,
-            created_at: now,
-            updated_at: now,
+            user_status,
             user_type: Default::default(), // Default user type
         }
     }
 
     pub fn fake_new_user() -> NewUser {
-        let now = Utc::now();
         NewUser {
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
             username: "johndoe".to_string(),
             email: "john.doe@example.com".to_string(),
             password: "hashed_password".to_string(),
-            is_active: 1,
-            created_at: now,
-            updated_at: now,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         }
     }
@@ -80,7 +74,7 @@ impl UserFactory {
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         }
     }
@@ -94,7 +88,7 @@ impl UserFactory {
             email: "john.doe@example.com".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         }
     }

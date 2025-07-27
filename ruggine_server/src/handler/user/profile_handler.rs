@@ -25,7 +25,7 @@ pub async fn profile(
 mod tests {
     use super::*;
     use crate::dto::user_dto::UserReadDto;
-    use crate::entity::user::User;
+    use crate::entity::user::{User, UserStatus};
     use crate::factory::user_factory::UserFactory;
     use axum::Extension;
 
@@ -50,7 +50,7 @@ mod tests {
     async fn test_profile_with_inactive_user() {
         // Arrange: create an inactive user using the factory
         let mut user = UserFactory::fake_user();
-        user.is_active = 0; // Set user as inactive
+        user.user_status = UserStatus::Deleted; // Set user as inactive
         user.id = 2;
         user.email = "inactive@example.com".to_string();
 
@@ -62,7 +62,7 @@ mod tests {
         let expected_dto = UserReadDto::from(user);
 
         assert_eq!(*data, expected_dto);
-        assert_eq!(data.is_active, 0);
+        assert_eq!(data.user_status, UserStatus::Deleted);
     }
 
     #[tokio::test]
@@ -77,7 +77,7 @@ mod tests {
             password: "secret_hash".to_string(),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
-        assert_eq!(data.is_active, user.is_active);
+        assert_eq!(data.user_status, user.user_status);
     }
 
     #[tokio::test]

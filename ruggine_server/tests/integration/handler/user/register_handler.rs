@@ -11,6 +11,8 @@ use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod register_handler_integration_tests {
+    use ruggine_server::entity::user::UserStatus;
+
     use crate::get_database;
     use super::*;
 
@@ -46,7 +48,7 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().username, register_dto.username);
         assert_eq!(user_response.data().first_name, register_dto.first_name);
         assert_eq!(user_response.data().last_name, register_dto.last_name);
-        assert_eq!(user_response.data().is_active, 1);
+        assert_eq!(user_response.data().user_status, UserStatus::Active);
         assert!(user_response.data().id > 0, "User should have a valid ID");
         assert!(user_response.data().created_at <= chrono::Utc::now(), "Created date should not be in future");
 
@@ -112,7 +114,7 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.username, register_dto.username);
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
-        assert_eq!(stored_user.is_active, 1);
+        assert_eq!(stored_user.user_status, UserStatus::Active);
         assert_eq!(stored_user.id, user_response.data().id);
 
         // Cleanup
@@ -240,7 +242,7 @@ mod register_handler_integration_tests {
         
         // Verify response structure
         assert!(user_response.data().id > 0);
-        assert_eq!(user_response.data().is_active, 1);
+        assert_eq!(user_response.data().user_status, UserStatus::Active);
         assert!(user_response.data().created_at <= chrono::Utc::now());
 
         // Cleanup
@@ -263,7 +265,7 @@ mod register_handler_integration_tests {
         assert!(result.is_ok(), "Registration should succeed");
         let user_response = result.unwrap().0;
         
-        assert_eq!(user_response.data().is_active, 1, "User should be active by default");
+        assert_eq!(user_response.data().user_status, UserStatus::Active, "User should be active by default");
 
         // Verify in database as well
         let db = get_database().await;
@@ -271,7 +273,7 @@ mod register_handler_integration_tests {
         let stored_user = repository.find_by_email(register_dto.email.clone()).await;
         
         assert!(stored_user.is_some(), "User should exist in database");
-        assert_eq!(stored_user.unwrap().is_active, 1, "User should be active in database");
+        assert_eq!(stored_user.unwrap().user_status, UserStatus::Active, "User should be active in database");
 
         // Cleanup
         cleanup_user(register_dto.email).await;

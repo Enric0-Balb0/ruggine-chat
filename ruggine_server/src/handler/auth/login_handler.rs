@@ -1,4 +1,5 @@
 use crate::dto::{token_dto::TokenReadDto, user_dto::UserLoginDto};
+use crate::entity::user::UserStatus;
 use crate::error::{api_error::ApiError,request_error::ValidatedRequest, user_error::UserError};
 use crate::response::api_response::ApiSuccessResponse;
 use crate::state::auth_state::AuthState;
@@ -27,7 +28,7 @@ pub async fn login(
         .await
         .ok_or(UserError::UserNotFound)?;
     
-    if user.is_active != 1 {
+    if user.user_status != UserStatus::Active {
         return Err(UserError::UserNotActive.into());
     }
 
@@ -40,7 +41,7 @@ pub async fn login(
 #[cfg(test)]
 mod login_tests {
     use super::*;
-    use crate::entity::user::User;
+    use crate::entity::user::{User, UserStatus};
     use crate::dto::token_dto::TokenReadDto;
     use crate::error::user_error::UserError;
     // Import the auto-generated mocks
@@ -75,8 +76,8 @@ mod login_tests {
     // These functions create test data that we'll use across multiple tests
     
     /// Creates a test user with the specified active status
-    /// @param is_active: 1 for active user, 0 for inactive user
-    fn create_test_user(is_active: i32) -> User {
+    /// @param user_status
+    fn create_test_user(user_status: UserStatus) -> User {
         User {
             id: 1,
             first_name: "John".to_string(),
@@ -86,7 +87,7 @@ mod login_tests {
             password: "hashed_password".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active, // This determines if user is active or not
+            user_status, // This determines if user is active or not
             user_type: Default::default(), // Default user type
         }
     }
@@ -127,7 +128,7 @@ mod login_tests {
         let mut mock_user_service = MockUserServiceTrait::new(); // Auto-generated mock!
         let mut mock_token_service = MockTokenServiceTrait::new(); // Auto-generated mock!
         
-        let test_user = create_test_user(1); // Active user (is_active = 1)
+        let test_user = create_test_user(UserStatus::Active);
         let expected_token = create_test_token();
 
         // MOCK EXPECTATIONS - Tell the mocks what to return when called
@@ -231,7 +232,7 @@ mod login_tests {
         let mock_user_service = MockUserServiceTrait::new(); // Won't be called - we fail before password check
         let mock_token_service = MockTokenServiceTrait::new(); // Won't be called
         
-        let inactive_user = create_test_user(0); // Inactive user (is_active = 0)
+        let inactive_user = create_test_user(UserStatus::Deleted); // Inactive user
 
         // MOCK EXPECTATIONS
         // Return an inactive user when email is found
@@ -277,7 +278,7 @@ mod login_tests {
         let mut mock_user_service = MockUserServiceTrait::new(); // Auto-generated mock!
         let mock_token_service = MockTokenServiceTrait::new(); // Won't be called - we fail at password verification
         
-        let test_user = create_test_user(1); // Active user
+        let test_user = create_test_user(UserStatus::Active); // Active user
 
         // MOCK EXPECTATIONS
         // User exists and is active
@@ -330,7 +331,7 @@ mod login_tests {
         let mut mock_user_service = MockUserServiceTrait::new(); // Auto-generated mock!
         let mut mock_token_service = MockTokenServiceTrait::new(); // Auto-generated mock!
         
-        let test_user = create_test_user(1); // Active user
+        let test_user = create_test_user(UserStatus::Active); // Active user
 
         // MOCK EXPECTATIONS
         // User exists and is active

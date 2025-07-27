@@ -16,6 +16,8 @@ use axum::body::to_bytes;
 
 #[cfg(test)]
 mod login_e2e_tests {
+    use ruggine_server::entity::user::UserStatus;
+
     use crate::get_database;
     use super::*;
 
@@ -161,7 +163,8 @@ mod login_e2e_tests {
         // Deactivate the user directly in database
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query(r#"UPDATE "user" SET is_active = 0 WHERE email = $1"#)
+        let update_result = sqlx::query(r#"UPDATE "user" SET user_status = $1 WHERE email = $2"#)
+            .bind(UserStatus::Deleted)
             .bind(&user_dto.email)
             .execute(pool)
             .await;

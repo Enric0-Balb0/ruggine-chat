@@ -1,3 +1,4 @@
+use crate::entity::user::UserStatus;
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
 use axum::extract::State;
@@ -45,7 +46,7 @@ pub async fn auth_inner(
         .ok_or(UserError::UserNotFound)?;
 
     // Check if the user is active
-    if user.is_active == 0 {
+    if user.user_status != UserStatus::Active {
         return Err(UserError::UserNotActive.into());
     }
 
@@ -98,7 +99,7 @@ mod tests {
         mock_user_repo.expect_find_by_email().returning(|_| {
             Box::pin(async {
                 let mut user = UserFactory::fake_user();
-                user.is_active = 1;
+                user.user_status = UserStatus::Active;
                 Some(user)
             })
         });
@@ -286,7 +287,7 @@ mod tests {
         mock_user_repo.expect_find_by_email().returning(|_| {
             Box::pin(async {
                 let mut user = UserFactory::fake_user();
-                user.is_active = 0; // User is not active
+                user.user_status = UserStatus::Deleted; // User is not active
                 Some(user)
             })
         });

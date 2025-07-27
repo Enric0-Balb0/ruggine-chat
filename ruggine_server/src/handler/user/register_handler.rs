@@ -57,7 +57,7 @@ mod tests {
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -135,7 +135,7 @@ mod tests {
             last_name: input.last_name.clone(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 

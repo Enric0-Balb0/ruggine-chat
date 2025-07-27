@@ -15,6 +15,8 @@ use crate::common::{cleanup_user, create_user_router};
 
 #[cfg(test)]
 mod register_e2e_tests {
+    use ruggine_server::entity::user::UserStatus;
+
     use crate::get_database;
     use super::*;
 
@@ -58,14 +60,15 @@ mod register_e2e_tests {
         assert!(data.get("first_name").is_some(), "Response should contain first_name");
         assert!(data.get("last_name").is_some(), "Response should contain last_name");
         assert!(data.get("created_at").is_some(), "Response should contain created_at");
-        assert!(data.get("is_active").is_some(), "Response should contain is_active");
+        assert!(data.get("updated_at").is_some(), "Response should contain updated_at");
+        assert!(data.get("user_status").is_some(), "Response should contain user_status");
 
         // Verify user data matches input
         assert_eq!(data["email"], register_dto.email);
         assert_eq!(data["username"], register_dto.username);
         assert_eq!(data["first_name"], register_dto.first_name);
         assert_eq!(data["last_name"], register_dto.last_name);
-        assert_eq!(data["is_active"], 1);
+        assert_eq!(data["user_status"], UserStatus::Active.to_string());
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "Response should not contain password");
@@ -114,7 +117,7 @@ mod register_e2e_tests {
         assert_eq!(stored_user.username, register_dto.username);
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
-        assert_eq!(stored_user.is_active, 1);
+        assert_eq!(stored_user.user_status, UserStatus::Active);
 
         // Verify password is hashed
         assert_ne!(stored_user.password, register_dto.password, "Password should be hashed");
@@ -514,7 +517,7 @@ mod register_e2e_tests {
         assert!(data["first_name"].is_string(), "first_name should be a string");
         assert!(data["last_name"].is_string(), "last_name should be a string");
         assert!(data["created_at"].is_string(), "created_at should be a string");
-        assert!(data["is_active"].is_number(), "is_active should be a number");
+        assert!(data["user_status"].is_string(), "user_status should be a string");
 
         // Verify field values are reasonable
         assert!(data["id"].as_i64().unwrap() > 0, "id should be positive");
@@ -522,7 +525,7 @@ mod register_e2e_tests {
         assert!(!data["username"].as_str().unwrap().is_empty(), "username should not be empty");
         assert!(!data["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
         assert!(!data["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
-        assert_eq!(data["is_active"].as_i64().unwrap(), 1, "is_active should be 1 for new users");
+        assert_eq!(data["user_status"].as_str().unwrap(), UserStatus::Active.to_string(), "user_status should be active for new users");
 
         // Verify sensitive fields are not included
         assert!(data.get("password").is_none(), "password should not be in response");

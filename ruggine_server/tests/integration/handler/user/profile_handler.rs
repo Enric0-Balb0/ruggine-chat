@@ -11,6 +11,7 @@ use crate::common::cleanup_user;
 #[cfg(test)]
 mod profile_handler_integration_tests {
     use chrono::Utc;
+    use ruggine_server::entity::user::UserStatus;
     use crate::get_database;
     use super::*;
 
@@ -50,7 +51,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
-        assert_eq!(data.is_active, user.is_active);
+        assert_eq!(data.user_status, user.user_status);
         
         // Cleanup
         cleanup_user(user.email).await;
@@ -60,14 +61,14 @@ mod profile_handler_integration_tests {
     async fn test_profile_with_active_user() {
         // Arrange: Create an active user
         let (user, _) = create_test_user("profile_active_user").await;
-        assert_eq!(user.is_active, 1, "User should be active by default");
+        assert_eq!(user.user_status, UserStatus::Active, "User should be active by default");
         
         // Act: Call profile handler
         let response = profile(Extension(user.clone())).await;
         
         // Assert: Verify active user data is returned correctly
         let data = response.0.data();
-        assert_eq!(data.is_active, 1);
+        assert_eq!(data.user_status, UserStatus::Active);
         assert_eq!(data.email, user.email);
         assert_eq!(data.id, user.id);
         
@@ -83,7 +84,8 @@ mod profile_handler_integration_tests {
         // Deactivate the user directly in database
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
+        let update_result = sqlx::query("UPDATE \"user\" SET user_status = $1 WHERE email = $2")
+            .bind(UserStatus::Deleted)
             .bind(&user.email)
             .execute(pool)
             .await;
@@ -99,7 +101,7 @@ mod profile_handler_integration_tests {
         
         // Assert: Verify inactive user data is returned correctly
         let data = response.0.data();
-        assert_eq!(data.is_active, 0);
+        assert_eq!(data.user_status, UserStatus::Deleted);
         assert_eq!(data.email, updated_user.email);
         assert_eq!(data.id, updated_user.id);
         
@@ -125,7 +127,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.email, user.email);
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
-        assert_eq!(data.is_active, user.is_active);
+        assert_eq!(data.user_status, user.user_status);
         
         // Verify password is not included in response
         // (UserReadDto doesn't have password field, so this is implicit)

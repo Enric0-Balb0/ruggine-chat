@@ -15,6 +15,8 @@ use ruggine_server::factory::token_factory::TokenFactory;
 
 #[cfg(test)]
 mod login_handler_integration_tests {
+    use ruggine_server::entity::user::UserStatus;
+
     use crate::get_database;
     use super::*;
 
@@ -118,7 +120,8 @@ mod login_handler_integration_tests {
         // Deactivate the user using direct database access
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
+        let update_result = sqlx::query("UPDATE \"user\" SET user_status = $1 WHERE email = $2")
+            .bind(UserStatus::Deleted)
             .bind(&user.email)
             .execute(pool)
             .await;

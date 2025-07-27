@@ -1,6 +1,6 @@
 use crate::config::database::{Database};
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-use crate::entity::user::{NewUser, User, UserType};
+use crate::entity::user::{NewUser, User};
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::user_error::UserError;
@@ -40,7 +40,6 @@ impl UserService {
 
     async fn add_user(&self, payload: UserRegisterDto) -> Result<User, SqlxError> {
         let hashed_password = bcrypt::hash(payload.password, 4).unwrap();
-        let now = chrono::Utc::now();
 
         let new_user = NewUser {
             first_name: payload.first_name,
@@ -48,10 +47,8 @@ impl UserService {
             username: payload.username,
             email: payload.email,
             password: hashed_password,
-            is_active: 1,
-            created_at: now,
-            updated_at: now,
-            user_type: UserType::EndUser, // Default user type
+            user_status: Default::default(),
+            user_type: Default::default(), // Default user type
         };
 
         let user_id = self.user_repo.insert(new_user).await?;
@@ -103,7 +100,7 @@ impl UserServiceTrait for UserService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity::user::{User, UserType};
+    use crate::entity::user::{User};
     use crate::dto::user_dto::UserRegisterDto;
     use crate::repository::user_repository::MockUserRepositoryTrait;
     use chrono::Utc;
@@ -126,7 +123,7 @@ mod tests {
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -191,7 +188,7 @@ mod tests {
             password: bcrypt::hash("password", 4).unwrap(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -366,7 +363,7 @@ mod tests {
             password: hashed_password,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -396,7 +393,7 @@ mod tests {
             password: hashed_password,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 
@@ -425,7 +422,7 @@ mod tests {
             password: hashed_password,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            is_active: 1,
+            user_status: Default::default(),
             user_type: Default::default(), // Default user type
         };
 

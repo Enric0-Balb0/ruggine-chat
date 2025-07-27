@@ -18,6 +18,8 @@ use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod auth_middleware_integration_tests {
+    use ruggine_server::entity::user::UserStatus;
+
     use crate::get_database;
     use super::*;
 
@@ -203,7 +205,8 @@ mod auth_middleware_integration_tests {
         let pool = db.get_pool();
 
         // Disattiva l’utente (senza cancellarlo)
-        let update_result = sqlx::query("UPDATE \"user\" SET is_active = 0 WHERE email = $1")
+        let update_result = sqlx::query("UPDATE \"user\" SET user_status = $1 WHERE email = $2")
+            .bind(UserStatus::Deleted)
             .bind(&user.email)
             .execute(pool)
             .await;

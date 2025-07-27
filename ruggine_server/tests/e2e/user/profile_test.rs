@@ -16,6 +16,8 @@ use crate::common::{cleanup_user, create_user_router, create_auth_router};
 
 #[cfg(test)]
 mod profile_e2e_tests {
+    use ruggine_server::entity::user::{UserStatus, UserType};
+
     use crate::get_database;
     use super::*;
 
@@ -97,14 +99,16 @@ mod profile_e2e_tests {
         assert!(data.get("first_name").is_some(), "User data should contain first_name");
         assert!(data.get("last_name").is_some(), "User data should contain last_name");
         assert!(data.get("created_at").is_some(), "User data should contain created_at");
-        assert!(data.get("is_active").is_some(), "User data should contain is_active");
+        assert!(data.get("user_status").is_some(), "User data should contain user_status");
+        assert!(data.get("user_type").is_some(), "User data should contain user_type");
 
         // Verify user data matches expected values
         assert_eq!(data["email"], user_dto.email);
         assert_eq!(data["username"], user_dto.username);
         assert_eq!(data["first_name"], user_dto.first_name);
         assert_eq!(data["last_name"], user_dto.last_name);
-        assert_eq!(data["is_active"], 1);
+        assert_eq!(data["user_status"], UserStatus::Active.to_string());
+        assert_eq!(data["user_type"], UserType::EndUser.to_string());
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "User data should not contain password");
@@ -234,7 +238,8 @@ mod profile_e2e_tests {
         // Deactivate the user after getting the token
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query(r#"UPDATE "user" SET is_active = 0 WHERE email = $1"#)
+        let update_result = sqlx::query(r#"UPDATE "user" SET user_status = $1 WHERE email = $2"#)
+            .bind(UserStatus::Deleted)
             .bind(&user_dto.email)
             .execute(pool)
             .await;
@@ -377,7 +382,9 @@ mod profile_e2e_tests {
         assert!(data["first_name"].is_string(), "first_name should be a string");
         assert!(data["last_name"].is_string(), "last_name should be a string");
         assert!(data["created_at"].is_string(), "created_at should be a string");
-        assert!(data["is_active"].is_number(), "is_active should be a number");
+        assert!(data["updated_at"].is_string(), "updated_at should be a string");
+        assert!(data["user_type"].is_string(), "user_type should be a string");
+        assert!(data["user_status"].is_string(), "user_status should be a string");
 
         // Verify field values are reasonable
         assert!(data["id"].as_i64().unwrap() > 0, "id should be positive");
@@ -385,7 +392,10 @@ mod profile_e2e_tests {
         assert!(!data["username"].as_str().unwrap().is_empty(), "username should not be empty");
         assert!(!data["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
         assert!(!data["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
-        assert!(data["is_active"].as_i64().unwrap() >= 0, "is_active should be 0 or 1");
+        assert!(!data["created_at"].as_str().unwrap().is_empty(), "created_at should not be empty");
+        assert!(!data["updated_at"].as_str().unwrap().is_empty(), "updated_at should not be empty");
+        assert!(!data["user_type"].as_str().unwrap().is_empty(), "user_type should not be empty");
+        assert!(!data["user_status"].as_str().unwrap().is_empty(), "user_status should not be empty");
 
         // Cleanup
         cleanup_user(user_dto.email).await;
