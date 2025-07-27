@@ -47,6 +47,19 @@
       },
       "args": [],
       "cwd": "${workspaceFolder}/ruggine_server"
+    },
+    {
+      "name": "Debug Tauri Client",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/ruggine_client/src-tauri/target/debug/ruggine_client.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/ruggine_client",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "preLaunchTask": "Tauri: Build Client",
+      "sourceLanguages": ["rust"]
     }
   ]
 }

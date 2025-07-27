@@ -86,6 +86,68 @@
         "panel": "shared"
       },
       "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Tauri: Build Client",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["tauri", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_client"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Tauri: Dev Client",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["tauri", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_client"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "isBackground": true,
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Trunk: Serve Frontend",
+      "type": "shell",
+      "command": "trunk",
+      "args": ["serve", "--open"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_client"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "isBackground": true,
+      "problemMatcher": ["$rustc"]
     }
   ],
   "inputs": [
