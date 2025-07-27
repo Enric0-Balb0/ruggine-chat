@@ -3,6 +3,8 @@ pub mod register_route;
 
 use axum::Router;
 
+use crate::entity::user::all_user_types;
+
 pub fn routes(user_state: crate::state::user_state::UserState, token_state: crate::state::token_state::TokenState) -> Router {
     use tower::ServiceBuilder;
     use axum::middleware;
@@ -15,7 +17,7 @@ pub fn routes(user_state: crate::state::user_state::UserState, token_state: crat
         .merge(
             profile_route::routes()
                 .layer(ServiceBuilder::new().layer(
-                    middleware::from_fn_with_state(token_state, crate::middleware::auth_middleware::auth),
+                    middleware::from_fn_with_state(token_state, crate::middleware::auth_middleware::auth(all_user_types())),
                 ))
         )
 }

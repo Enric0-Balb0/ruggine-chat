@@ -62,6 +62,9 @@ mod user_service_integration_tests {
             username: "different_username".into(),
             email: first_user.email.clone(), // Same email as first user
             password: "password123".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1985, 3, 20).unwrap(),
+            address: "789 Different St".to_string(),
+            gender: ruggine_server::entity::user::Gender::Female,
         };
 
         // Act: Attempt to create a user with the same email
@@ -243,6 +246,49 @@ mod user_service_integration_tests {
         assert_eq!(user_dto.last_name, "García-López");
         assert_eq!(user_dto.username, dto.username);
         assert_eq!(user_dto.email, dto.email);
+
+        // Cleanup: Delete the test user
+        if let Err(e) = repository.delete_by_email(dto.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", dto.email, e);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_user_with_new_fields() {
+        // Arrange: Test that new fields are properly stored
+        let db = get_database().await;
+        let service = UserService::new(&db);
+        let repository = UserRepository::new(&db);
+        
+        let mut dto = UserFactory::unique_fake_user_register_dto("new_fields");
+        dto.birthday = chrono::NaiveDate::from_ymd_opt(1995, 7, 15).unwrap();
+        dto.address = "456 New Field Ave, Test City".to_string();
+        dto.gender = ruggine_server::entity::user::Gender::Other;
+
+        // Act: Create the user
+        let result = service.create_user(dto.clone()).await;
+
+        // Assert: Verify the user was created successfully
+        assert!(result.is_ok(), "Failed to create user: {:?}", result);
+        let user_dto = result.unwrap();
+        
+        // Verify that new fields are correctly returned in UserReadDto
+        assert_eq!(user_dto.birthday, dto.birthday);
+        assert_eq!(user_dto.address, dto.address);
+        assert_eq!(user_dto.gender, dto.gender);
+        assert_eq!(user_dto.is_online, false); // Should default to false
+        assert_eq!(user_dto.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
+
+        // Also verify by fetching from database directly
+        let user_option = repository.find_by_email(dto.email.clone()).await;
+        assert!(user_option.is_some(), "User not found in database");
+        let user = user_option.unwrap();
+        
+        assert_eq!(user.birthday, dto.birthday);
+        assert_eq!(user.address, dto.address);
+        assert_eq!(user.gender, dto.gender);
+        assert_eq!(user.is_online, false); // Should default to false
+        assert_eq!(user.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Cleanup: Delete the test user
         if let Err(e) = repository.delete_by_email(dto.email.clone()).await {

@@ -1,25 +1,35 @@
-use crate::entity::user::UserStatus;
+use crate::entity::user::{UserStatus, UserType};
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
 use axum::extract::State;
 use axum::{http, http::Request, middleware::Next, response::IntoResponse, body::Body};
+use futures::future::BoxFuture;
 use jsonwebtoken::errors::ErrorKind;
 use headers::authorization::{Authorization, Bearer};
 use headers::Header;
+use axum::response::Response;
 
-/// Middleware principale: chiama la logica di auth_inner e poi next.run
-pub async fn auth(
-    State(state): State<TokenState>,
-    req: Request<Body>,
-    next: Next,
-) -> Result<impl IntoResponse, ApiError> {
-    let req = auth_inner(&state, req).await?;
-    Ok(next.run(req).await)
+pub fn auth(
+    allowed_user_types: Vec<UserType>,
+) -> impl Clone
+         + Fn(State<TokenState>, Request<axum::body::Body>, Next) -> BoxFuture<'static, Result<Response, ApiError>>
+         + Send
+         + Sync
+         + 'static {
+    move |State(state), req, next| {
+        let allowed_user_types = allowed_user_types.clone();
+        Box::pin(async move {
+            let req = auth_inner(&state, req, allowed_user_types).await?;
+            Ok(next.run(req).await)
+        })
+    }
 }
+
 
 pub async fn auth_inner(
     state: &TokenState,
     mut req: Request<Body>,
+    allowed_user_types: Vec<UserType>,
 ) -> Result<Request<Body>, ApiError> {
     let auth_header = req
         .headers()
@@ -50,6 +60,11 @@ pub async fn auth_inner(
         return Err(UserError::UserNotActive.into());
     }
 
+    // Check user type if specified
+    if !allowed_user_types.contains(&user.user_type) {
+        return Err(UserError::InsufficientPermissions.into());
+    }
+
     // Insert the user into the request extensions for downstream handlers
     req.extensions_mut().insert(user);
 
@@ -66,9 +81,8 @@ mod tests {
     };
     use std::sync::Arc;
     use crate::{
-        entity::user::User,
-        factory::user_factory::UserFactory,
-        factory::token_factory::TokenFactory,
+        entity::user::{all_user_types, User},
+        factory::{token_factory::TokenFactory, user_factory::UserFactory},
         repository::user_repository::MockUserRepositoryTrait,
         service::token_service::MockTokenServiceTrait,
         state::token_state::TokenState,
@@ -115,7 +129,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let req_with_user = auth_inner(&state, req).await.expect("Auth failed");
+        let req_with_user = auth_inner(&state, req, all_user_types()).await.expect("Auth failed");
 
         let next = FakeNext;
         let response = next.run(req_with_user).await;
@@ -141,7 +155,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::MissingToken)) = result {
@@ -167,7 +181,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::MissingToken)) = result {
@@ -200,7 +214,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::TokenExpired)) = result {
@@ -233,7 +247,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::InvalidToken(_))) = result {
@@ -266,7 +280,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::UserError(UserError::UserNotFound)) = result {
@@ -303,7 +317,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::UserError(UserError::UserNotActive)) = result {
@@ -329,7 +343,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::MissingToken)) = result {
@@ -362,13 +376,85 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
         assert!(result.is_err());
         
         if let Err(ApiError::TokenError(TokenError::InvalidToken(_))) = result {
             // Expected error
         } else {
             panic!("Expected TokenError::InvalidToken");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_auth_with_allowed_user_type_success() {
+        let mut mock_token_service = MockTokenServiceTrait::new();
+        mock_token_service
+            .expect_retrieve_token_claims()
+            .returning(|_| Ok(TokenFactory::fake_token_data()));
+
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        mock_user_repo.expect_find_by_email().returning(|_| {
+            Box::pin(async {
+                let mut user = UserFactory::fake_user();
+                user.user_status = UserStatus::Active;
+                user.user_type = UserType::Admin;
+                Some(user)
+            })
+        });
+
+        let state = TokenState {
+            token_service: Arc::new(mock_token_service),
+            user_repo: Arc::new(mock_user_repo),
+        };
+
+        let req = Request::builder()
+            .uri("/")
+            .header(header::AUTHORIZATION, "Bearer validtoken")
+            .body(Body::empty())
+            .unwrap();
+
+        let allowed_types = vec![UserType::Admin, UserType::Developer];
+        let result = auth_inner(&state, req, allowed_types).await;
+        assert!(result.is_ok(), "Auth should succeed with allowed user type");
+    }
+
+    #[tokio::test]
+    async fn test_auth_with_disallowed_user_type_fails() {
+        let mut mock_token_service = MockTokenServiceTrait::new();
+        mock_token_service
+            .expect_retrieve_token_claims()
+            .returning(|_| Ok(TokenFactory::fake_token_data()));
+
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        mock_user_repo.expect_find_by_email().returning(|_| {
+            Box::pin(async {
+                let mut user = UserFactory::fake_user();
+                user.user_status = UserStatus::Active;
+                user.user_type = UserType::EndUser;
+                Some(user)
+            })
+        });
+
+        let state = TokenState {
+            token_service: Arc::new(mock_token_service),
+            user_repo: Arc::new(mock_user_repo),
+        };
+
+        let req = Request::builder()
+            .uri("/")
+            .header(header::AUTHORIZATION, "Bearer validtoken")
+            .body(Body::empty())
+            .unwrap();
+
+        let allowed_types = vec![UserType::Admin];
+        let result = auth_inner(&state, req, allowed_types).await;
+        assert!(result.is_err(), "Auth should fail with disallowed user type");
+        
+        if let Err(ApiError::UserError(UserError::InsufficientPermissions)) = result {
+            // Expected error
+        } else {
+            panic!("Expected UserError::InsufficientPermissions");
         }
     }
 

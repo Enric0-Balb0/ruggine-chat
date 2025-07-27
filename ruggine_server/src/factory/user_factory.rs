@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
-use chrono::Utc;
+use chrono::{Utc, NaiveDate};
 
-use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User, UserStatus}};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto}, entity::user::{NewUser, User, UserStatus, CurrentAction, Gender}};
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -49,6 +49,9 @@ impl UserFactory {
             password: "hashed_password".to_string(), // Placeholder for hashed password
             user_status,
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            address: format!("{}_{}", prefix, "456 Oak Ave"),
+            gender: Gender::Male,
         }
     }
 
@@ -61,6 +64,9 @@ impl UserFactory {
             password: "hashed_password".to_string(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            address: "456 Oak Ave".to_string(),
+            gender: Gender::Male,
         }
     }
 
@@ -76,6 +82,11 @@ impl UserFactory {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            is_online: true,
+            address: "456 Oak Ave".to_string(),
+            current_action: CurrentAction::Writing,
+            gender: Gender::Female,
         }
     }
 
@@ -90,6 +101,11 @@ impl UserFactory {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            is_online: true,
+            address: "456 Oak Ave".to_string(),
+            current_action: CurrentAction::Writing,
+            gender: Gender::Female,
         }
     }
 
@@ -100,6 +116,9 @@ impl UserFactory {
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
             username: "johndoe".to_string(),
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            address: "456 Oak Ave".to_string(),
+            gender: Gender::Male,
         }
     }
 
@@ -111,6 +130,9 @@ impl UserFactory {
             first_name: full_name,
             last_name: "Test".to_string(),
             username,
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            address: format!("{}_{}", prefix, "456 Oak Ave"),
+            gender: Gender::Male,
         }
     }
 

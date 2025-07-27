@@ -49,6 +49,9 @@ impl UserService {
             password: hashed_password,
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: payload.birthday,
+            address: payload.address,
+            gender: payload.gender,
         };
 
         let user_id = self.user_repo.insert(new_user).await?;
@@ -103,7 +106,7 @@ mod tests {
     use crate::entity::user::{User};
     use crate::dto::user_dto::UserRegisterDto;
     use crate::repository::user_repository::MockUserRepositoryTrait;
-    use chrono::Utc;
+    use chrono::{Utc, NaiveDate};
     use std::sync::Arc;
     use mockall::predicate::*;
     use std::pin::Pin;
@@ -125,6 +128,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            is_online: false,
+            address: "123 Test St".to_string(),
+            current_action: Default::default(),
+            gender: Default::default(),
         };
 
         // Mock: find_by_email should return None (user not found)
@@ -160,6 +168,9 @@ mod tests {
             username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         // Act: Call the create_user method
@@ -190,6 +201,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: chrono::NaiveDate::from_ymd_opt(1985, 5, 10).unwrap(),
+            is_online: true,
+            address: "456 Oak Ave".to_string(),
+            current_action: Default::default(),
+            gender: crate::entity::user::Gender::Female,
         };
 
         // Mock: find_by_email should return Some(user) indicating user already exists
@@ -209,6 +225,9 @@ mod tests {
             username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         // Act: Attempt to create a user that already exists
@@ -249,6 +268,9 @@ mod tests {
             username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         // Act: Attempt to create a user that violates unique constraint
@@ -289,6 +311,9 @@ mod tests {
             username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         // Act: Attempt to create a user with database error
@@ -337,6 +362,9 @@ mod tests {
             username: "testuser".into(),
             email: "test@example.com".into(),
             password: "password".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         // Act: Attempt to create a user where find fails after insert
@@ -365,6 +393,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            is_online: false,
+            address: "123 Test St".to_string(),
+            current_action: Default::default(),
+            gender: Default::default(),
         };
 
         let mock_repo = MockUserRepositoryTrait::new();
@@ -395,6 +428,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            is_online: false,
+            address: "123 Test St".to_string(),
+            current_action: Default::default(),
+            gender: Default::default(),
         };
 
         let mock_repo = MockUserRepositoryTrait::new();
@@ -424,6 +462,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            is_online: false,
+            address: "123 Test St".to_string(),
+            current_action: Default::default(),
+            gender: Default::default(),
         };
 
         let mock_repo = MockUserRepositoryTrait::new();

@@ -31,7 +31,10 @@ mod register_e2e_tests {
             "password": register_dto.password,
             "username": register_dto.username,
             "first_name": register_dto.first_name,
-            "last_name": register_dto.last_name
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
         });
 
         // Act: Send POST request to /register
@@ -62,6 +65,13 @@ mod register_e2e_tests {
         assert!(data.get("created_at").is_some(), "Response should contain created_at");
         assert!(data.get("updated_at").is_some(), "Response should contain updated_at");
         assert!(data.get("user_status").is_some(), "Response should contain user_status");
+        
+        // Verify new fields are present in response
+        assert!(data.get("birthday").is_some(), "Response should contain birthday");
+        assert!(data.get("is_online").is_some(), "Response should contain is_online");
+        assert!(data.get("address").is_some(), "Response should contain address");
+        assert!(data.get("current_action").is_some(), "Response should contain current_action");
+        assert!(data.get("gender").is_some(), "Response should contain gender");
 
         // Verify user data matches input
         assert_eq!(data["email"], register_dto.email);
@@ -69,6 +79,13 @@ mod register_e2e_tests {
         assert_eq!(data["first_name"], register_dto.first_name);
         assert_eq!(data["last_name"], register_dto.last_name);
         assert_eq!(data["user_status"], UserStatus::Active.to_string());
+        
+        // Verify new fields match input or have expected default values
+        assert_eq!(data["birthday"], register_dto.birthday.format("%Y-%m-%d").to_string());
+        assert_eq!(data["address"], register_dto.address);
+        assert_eq!(data["gender"], register_dto.gender.to_string());
+        assert_eq!(data["is_online"], false); // Should default to false
+        assert_eq!(data["current_action"], "waiting"); // Should default to waiting
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "Response should not contain password");
@@ -91,7 +108,10 @@ mod register_e2e_tests {
             "password": register_dto.password,
             "username": register_dto.username,
             "first_name": register_dto.first_name,
-            "last_name": register_dto.last_name
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
         });
 
         // Act: Send POST request to /register
@@ -118,6 +138,15 @@ mod register_e2e_tests {
         assert_eq!(stored_user.first_name, register_dto.first_name);
         assert_eq!(stored_user.last_name, register_dto.last_name);
         assert_eq!(stored_user.user_status, UserStatus::Active);
+        
+        // Verify new fields are correctly stored in database
+        assert_eq!(stored_user.birthday, register_dto.birthday);
+        assert_eq!(stored_user.address, register_dto.address);
+        assert_eq!(stored_user.gender, register_dto.gender);
+        
+        // Verify default values for auto-generated fields
+        assert!(!stored_user.is_online, "User should not be online by default");
+        assert_eq!(stored_user.current_action.to_string(), "waiting", "User should be in waiting state by default");
 
         // Verify password is hashed
         assert_ne!(stored_user.password, register_dto.password, "Password should be hashed");
@@ -137,7 +166,10 @@ mod register_e2e_tests {
             "password": register_dto.password,
             "username": register_dto.username,
             "first_name": register_dto.first_name,
-            "last_name": register_dto.last_name
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
         });
 
         // Register user first time
@@ -314,7 +346,10 @@ mod register_e2e_tests {
             "password": "password123",
             "username": "testuser",
             "first_name": "Test",
-            "last_name": "User"
+            "last_name": "User",
+            "birthday": "1990-01-01",
+            "address": "123 Test Street",
+            "gender": "male"
         });
 
         // Act: Send GET request to /register (should be POST)
@@ -341,7 +376,10 @@ mod register_e2e_tests {
             "password": "P@ssw0rd!#$%",
             "username": "user_with_underscore_123",
             "first_name": "José María",
-            "last_name": "García-López"
+            "last_name": "García-López",
+            "birthday": "1990-06-15",
+            "address": "Calle de la Paz, 123",
+            "gender": "male"
         });
 
         // Act: Send POST request to /register with special characters
@@ -368,6 +406,11 @@ mod register_e2e_tests {
         assert_eq!(data["username"], "user_with_underscore_123");
         assert_eq!(data["first_name"], "José María");
         assert_eq!(data["last_name"], "García-López");
+        
+        // Verify new fields with special characters
+        assert_eq!(data["birthday"], "1990-06-15");
+        assert_eq!(data["address"], "Calle de la Paz, 123");
+        assert_eq!(data["gender"], "male");
 
         // Cleanup
         cleanup_user("special.chars+test@example.com".to_string()).await;
@@ -384,7 +427,10 @@ mod register_e2e_tests {
             "password": register_dto.password,
             "username": register_dto.username,
             "first_name": register_dto.first_name,
-            "last_name": register_dto.last_name
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
         });
 
         // Act: Send POST request to /register without content-type header
@@ -422,7 +468,10 @@ mod register_e2e_tests {
             "password": register_dto1.password,
             "username": register_dto1.username,
             "first_name": register_dto1.first_name,
-            "last_name": register_dto1.last_name
+            "last_name": register_dto1.last_name,
+            "birthday": register_dto1.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto1.address,
+            "gender": register_dto1.gender.to_string()
         });
 
         let payload2 = json!({
@@ -430,7 +479,10 @@ mod register_e2e_tests {
             "password": register_dto2.password,
             "username": register_dto2.username,
             "first_name": register_dto2.first_name,
-            "last_name": register_dto2.last_name
+            "last_name": register_dto2.last_name,
+            "birthday": register_dto2.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto2.address,
+            "gender": register_dto2.gender.to_string()
         });
 
         // Act: Send concurrent registration requests
@@ -488,7 +540,10 @@ mod register_e2e_tests {
             "password": register_dto.password,
             "username": register_dto.username,
             "first_name": register_dto.first_name,
-            "last_name": register_dto.last_name
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
         });
 
         // Act: Send POST request to /register

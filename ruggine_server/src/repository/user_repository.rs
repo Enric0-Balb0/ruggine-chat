@@ -62,8 +62,8 @@ impl UserRepositoryTrait for UserRepository {
         let now = chrono::Utc::now();
         let rec = sqlx::query_scalar(
             r#"
-            INSERT INTO "user" (first_name, last_name, username, email, password, user_status, user_type, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO "user" (first_name, last_name, username, email, password, user_status, user_type, birthday, is_online, address, current_action, gender, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id
             "#
         )
@@ -74,6 +74,11 @@ impl UserRepositoryTrait for UserRepository {
         .bind(new_user.password)
         .bind(new_user.user_status)
         .bind(new_user.user_type)
+        .bind(new_user.birthday)
+        .bind(false) // is_online default to false
+        .bind(new_user.address)
+        .bind(crate::entity::user::CurrentAction::Waiting) // current_action default to Waiting
+        .bind(new_user.gender)
         .bind(now)
         .bind(now)
         .fetch_one(self.db_conn.get_pool())
@@ -108,6 +113,11 @@ mod user_repository_unit_tests {
             updated_at: Utc::now(),
             user_status: Default::default(), // Default user status
             user_type: Default::default(), // Default user type
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            is_online: false,
+            address: "123 Test St".to_string(),
+            current_action: Default::default(), // Default current action
+            gender: Default::default(), // Default gender
         };
 
         let expected_user_clone = expected_user.clone();
@@ -166,6 +176,11 @@ mod user_repository_unit_tests {
             updated_at: Utc::now(),
             user_status: Default::default(), // Default user status
             user_type: Default::default(), // Default user type
+            birthday: chrono::NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            is_online: false,
+            address: "456 Oak Ave".to_string(),
+            current_action: Default::default(), // Default current action
+            gender: crate::entity::user::Gender::Female,
         };
 
         let expected_user_clone = expected_user.clone();
@@ -327,6 +342,11 @@ mod user_repository_unit_tests {
                         updated_at: Utc::now(),
                         user_status: Default::default(), // Default user status,
                         user_type: Default::default(), // Default user type
+                        birthday: chrono::NaiveDate::from_ymd_opt(1985, 12, 25).unwrap(),
+                        is_online: false,
+                        address: "789 Pine Rd".to_string(),
+                        current_action: Default::default(), // Default current action
+                        gender: crate::entity::user::Gender::Male,
                     })
                 })
             });

@@ -47,6 +47,9 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         let expected_output = UserReadDto {
@@ -59,6 +62,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: input.birthday,
+            is_online: false,
+            address: input.address.clone(),
+            current_action: Default::default(),
+            gender: input.gender.clone(),
         };
 
         let mut mock_service = MockUserServiceTrait::new();
@@ -95,6 +103,9 @@ mod tests {
             username: "existinguser".to_string(),
             first_name: "Existing".to_string(),
             last_name: "User".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1985, 5, 10).unwrap(),
+            address: "456 Oak Ave".to_string(),
+            gender: crate::entity::user::Gender::Female,
         };
 
         let mut mock_service = MockUserServiceTrait::new();
@@ -137,6 +148,11 @@ mod tests {
             updated_at: Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: input.birthday,
+            is_online: false,
+            address: input.address.clone(),
+            current_action: Default::default(),
+            gender: input.gender.clone(),
         };
 
         let mut mock_service = MockUserServiceTrait::new();
@@ -177,6 +193,9 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: crate::entity::user::Gender::Male,
         };
 
         let mut mock_service = MockUserServiceTrait::new();

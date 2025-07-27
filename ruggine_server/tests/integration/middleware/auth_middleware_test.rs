@@ -1,4 +1,5 @@
 use ruggine_server::middleware::auth_middleware::{auth_inner};
+use ruggine_server::entity::user::all_user_types;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::service::token_service::{TokenService, TokenServiceTrait};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
@@ -6,7 +7,7 @@ use ruggine_server::repository::user_repository::{UserRepository, UserRepository
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::factory::token_factory::TokenFactory;
 use ruggine_server::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
-use ruggine_server::entity::user::User;
+use ruggine_server::entity::user::{User, UserType};
 use axum::{
     body::Body,
     http::{Request, header},
@@ -74,7 +75,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner with real token and user
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should succeed and inject user into request
         assert!(result.is_ok(), "Auth should succeed with valid token and user");
@@ -101,7 +102,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner without authorization header
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with MissingToken error
         assert!(result.is_err(), "Auth should fail without authorization header");
@@ -126,7 +127,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner with invalid header format
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with MissingToken error
         assert!(result.is_err(), "Auth should fail with invalid header format");
@@ -154,7 +155,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Try to verify token with wrong secret
-        let result = auth_inner(&different_state, req).await;
+        let result = auth_inner(&different_state, req, all_user_types()).await;
 
         // Assert: Should fail with InvalidToken error
         assert!(result.is_err(), "Auth should fail with token signed by different secret");
@@ -184,7 +185,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Try to authenticate with token of deleted user
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with UserNotFound error
         assert!(result.is_err(), "Auth should fail when user is not found in database");
@@ -219,7 +220,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert
         assert!(result.is_err());
@@ -246,7 +247,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner with malformed token
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with InvalidToken error
         assert!(result.is_err(), "Auth should fail with malformed token");
@@ -271,7 +272,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner with empty token
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with InvalidToken error
         assert!(result.is_err(), "Auth should fail with empty token");
@@ -296,7 +297,7 @@ mod auth_middleware_integration_tests {
             .unwrap();
 
         // Act: Call auth_inner with token without Bearer prefix
-        let result = auth_inner(&state, req).await;
+        let result = auth_inner(&state, req, all_user_types()).await;
 
         // Assert: Should fail with MissingToken error
         assert!(result.is_err(), "Auth should fail with token without Bearer prefix");
@@ -307,4 +308,118 @@ mod auth_middleware_integration_tests {
             other => panic!("Expected TokenError::MissingToken, got {:?}", other),
         }
     }
+
+    #[tokio::test]
+    async fn test_auth_inner_with_allowed_user_type_success() {
+        // Arrange: Create a real user with Admin type and valid token
+        let (mut user, token, state) = create_user_and_token("auth_admin_success").await;
+        
+        // Update user type to Admin
+        let db = get_database().await;
+        let pool = db.get_pool();
+        sqlx::query(r#"UPDATE "user" SET user_type = $1 WHERE id = $2"#)
+            .bind(UserType::Admin)
+            .bind(user.id)
+            .execute(pool)
+            .await
+            .expect("Failed to update user type");
+        
+        user.user_type = UserType::Admin; // Update local copy
+
+        let req = Request::builder()
+            .uri("/admin-protected")
+            .header(header::AUTHORIZATION, format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner with Admin type allowed
+        let allowed_types = vec![UserType::Admin];
+        let result = auth_inner(&state, req, allowed_types).await;
+
+        // Assert: Should succeed for Admin user
+        assert!(result.is_ok(), "Auth should succeed for Admin user with Admin type allowed");
+        let req_with_user = result.unwrap();
+        
+        let injected_user = req_with_user.extensions().get::<User>();
+        assert!(injected_user.is_some(), "User should be injected into request");
+        assert_eq!(injected_user.unwrap().user_type, UserType::Admin, "Injected user should be Admin");
+
+        // Cleanup
+        cleanup_user(user.email).await;
+    }
+
+    #[tokio::test]
+    async fn test_auth_inner_with_disallowed_user_type_fails() {
+        // Arrange: Create a real user with User type and valid token
+        let (mut user, token, state) = create_user_and_token("auth_user_fail").await;
+        
+        // Ensure user type is User (should be default)
+        let db = get_database().await;
+        let pool = db.get_pool();
+        sqlx::query(r#"UPDATE "user" SET user_type = $1 WHERE id = $2"#)
+            .bind(UserType::EndUser)
+            .bind(user.id)
+            .execute(pool)
+            .await
+            .expect("Failed to update user type");
+            
+        user.user_type = UserType::EndUser; // Update local copy
+
+        let req = Request::builder()
+            .uri("/admin-protected")
+            .header(header::AUTHORIZATION, format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner with only Admin type allowed
+        let allowed_types = vec![UserType::Admin];
+        let result = auth_inner(&state, req, allowed_types).await;
+
+        // Assert: Should fail for User trying to access Admin-only resource
+        assert!(result.is_err(), "Auth should fail for User trying to access Admin-only resource");
+        match result.unwrap_err() {
+            ApiError::UserError(UserError::InsufficientPermissions) => {
+                // Expected error
+            }
+            other => panic!("Expected UserError::InsufficientPermissions, got {:?}", other),
+        }
+
+        // Cleanup
+        cleanup_user(user.email).await;
+    }
+
+    #[tokio::test]
+    async fn test_auth_inner_with_multiple_allowed_user_types() {
+        // Arrange: Create a real user with User type and valid token
+        let (user, token, state) = create_user_and_token("auth_multi_types").await;
+
+        let req = Request::builder()
+            .uri("/user-or-admin-protected")
+            .header(header::AUTHORIZATION, format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner with both User and Admin types allowed
+        let allowed_types = vec![UserType::Admin, UserType::EndUser];
+        let result = auth_inner(&state, req, allowed_types).await;
+
+        // Assert: Should succeed for User when both User and Admin are allowed
+        assert!(result.is_ok(), "Auth should succeed for User when both User and Admin types are allowed");
+
+        // Cleanup
+        cleanup_user(user.email).await;
+    }
+
+    #[tokio::test]
+    async fn test_all_user_types_helper_function() {
+        // Act: Call the helper function
+        let all_types = all_user_types();
+
+        // Assert: Should return all available user types
+        assert_eq!(all_types.len(), 3, "Should return exactly 3 user types");
+        assert!(all_types.contains(&UserType::Admin), "Should contain Admin type");
+        assert!(all_types.contains(&UserType::Developer), "Should contain Developer type");
+        assert!(all_types.contains(&UserType::EndUser), "Should contain EndUser type");
+    }
+
 }

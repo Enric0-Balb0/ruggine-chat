@@ -101,6 +101,13 @@ mod profile_e2e_tests {
         assert!(data.get("created_at").is_some(), "User data should contain created_at");
         assert!(data.get("user_status").is_some(), "User data should contain user_status");
         assert!(data.get("user_type").is_some(), "User data should contain user_type");
+        
+        // Verify new fields are present in response
+        assert!(data.get("birthday").is_some(), "User data should contain birthday");
+        assert!(data.get("is_online").is_some(), "User data should contain is_online");
+        assert!(data.get("address").is_some(), "User data should contain address");
+        assert!(data.get("current_action").is_some(), "User data should contain current_action");
+        assert!(data.get("gender").is_some(), "User data should contain gender");
 
         // Verify user data matches expected values
         assert_eq!(data["email"], user_dto.email);
@@ -109,6 +116,13 @@ mod profile_e2e_tests {
         assert_eq!(data["last_name"], user_dto.last_name);
         assert_eq!(data["user_status"], UserStatus::Active.to_string());
         assert_eq!(data["user_type"], UserType::EndUser.to_string());
+        
+        // Verify new fields have expected values
+        assert_eq!(data["birthday"], user_dto.birthday.format("%Y-%m-%d").to_string());
+        assert_eq!(data["address"], user_dto.address);
+        assert_eq!(data["gender"], user_dto.gender.to_string());
+        assert_eq!(data["is_online"], false); // Should default to false
+        assert_eq!(data["current_action"], "waiting"); // Should default to waiting
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "User data should not contain password");
@@ -344,6 +358,17 @@ mod profile_e2e_tests {
         assert_eq!(data["last_name"], new_last_name);
         assert_eq!(data["email"], user_dto.email);
         assert!(data.get("updated_at").is_some(), "Updated timestamp should be present");
+        
+        // Verify all required fields are present in response
+        assert!(data.get("id").is_some(), "ID should be present");
+        assert!(data.get("username").is_some(), "Username should be present");
+        assert!(data.get("user_type").is_some(), "User type should be present");
+        assert!(data.get("birthday").is_some(), "Birthday should be present");
+        assert!(data.get("is_online").is_some(), "Is online should be present");
+        assert!(data.get("address").is_some(), "Address should be present");
+        assert!(data.get("current_action").is_some(), "Current action should be present");
+        assert!(data.get("gender").is_some(), "Gender should be present");
+        assert!(data.get("created_at").is_some(), "Created at should be present");
 
         // Cleanup
         cleanup_user(user_dto.email).await;
@@ -385,6 +410,11 @@ mod profile_e2e_tests {
         assert!(data["updated_at"].is_string(), "updated_at should be a string");
         assert!(data["user_type"].is_string(), "user_type should be a string");
         assert!(data["user_status"].is_string(), "user_status should be a string");
+        assert!(data["birthday"].is_string(), "birthday should be a string");
+        assert!(data["is_online"].is_boolean(), "is_online should be a boolean");
+        assert!(data["address"].is_string(), "address should be a string");
+        assert!(data["current_action"].is_string(), "current_action should be a string");
+        assert!(data["gender"].is_string(), "gender should be a string");
 
         // Verify field values are reasonable
         assert!(data["id"].as_i64().unwrap() > 0, "id should be positive");
@@ -393,6 +423,13 @@ mod profile_e2e_tests {
         assert!(!data["first_name"].as_str().unwrap().is_empty(), "first_name should not be empty");
         assert!(!data["last_name"].as_str().unwrap().is_empty(), "last_name should not be empty");
         assert!(!data["created_at"].as_str().unwrap().is_empty(), "created_at should not be empty");
+        assert!(!data["updated_at"].as_str().unwrap().is_empty(), "updated_at should not be empty");
+        assert!(!data["user_type"].as_str().unwrap().is_empty(), "user_type should not be empty");
+        assert!(!data["user_status"].as_str().unwrap().is_empty(), "user_status should not be empty");
+        assert!(!data["birthday"].as_str().unwrap().is_empty(), "birthday should not be empty");
+        assert!(!data["address"].as_str().unwrap().is_empty(), "address should not be empty");
+        assert!(!data["current_action"].as_str().unwrap().is_empty(), "current_action should not be empty");
+        assert!(!data["gender"].as_str().unwrap().is_empty(), "gender should not be empty");
         assert!(!data["updated_at"].as_str().unwrap().is_empty(), "updated_at should not be empty");
         assert!(!data["user_type"].as_str().unwrap().is_empty(), "user_type should not be empty");
         assert!(!data["user_status"].as_str().unwrap().is_empty(), "user_status should not be empty");

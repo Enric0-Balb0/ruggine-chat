@@ -565,11 +565,26 @@ enum InvitationStatus {
   DECLINED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum CurrentAction {
+  WAITING
+  WRITING
+}
+
 abstract class User {
   - userId: String
   - username: String
   - passwordHash: String
   - email: String
+  - birthday: Date
+  - address: String
+  - currentAction: CurrentAction
+  - isOnline: Boolean
   + register()
   + authenticate()
   + retrieveInfo()
@@ -635,6 +650,8 @@ EndUser "1" -- "*" Invitation : "receives"
 GroupChat "1" -- "*" Invitation : "related to"
 Invitation --> InvitationStatus : "has"
 CPUUsageLog --> Admin : "monitored by"
+User --> Gender : "has"
+User --> CurrentAction : "has"
 
 @enduml
 

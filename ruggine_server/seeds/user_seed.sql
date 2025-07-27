@@ -6,7 +6,7 @@ CREATE DATABASE ruggine_test;
 
 -- Connettiti al database ruggine
 
--- Crea ENUM user_type solo se non esiste già
+-- Crea ENUM user_type, user_status, current_action, gender solo se non esistono già
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type') THEN
@@ -15,6 +15,14 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_status') THEN
         CREATE TYPE user_status AS ENUM ('pending', 'active', 'suspended', 'deleted', 'banned');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'current_action') THEN
+        CREATE TYPE current_action AS ENUM ('waiting', 'writing');
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
+        CREATE TYPE gender AS ENUM ('male', 'female', 'other');
     END IF;
 END$$;
 
@@ -30,19 +38,23 @@ CREATE TABLE "user" (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     user_type user_type NOT NULL DEFAULT 'end_user',
+    user_status user_status NOT NULL DEFAULT 'active',
+    birthday DATE,
+    is_online BOOLEAN NOT NULL DEFAULT false,
+    address VARCHAR(255),
+    current_action current_action NOT NULL DEFAULT 'waiting',
+    gender gender NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_status user_status NOT NULL DEFAULT 'active'
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status)
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, current_action, gender)
 VALUES
-('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 'active');
-
+('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 'active', '1990-01-01', false, '123 Main St', 'waiting', 'male');
 
 -- Connettiti al database ruggine_test
 
--- Crea ENUM user_type solo se non esiste già
+-- Crea ENUM user_type, user_status, current_action, gender solo se non esistono già
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type') THEN
@@ -51,6 +63,14 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_status') THEN
         CREATE TYPE user_status AS ENUM ('pending', 'active', 'suspended', 'deleted', 'banned');
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'current_action') THEN
+        CREATE TYPE current_action AS ENUM ('waiting', 'writing');
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
+        CREATE TYPE gender AS ENUM ('male', 'female', 'other');
     END IF;
 END$$;
 
@@ -66,11 +86,16 @@ CREATE TABLE "user" (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     user_type user_type NOT NULL DEFAULT 'end_user',
+    user_status user_status NOT NULL DEFAULT 'active',
+    birthday DATE,
+    is_online BOOLEAN NOT NULL DEFAULT false,
+    address VARCHAR(255),
+    current_action current_action NOT NULL DEFAULT 'waiting',
+    gender gender NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_status user_status NOT NULL DEFAULT 'active'
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status)
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, current_action, gender)
 VALUES
-('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 'active');
+('Test', 'User', 'testuser', 'test.user@example.com', '$2b$04$somethinghashed', 'developer', 'active', '1990-01-01', false, '123 Main St', 'waiting', 'male');

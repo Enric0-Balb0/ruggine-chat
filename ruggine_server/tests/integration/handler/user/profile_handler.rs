@@ -53,6 +53,18 @@ mod profile_handler_integration_tests {
         assert_eq!(data.updated_at, user.updated_at);
         assert_eq!(data.user_status, user.user_status);
         
+        // Verify new fields are properly returned
+        assert_eq!(data.birthday, user.birthday);
+        assert_eq!(data.is_online, user.is_online);
+        assert_eq!(data.address, user.address);
+        assert_eq!(data.current_action, user.current_action);
+        assert_eq!(data.gender, user.gender);
+        
+        // Verify default values for auto-generated fields
+        assert!(!data.is_online, "User should not be online by default");
+        assert_eq!(data.current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
+                  "User should be in Waiting state by default");
+        
         // Cleanup
         cleanup_user(user.email).await;
     }
@@ -71,6 +83,15 @@ mod profile_handler_integration_tests {
         assert_eq!(data.user_status, UserStatus::Active);
         assert_eq!(data.email, user.email);
         assert_eq!(data.id, user.id);
+        
+        // Verify new fields are present and have expected default values
+        assert_eq!(data.birthday, user.birthday);
+        assert_eq!(data.is_online, user.is_online);
+        assert_eq!(data.address, user.address);
+        assert_eq!(data.current_action, user.current_action);
+        assert_eq!(data.gender, user.gender);
+        assert!(!data.is_online, "User should not be online by default");
+        assert_eq!(data.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
         
         // Cleanup
         cleanup_user(user.email).await;
@@ -105,6 +126,13 @@ mod profile_handler_integration_tests {
         assert_eq!(data.email, updated_user.email);
         assert_eq!(data.id, updated_user.id);
         
+        // Verify new fields are still returned correctly for inactive users
+        assert_eq!(data.birthday, updated_user.birthday);
+        assert_eq!(data.is_online, updated_user.is_online);
+        assert_eq!(data.address, updated_user.address);
+        assert_eq!(data.current_action, updated_user.current_action);
+        assert_eq!(data.gender, updated_user.gender);
+        
         // Cleanup
         cleanup_user(updated_user.email).await;
     }
@@ -128,6 +156,13 @@ mod profile_handler_integration_tests {
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
         assert_eq!(data.user_status, user.user_status);
+        
+        // Verify new fields are also preserved
+        assert_eq!(data.birthday, user.birthday);
+        assert_eq!(data.is_online, user.is_online);
+        assert_eq!(data.address, user.address);
+        assert_eq!(data.current_action, user.current_action);
+        assert_eq!(data.gender, user.gender);
         
         // Verify password is not included in response
         // (UserReadDto doesn't have password field, so this is implicit)
@@ -155,6 +190,7 @@ mod profile_handler_integration_tests {
         assert!(!data.username.is_empty(), "Username should not be empty");
         assert!(data.email.contains('@'), "Email should be valid format");
         assert!(data.created_at <= chrono::Utc::now(), "Created date should not be in future");
+        assert!(!data.address.is_empty(), "Address should not be empty");
         
         // Cleanup
         cleanup_user(user.email).await;
@@ -234,6 +270,12 @@ mod profile_handler_integration_tests {
         assert!(data2.id > 0);
         assert!(data1.email.contains('@'));
         assert!(data2.email.contains('@'));
+        
+        // Both should have default values for auto-generated fields
+        assert!(!data1.is_online);
+        assert!(!data2.is_online);
+        assert_eq!(data1.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
+        assert_eq!(data2.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
         
         // Cleanup
         cleanup_user(user1.email).await;

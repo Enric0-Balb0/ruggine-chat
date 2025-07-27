@@ -29,7 +29,7 @@ mod register_handler_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_register_success_with_valid_data() {
+    async fn test_register_handler_creates_user_successfully_with_valid_data() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
         let register_dto = UserFactory::unique_fake_user_register_dto("register_success");
@@ -51,13 +51,23 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().user_status, UserStatus::Active);
         assert!(user_response.data().id > 0, "User should have a valid ID");
         assert!(user_response.data().created_at <= chrono::Utc::now(), "Created date should not be in future");
+        
+        // Verify new fields from registration are properly set
+        assert_eq!(user_response.data().birthday, register_dto.birthday);
+        assert_eq!(user_response.data().address, register_dto.address);
+        assert_eq!(user_response.data().gender, register_dto.gender);
+        
+        // Verify default values for auto-generated fields
+        assert!(!user_response.data().is_online, "New user should not be online by default");
+        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
+                  "New user should be in Waiting state by default");
 
         // Cleanup
         cleanup_user(register_dto.email).await;
     }
 
     #[tokio::test]
-    async fn test_register_user_already_exists() {
+    async fn test_register_handler_fails_when_user_already_exists() {
         // Arrange: Create user state and register a user first
         let user_state = create_user_state().await;
         let register_dto = UserFactory::unique_fake_user_register_dto("register_duplicate");
@@ -89,7 +99,7 @@ mod register_handler_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_register_creates_user_in_database() {
+    async fn test_register_handler_persists_user_data_to_database() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
         let register_dto = UserFactory::unique_fake_user_register_dto("register_db_check");
@@ -116,13 +126,23 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.last_name, register_dto.last_name);
         assert_eq!(stored_user.user_status, UserStatus::Active);
         assert_eq!(stored_user.id, user_response.data().id);
+        
+        // Verify new fields are correctly stored in database
+        assert_eq!(stored_user.birthday, register_dto.birthday);
+        assert_eq!(stored_user.address, register_dto.address);
+        assert_eq!(stored_user.gender, register_dto.gender);
+        
+        // Verify default values are correctly set in database
+        assert!(!stored_user.is_online, "User should not be online by default in database");
+        assert_eq!(stored_user.current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
+                  "User should be in Waiting state by default in database");
 
         // Cleanup
         cleanup_user(register_dto.email).await;
     }
 
     #[tokio::test]
-    async fn test_register_password_is_hashed() {
+    async fn test_register_handler_hashes_password_before_storage() {
         // Arrange: Create user state and registration data with known password
         let user_state = create_user_state().await;
         let mut register_dto = UserFactory::unique_fake_user_register_dto("register_password");
@@ -154,7 +174,7 @@ mod register_handler_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_register_with_special_characters() {
+    async fn test_register_handler_handles_special_characters_in_user_data() {
         // Arrange: Create user state and registration data with special characters
         let user_state = create_user_state().await;
         let register_dto = UserRegisterDto {
@@ -163,6 +183,9 @@ mod register_handler_integration_tests {
             username: "user_with_underscore_123".to_string(),
             first_name: "José María".to_string(),
             last_name: "García-López".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 6, 15).unwrap(),
+            address: "Calle de la Paz, 123".to_string(),
+            gender: ruggine_server::entity::user::Gender::Male,
         };
         
         // Act: Register the user
@@ -179,13 +202,18 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().username, register_dto.username);
         assert_eq!(user_response.data().first_name, register_dto.first_name);
         assert_eq!(user_response.data().last_name, register_dto.last_name);
+        
+        // Verify new fields with special characters are properly handled
+        assert_eq!(user_response.data().birthday, register_dto.birthday);
+        assert_eq!(user_response.data().address, register_dto.address);
+        assert_eq!(user_response.data().gender, register_dto.gender);
 
         // Cleanup
         cleanup_user(register_dto.email).await;
     }
 
     #[tokio::test]
-    async fn test_register_multiple_users_concurrently() {
+    async fn test_register_handler_supports_concurrent_user_registrations() {
         // Arrange: Create user state and multiple registration data
         let user_state = create_user_state().await;
         let register_dto1 = UserFactory::unique_fake_user_register_dto("register_concurrent1");
@@ -214,7 +242,7 @@ mod register_handler_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_register_preserves_input_data() {
+    async fn test_register_handler_preserves_all_input_data_in_response() {
         // Arrange: Create user state with specific input data
         let user_state = create_user_state().await;
         let register_dto = UserRegisterDto {
@@ -223,6 +251,9 @@ mod register_handler_integration_tests {
             username: "preserve_user".to_string(),
             first_name: "PreserveFirst".to_string(),
             last_name: "PreserveLast".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1995, 12, 1).unwrap(),
+            address: "100 Preserve Street".to_string(),
+            gender: ruggine_server::entity::user::Gender::Female,
         };
         
         // Act: Register the user
@@ -240,6 +271,15 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().first_name, register_dto.first_name);
         assert_eq!(user_response.data().last_name, register_dto.last_name);
         
+        // Verify new fields are preserved from input
+        assert_eq!(user_response.data().birthday, register_dto.birthday);
+        assert_eq!(user_response.data().address, register_dto.address);
+        assert_eq!(user_response.data().gender, register_dto.gender);
+        
+        // Verify default values for auto-generated fields
+        assert!(!user_response.data().is_online, "User should not be online by default");
+        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting);
+        
         // Verify response structure
         assert!(user_response.data().id > 0);
         assert_eq!(user_response.data().user_status, UserStatus::Active);
@@ -250,7 +290,7 @@ mod register_handler_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_register_user_is_active_by_default() {
+    async fn test_register_handler_sets_new_user_status_to_active_by_default() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
         let register_dto = UserFactory::unique_fake_user_register_dto("register_active_default");
@@ -274,6 +314,56 @@ mod register_handler_integration_tests {
         
         assert!(stored_user.is_some(), "User should exist in database");
         assert_eq!(stored_user.unwrap().user_status, UserStatus::Active, "User should be active in database");
+
+        // Cleanup
+        cleanup_user(register_dto.email).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_handler_correctly_stores_all_user_fields_to_database() {
+        // Arrange: Create user state and registration data with new fields
+        let user_state = create_user_state().await;
+        let register_dto = UserRegisterDto {
+            email: "newfields.test@example.com".to_string(),
+            password: "test_password_456".to_string(),
+            username: "newfields_user".to_string(),
+            first_name: "NewField".to_string(),
+            last_name: "TestUser".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1988, 4, 22).unwrap(),
+            address: "456 New Field Avenue, Test City".to_string(),
+            gender: ruggine_server::entity::user::Gender::Other,
+        };
+        
+        // Act: Register the user
+        let result = register(
+            State(user_state),
+            ValidatedRequest(register_dto.clone()),
+        ).await;
+
+        // Assert: New fields should be correctly stored and returned
+        assert!(result.is_ok(), "Registration should succeed");
+        let user_response = result.unwrap().0;
+        
+        // Check that new fields are in the response
+        assert_eq!(user_response.data().birthday, register_dto.birthday);
+        assert_eq!(user_response.data().address, register_dto.address);
+        assert_eq!(user_response.data().gender, register_dto.gender);
+        assert_eq!(user_response.data().is_online, false); // Should default to false
+        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
+
+        // Verify new fields are stored in database
+        let db = get_database().await;
+        let repository = UserRepository::new(&db);
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        
+        assert!(stored_user.is_some(), "User should exist in database");
+        let stored_user = stored_user.unwrap();
+        
+        assert_eq!(stored_user.birthday, register_dto.birthday);
+        assert_eq!(stored_user.address, register_dto.address);
+        assert_eq!(stored_user.gender, register_dto.gender);
+        assert_eq!(stored_user.is_online, false); // Should default to false
+        assert_eq!(stored_user.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Cleanup
         cleanup_user(register_dto.email).await;

@@ -15,6 +15,8 @@ pub enum UserError {
     InvalidPassword,
     #[error("User is not active")]
     UserNotActive,
+    #[error("Insufficient permissions")]
+    InsufficientPermissions,
 }
 
 impl IntoResponse for UserError {
@@ -24,6 +26,7 @@ impl IntoResponse for UserError {
             UserError::UserAlreadyExists(_) => StatusCode::CONFLICT,
             UserError::InvalidPassword => StatusCode::UNAUTHORIZED,
             UserError::UserNotActive => StatusCode::FORBIDDEN,
+            UserError::InsufficientPermissions => StatusCode::FORBIDDEN,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

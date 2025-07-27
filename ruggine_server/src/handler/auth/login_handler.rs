@@ -41,7 +41,7 @@ pub async fn login(
 #[cfg(test)]
 mod login_tests {
     use super::*;
-    use crate::entity::user::{User, UserStatus};
+    use crate::entity::user::{CurrentAction, Gender, User, UserStatus};
     use crate::dto::token_dto::TokenReadDto;
     use crate::error::user_error::UserError;
     // Import the auto-generated mocks
@@ -89,6 +89,11 @@ mod login_tests {
             updated_at: Utc::now(),
             user_status, // This determines if user is active or not
             user_type: Default::default(), // Default user type
+            birthday: Utc::now().naive_utc().into(),
+            is_online: false,
+            address: "123 Main St".to_string(),
+            current_action: CurrentAction::Waiting,
+            gender: Gender::Other,
         }
     }
 

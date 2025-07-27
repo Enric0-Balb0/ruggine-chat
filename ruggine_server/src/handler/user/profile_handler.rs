@@ -79,6 +79,11 @@ mod tests {
             updated_at: chrono::Utc::now(),
             user_status: Default::default(),
             user_type: Default::default(), // Default user type
+            birthday: chrono::NaiveDate::from_ymd_opt(1992, 8, 20).unwrap(),
+            is_online: true,
+            address: "789 Profile St".to_string(),
+            current_action: crate::entity::user::CurrentAction::Writing,
+            gender: crate::entity::user::Gender::Female,
         };
 
         // Act: call the profile handler
@@ -95,6 +100,11 @@ mod tests {
         assert_eq!(data.created_at, user.created_at);
         assert_eq!(data.updated_at, user.updated_at);
         assert_eq!(data.user_status, user.user_status);
+        assert_eq!(data.birthday, user.birthday);
+        assert_eq!(data.is_online, user.is_online);
+        assert_eq!(data.address, user.address);
+        assert_eq!(data.current_action, user.current_action);
+        assert_eq!(data.gender, user.gender);
     }
 
     #[tokio::test]
@@ -115,5 +125,40 @@ mod tests {
         assert!(!data.last_name.is_empty());
         assert!(!data.username.is_empty());
         assert!(data.email.contains('@'));
+    }
+
+    #[tokio::test]
+    async fn test_profile_includes_new_fields() {
+        // Arrange: create a user with all new fields set
+        let user = User {
+            id: 100,
+            first_name: "New".to_string(),
+            last_name: "Fields".to_string(),
+            username: "newfields".to_string(),
+            email: "newfields@test.com".to_string(),
+            password: "hash123".to_string(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            user_status: crate::entity::user::UserStatus::Active,
+            user_type: crate::entity::user::UserType::Developer,
+            birthday: chrono::NaiveDate::from_ymd_opt(1988, 3, 15).unwrap(),
+            is_online: false,
+            address: "321 New Field Blvd".to_string(),
+            current_action: crate::entity::user::CurrentAction::Waiting,
+            gender: crate::entity::user::Gender::Other,
+        };
+
+        // Act: call the profile handler
+        let response = profile(Extension(user.clone())).await;
+
+        // Assert: verify all new fields are present in the response
+        let data = response.0.data();
+        
+        assert_eq!(data.birthday, user.birthday);
+        assert_eq!(data.is_online, user.is_online);
+        assert_eq!(data.address, user.address);
+        assert_eq!(data.current_action, user.current_action);
+        assert_eq!(data.gender, user.gender);
+        assert_eq!(data.user_type, user.user_type);
     }
 }
