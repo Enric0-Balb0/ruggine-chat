@@ -83,7 +83,7 @@ mod tests {
     use crate::{
         entity::user::{all_user_types, User},
         factory::{token_factory::TokenFactory, user_factory::UserFactory},
-        repository::user_repository::MockUserRepositoryTrait,
+        repository::user_repository::user_repository_trait::MockUserRepositoryTrait,
         service::token_service::MockTokenServiceTrait,
         state::token_state::TokenState,
     };

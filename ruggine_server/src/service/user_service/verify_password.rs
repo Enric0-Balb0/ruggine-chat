@@ -11,7 +11,7 @@ impl UserService {
 mod tests {
     use super::*;
     use crate::entity::user::{User};
-    use crate::repository::user_repository::MockUserRepositoryTrait;
+    use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use chrono::{Utc, NaiveDate};
     use std::sync::Arc;
 

@@ -30,7 +30,7 @@ mod tests {
     use crate::error::user_error::UserError;
     use crate::factory::user_factory::UserFactory;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
-    use crate::repository::user_repository::MockUserRepositoryTrait;
+    use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::state::user_state::UserState;
     use axum::extract::State;
     use axum::Json;

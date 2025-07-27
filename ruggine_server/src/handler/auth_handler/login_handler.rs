@@ -47,7 +47,7 @@ mod login_tests {
     // Import the auto-generated mocks
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use crate::service::token_service::MockTokenServiceTrait;
-    use crate::repository::user_repository::MockUserRepositoryTrait;
+    use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::*;
     use std::sync::Arc;
     use chrono::Utc;
