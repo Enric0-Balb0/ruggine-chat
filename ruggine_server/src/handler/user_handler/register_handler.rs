@@ -27,6 +27,7 @@ pub async fn register(
 mod tests {
     use super::*;
     use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
+    use crate::entity::user::User;
     use crate::error::user_error::UserError;
     use crate::factory::user_factory::UserFactory;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
@@ -34,40 +35,15 @@ mod tests {
     use crate::state::user_state::UserState;
     use axum::extract::State;
     use axum::Json;
-    use chrono::Utc;
     use mockall::predicate::*;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_register_returns_created_user() {
         // Arrange: mock input and expected output
-        let input = UserRegisterDto {
-            email: "test@example.com".to_string(),
-            password: "securepassword".to_string(),
-            username: "testuser".to_string(),
-            first_name: "Test".to_string(),
-            last_name: "User".to_string(),
-            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            address: "123 Test St".to_string(),
-            gender: crate::entity::user::Gender::Male,
-        };
+        let input = UserFactory::fake_user_register_dto();
 
-        let expected_output = UserReadDto {
-            id: 1,
-            email: input.email.clone(),
-            username: input.username.clone(),
-            first_name: input.first_name.clone(),
-            last_name: input.last_name.clone(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: input.birthday,
-            is_online: false,
-            address: input.address.clone(),
-            current_action: Default::default(),
-            gender: input.gender.clone(),
-        };
+        let expected_output = UserFactory::fake_read_user_dto();
 
         let mut mock_service = MockUserServiceTrait::new();
         let mock_repo = MockUserRepositoryTrait::new();
@@ -97,16 +73,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_handles_user_already_exists_error() {
         // Arrange: mock input and service error
-        let input = UserRegisterDto {
-            email: "existing@example.com".to_string(),
-            password: "password123".to_string(),
-            username: "existinguser".to_string(),
-            first_name: "Existing".to_string(),
-            last_name: "User".to_string(),
-            birthday: chrono::NaiveDate::from_ymd_opt(1985, 5, 10).unwrap(),
-            address: "456 Oak Ave".to_string(),
-            gender: crate::entity::user::Gender::Female,
-        };
+        let input = UserFactory::fake_user_register_dto();
 
         let mut mock_service = MockUserServiceTrait::new();
         let mock_repo = MockUserRepositoryTrait::new();
@@ -138,22 +105,7 @@ mod tests {
     async fn test_register_with_factory_data() {
         // Arrange: use factory to create test data
         let input = UserFactory::fake_user_register_dto();
-        let expected_output = UserReadDto {
-            id: 42,
-            email: input.email.clone(),
-            username: input.username.clone(),
-            first_name: input.first_name.clone(),
-            last_name: input.last_name.clone(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: input.birthday,
-            is_online: false,
-            address: input.address.clone(),
-            current_action: Default::default(),
-            gender: input.gender.clone(),
-        };
+        let expected_output = UserFactory::fake_read_user_dto();
 
         let mut mock_service = MockUserServiceTrait::new();
         let mock_repo = MockUserRepositoryTrait::new();
@@ -187,16 +139,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_propagates_service_errors() {
         // Arrange: mock input and database error
-        let input = UserRegisterDto {
-            email: "test@example.com".to_string(),
-            password: "password123".to_string(),
-            username: "testuser".to_string(),
-            first_name: "Test".to_string(),
-            last_name: "User".to_string(),
-            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            address: "123 Test St".to_string(),
-            gender: crate::entity::user::Gender::Male,
-        };
+        let input = UserFactory::fake_user_register_dto();
 
         let mut mock_service = MockUserServiceTrait::new();
         let mock_repo = MockUserRepositoryTrait::new();

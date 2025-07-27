@@ -10,7 +10,7 @@ use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod profile_handler_integration_tests {
-    use ruggine_server::entity::user::UserStatus;
+    use ruggine_server::entity::user::{CurrentAction, UserStatus};
     use crate::get_database;
     use super::*;
 
@@ -32,41 +32,25 @@ mod profile_handler_integration_tests {
 
     #[tokio::test]
     async fn test_profile_returns_correct_user_data() {
-        // Arrange: Create a real user in the database
+        // Arrange
         let (user, _) = create_test_user("profile_correct_data").await;
-        
-        // Act: Call profile handler with the user
+
+        // Act
         let response = profile(Extension(user.clone())).await;
-        
-        // Assert: Verify response contains correct user data
         let data = response.0.data();
-        let expected_dto = UserReadDto::from(user.clone());
-        
-        assert_eq!(*data, expected_dto);
-        assert_eq!(data.id, user.id);
-        assert_eq!(data.first_name, user.first_name);
-        assert_eq!(data.last_name, user.last_name);
-        assert_eq!(data.username, user.username);
-        assert_eq!(data.email, user.email);
-        assert_eq!(data.created_at, user.created_at);
-        assert_eq!(data.updated_at, user.updated_at);
-        assert_eq!(data.user_status, user.user_status);
-        
-        // Verify new fields are properly returned
-        assert_eq!(data.birthday, user.birthday);
-        assert_eq!(data.is_online, user.is_online);
-        assert_eq!(data.address, user.address);
-        assert_eq!(data.current_action, user.current_action);
-        assert_eq!(data.gender, user.gender);
-        
-        // Verify default values for auto-generated fields
+
+        // Assert: confronta direttamente con UserReadDto generato
+        let expected = UserReadDto::from(user.clone());
+        assert_eq!(*data, expected, "UserReadDto should match expected user data");
+
+        // Extra check
         assert!(!data.is_online, "User should not be online by default");
-        assert_eq!(data.current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
-                  "User should be in Waiting state by default");
-        
+        assert_eq!(data.current_action, CurrentAction::Waiting, "User should be in Waiting state by default");
+
         // Cleanup
         cleanup_user(user.email).await;
     }
+
 
     #[tokio::test]
     async fn test_profile_with_active_user() {
@@ -76,21 +60,15 @@ mod profile_handler_integration_tests {
         
         // Act: Call profile handler
         let response = profile(Extension(user.clone())).await;
-        
-        // Assert: Verify active user data is returned correctly
         let data = response.0.data();
-        assert_eq!(data.user_status, UserStatus::Active);
-        assert_eq!(data.email, user.email);
-        assert_eq!(data.id, user.id);
-        
-        // Verify new fields are present and have expected default values
-        assert_eq!(data.birthday, user.birthday);
-        assert_eq!(data.is_online, user.is_online);
-        assert_eq!(data.address, user.address);
-        assert_eq!(data.current_action, user.current_action);
-        assert_eq!(data.gender, user.gender);
+
+        // Assert: Compare the entire user response (excluding password)
+        let expected = UserReadDto::from(user.clone());
+        assert_eq!(data, &expected);
+
+        // Extra check: user should not be online and should be waiting
         assert!(!data.is_online, "User should not be online by default");
-        assert_eq!(data.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
+        assert_eq!(data.current_action, CurrentAction::Waiting);
         
         // Cleanup
         cleanup_user(user.email).await;
@@ -98,43 +76,40 @@ mod profile_handler_integration_tests {
 
     #[tokio::test]
     async fn test_profile_with_inactive_user() {
-        // Arrange: Create user and then deactivate them
+        // Arrange: create and deactivate user
         let (user, _) = create_test_user("profile_inactive_user").await;
-        
-        // Deactivate the user directly in database
+
         let db = get_database().await;
         let pool = db.get_pool();
-        let update_result = sqlx::query("UPDATE \"user\" SET user_status = $1 WHERE email = $2")
+        sqlx::query("UPDATE \"user\" SET user_status = $1 WHERE email = $2")
             .bind(UserStatus::Deleted)
             .bind(&user.email)
             .execute(pool)
-            .await;
-        assert!(update_result.is_ok(), "Failed to deactivate user");
-        
-        // Get the updated user from database
-        let repository = UserRepository::new(&db);
-        let updated_user = repository.find_by_email(user.email.clone()).await
+            .await
+            .expect("Failed to deactivate user");
+
+        let repo = UserRepository::new(&db);
+        let updated_user = repo
+            .find_by_email(user.email.clone())
+            .await
             .expect("User should still exist in database");
-        
-        // Act: Call profile handler with inactive user
+
+        // Act
         let response = profile(Extension(updated_user.clone())).await;
-        
-        // Assert: Verify inactive user data is returned correctly
         let data = response.0.data();
-        assert_eq!(data.user_status, UserStatus::Deleted);
-        assert_eq!(data.email, updated_user.email);
-        assert_eq!(data.id, updated_user.id);
-        
-        // Verify new fields are still returned correctly for inactive users
-        assert_eq!(data.birthday, updated_user.birthday);
-        assert_eq!(data.is_online, updated_user.is_online);
-        assert_eq!(data.address, updated_user.address);
-        assert_eq!(data.current_action, updated_user.current_action);
-        assert_eq!(data.gender, updated_user.gender);
-        
+
+        // Assert
+        let expected = UserReadDto::from(updated_user.clone());
+        assert_eq!(*data, expected, "Returned user data should match updated user");
+        assert_eq!(data.user_status, UserStatus::Deleted, "User status should reflect deletion");
+
+        assert!(!data.is_online, "User should not be online by default");
+        assert_eq!(data.current_action, CurrentAction::Waiting, "Default action should be Waiting");
+
         // Cleanup
         cleanup_user(updated_user.email).await;
     }
+
 
     #[tokio::test]
     async fn test_profile_preserves_all_user_fields() {
@@ -147,25 +122,7 @@ mod profile_handler_integration_tests {
         // Assert: Verify all user fields are preserved (except password)
         let data = response.0.data();
         
-        assert_eq!(data.id, user.id);
-        assert_eq!(data.first_name, user.first_name);
-        assert_eq!(data.last_name, user.last_name);
-        assert_eq!(data.username, user.username);
-        assert_eq!(data.email, user.email);
-        assert_eq!(data.created_at, user.created_at);
-        assert_eq!(data.updated_at, user.updated_at);
-        assert_eq!(data.user_status, user.user_status);
-        
-        // Verify new fields are also preserved
-        assert_eq!(data.birthday, user.birthday);
-        assert_eq!(data.is_online, user.is_online);
-        assert_eq!(data.address, user.address);
-        assert_eq!(data.current_action, user.current_action);
-        assert_eq!(data.gender, user.gender);
-        
-        // Verify password is not included in response
-        // (UserReadDto doesn't have password field, so this is implicit)
-        
+        assert_eq!(data, &UserReadDto::from(user.clone()));
         // Cleanup
         cleanup_user(user.email).await;
     }

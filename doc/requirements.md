@@ -595,7 +595,7 @@ class EndUser {
   + leaveChat()
 }
 
-class Admin {
+class AdminDeveloper {
   + accessLogs()
   + notifyCPUAbnormal()
   + logCPUUsage()
@@ -640,7 +640,7 @@ class CPUUsageLog {
 }
 
 User <|-- EndUser
-User <|-- Admin
+User <|-- AdminDeveloper
 
 EndUser "1" -- "*" GroupChat : "member of"
 GroupChat "1" -- "*" Message : "contains"
@@ -649,7 +649,7 @@ EndUser "1" -- "*" Invitation : "sends"
 EndUser "1" -- "*" Invitation : "receives"
 GroupChat "1" -- "*" Invitation : "related to"
 Invitation --> InvitationStatus : "has"
-CPUUsageLog --> Admin : "monitored by"
+CPUUsageLog --> AdminDeveloper : "monitored by"
 User --> Gender : "has"
 User --> CurrentAction : "has"
 

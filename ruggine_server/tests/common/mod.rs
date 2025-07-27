@@ -38,7 +38,7 @@ pub async fn cleanup_user(email: String) {
     let db = get_database().await;
     let repository = UserRepository::new(&db);
     if let Err(e) = repository.delete_by_email(email.clone()).await {
-        eprintln!("Cleanup failed for {}: {:?}", email, e);
+        panic!("Cleanup failed for {}: {:?}", email, e);
     }
 }
 
