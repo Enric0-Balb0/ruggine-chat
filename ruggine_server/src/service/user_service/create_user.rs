@@ -1,70 +1,10 @@
-use crate::config::database::{Database};
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-use crate::entity::user::{NewUser, User};
-use crate::error::api_error::ApiError;
-use crate::error::db_error::DbError;
-use crate::error::user_error::UserError;
-use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use axum::async_trait;
+use crate::error::{api_error::ApiError, db_error::DbError, user_error::UserError};
+use crate::service::user_service::UserService;
 use sqlx::Error as SqlxError;
-use std::sync::Arc;
-use mockall::automock;
-
-#[derive(Clone)]
-pub struct UserService {
-    user_repo: Arc<dyn UserRepositoryTrait>,
-    // db_conn: Arc<Database>,
-}
-
-#[async_trait]
-#[automock]
-pub trait UserServiceTrait: Send + Sync {
-    async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError>;
-    fn verify_password(&self, user: &User, password: &str) -> bool;
-}
 
 impl UserService {
-    pub fn new(db_conn: &Arc<Database>) -> Self {
-        Self {
-            user_repo: Arc::new(UserRepository::new(db_conn)),
-            // db_conn: Arc::clone(db_conn),
-        }
-    }
-
-    /// Creates a new UserService with a specific repository.
-    pub fn with_repo(repo: Arc<dyn UserRepositoryTrait>) -> Self {
-        Self {
-            user_repo: repo,
-        }
-    }
-
-    async fn add_user(&self, payload: UserRegisterDto) -> Result<User, SqlxError> {
-        let hashed_password = bcrypt::hash(payload.password, 4).unwrap();
-
-        let new_user = NewUser {
-            first_name: payload.first_name,
-            last_name: payload.last_name,
-            username: payload.username,
-            email: payload.email,
-            password: hashed_password,
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: payload.birthday,
-            address: payload.address,
-            gender: payload.gender,
-        };
-
-        let user_id = self.user_repo.insert(new_user).await?;
-        let user = self.user_repo.find(user_id).await?;
-
-        Ok(user)
-    }
-
-}
-
-#[async_trait]
-impl UserServiceTrait for UserService {
-    async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
+    pub async fn create_user_internal(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
         return match self.user_repo.find_by_email(payload.email.to_owned()).await {
             Some(_) => Err(UserError::UserAlreadyExists("Username or email already taken".to_string()))?,
             None => {
@@ -93,11 +33,6 @@ impl UserServiceTrait for UserService {
             }
         };
     }
-
-    
-    fn verify_password(&self, user: &User, password: &str) -> bool {
-        bcrypt::verify(password, &user.password).unwrap_or(false)
-    }
 }
 
 #[cfg(test)]
@@ -106,7 +41,7 @@ mod tests {
     use crate::entity::user::{User};
     use crate::dto::user_dto::UserRegisterDto;
     use crate::repository::user_repository::MockUserRepositoryTrait;
-    use chrono::{Utc, NaiveDate};
+    use chrono::{Utc};
     use std::sync::Arc;
     use mockall::predicate::*;
     use std::pin::Pin;
@@ -174,7 +109,7 @@ mod tests {
         };
 
         // Act: Call the create_user method
-        let result = service.create_user(dto).await;
+        let result = service.create_user_internal(dto).await;
 
         // Assert: Verify the user was created successfully
         assert!(result.is_ok());
@@ -231,7 +166,7 @@ mod tests {
         };
 
         // Act: Attempt to create a user that already exists
-        let result = service.create_user(dto).await;
+        let result = service.create_user_internal(dto).await;
 
         // Assert: Should return UserAlreadyExists error
         assert!(result.is_err());
@@ -274,7 +209,7 @@ mod tests {
         };
 
         // Act: Attempt to create a user that violates unique constraint
-        let result = service.create_user(dto).await;
+        let result = service.create_user_internal(dto).await;
 
         // Assert: Should return UniqueConstraintViolation error
         assert!(result.is_err());
@@ -317,7 +252,7 @@ mod tests {
         };
 
         // Act: Attempt to create a user with database error
-        let result = service.create_user(dto).await;
+        let result = service.create_user_internal(dto).await;
 
         // Assert: Should return SomethingWentWrong error
         assert!(result.is_err());
@@ -368,115 +303,12 @@ mod tests {
         };
 
         // Act: Attempt to create a user where find fails after insert
-        let result = service.create_user(dto).await;
+        let result = service.create_user_internal(dto).await;
 
         // Assert: Should return SomethingWentWrong error
         assert!(result.is_err());
         let error = result.unwrap_err();
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
-    }
-
-    #[test]
-    fn test_verify_password_correct() {
-        // Arrange: Create a user with a known password
-        let password = "testpassword123";
-        let hashed_password = bcrypt::hash(password, 4).unwrap();
-        
-        let user = User {
-            id: 1,
-            first_name: "Test".into(),
-            last_name: "User".into(),
-            username: "testuser".into(),
-            email: "test@example.com".into(),
-            password: hashed_password,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            is_online: false,
-            address: "123 Test St".to_string(),
-            current_action: Default::default(),
-            gender: Default::default(),
-        };
-
-        let mock_repo = MockUserRepositoryTrait::new();
-        let service = UserService::with_repo(Arc::new(mock_repo));
-
-        // Act: Verify the correct password
-        let result = service.verify_password(&user, password);
-
-        // Assert: Should return true for correct password
-        assert!(result);
-    }
-
-    #[test]
-    fn test_verify_password_incorrect() {
-        // Arrange: Create a user with a known password
-        let correct_password = "testpassword123";
-        let incorrect_password = "wrongpassword";
-        let hashed_password = bcrypt::hash(correct_password, 4).unwrap();
-        
-        let user = User {
-            id: 1,
-            first_name: "Test".into(),
-            last_name: "User".into(),
-            username: "testuser".into(),
-            email: "test@example.com".into(),
-            password: hashed_password,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            is_online: false,
-            address: "123 Test St".to_string(),
-            current_action: Default::default(),
-            gender: Default::default(),
-        };
-
-        let mock_repo = MockUserRepositoryTrait::new();
-        let service = UserService::with_repo(Arc::new(mock_repo));
-
-        // Act: Verify an incorrect password
-        let result = service.verify_password(&user, incorrect_password);
-
-        // Assert: Should return false for incorrect password
-        assert!(!result);
-    }
-
-    #[test]
-    fn test_verify_password_empty_password() {
-        // Arrange: Create a user with a known password
-        let correct_password = "testpassword123";
-        let hashed_password = bcrypt::hash(correct_password, 4).unwrap();
-        
-        let user = User {
-            id: 1,
-            first_name: "Test".into(),
-            last_name: "User".into(),
-            username: "testuser".into(),
-            email: "test@example.com".into(),
-            password: hashed_password,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            user_status: Default::default(),
-            user_type: Default::default(), // Default user type
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            is_online: false,
-            address: "123 Test St".to_string(),
-            current_action: Default::default(),
-            gender: Default::default(),
-        };
-
-        let mock_repo = MockUserRepositoryTrait::new();
-        let service = UserService::with_repo(Arc::new(mock_repo));
-
-        // Act: Verify an empty password
-        let result = service.verify_password(&user, "");
-
-        // Assert: Should return false for empty password
-        assert!(!result);
     }
 
     // Helper struct to mock database errors

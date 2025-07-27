@@ -1,4 +1,4 @@
-use ruggine_server::handler::auth::login_handler::login;
+use ruggine_server::handler::auth_handler::login_handler::login;
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::service::token_service::TokenService;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};

@@ -1,7 +1,7 @@
 use ruggine_server::middleware::auth_middleware::{auth_inner};
 use ruggine_server::entity::user::all_user_types;
 use ruggine_server::state::token_state::TokenState;
-use ruggine_server::service::token_service::{TokenService, TokenServiceTrait};
+use ruggine_server::service::token_service::{TokenService};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::factory::user_factory::UserFactory;
@@ -13,7 +13,6 @@ use axum::{
     http::{Request, header},
 };
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use ruggine_server::config::database::DatabaseTrait;
 use crate::common::cleanup_user;
 

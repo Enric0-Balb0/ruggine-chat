@@ -11,7 +11,7 @@ use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::entity::user::User;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use ruggine_server::routes::{auth, user};
+use ruggine_server::routes::{auth_route, user_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::token_state::TokenState;
@@ -46,13 +46,13 @@ pub async fn create_user_router() -> Router {
     let db = get_database().await;
     let user_state = UserState::new(&db);
     let token_state = TokenState::new(&db);
-    user::routes(user_state, token_state)
+    user_route::routes(user_state, token_state)
 }
 
 pub async fn create_auth_router() -> Router {
     let db = get_database().await;
     let auth_state = AuthState::new(&db);
-    auth::routes().with_state(auth_state)
+    auth_route::routes().with_state(auth_state)
 }
 
 /// Helper function to create a real user in the database

@@ -158,7 +158,6 @@ impl std::fmt::Debug for UserRegisterDto {
 
 #[cfg(test)]
 mod tests {
-    use crate::entity::user::UserType;
 
     use super::*;
     use validator::Validate;

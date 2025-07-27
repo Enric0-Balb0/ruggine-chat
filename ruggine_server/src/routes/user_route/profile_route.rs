@@ -1,4 +1,4 @@
-use crate::handler::user::profile_handler;
+use crate::handler::user_handler::profile_handler;
 use axum::{routing::get, Router};
 
 pub fn routes() -> Router {

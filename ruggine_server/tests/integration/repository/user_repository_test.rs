@@ -1,12 +1,11 @@
 use std::sync::Arc;
-use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_repository_integration_tests {
 
-    use ruggine_server::entity::user::{User, UserStatus};
+    use ruggine_server::entity::user::{UserStatus};
 
     use crate::get_database;
 

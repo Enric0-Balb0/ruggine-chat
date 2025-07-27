@@ -1,4 +1,4 @@
-use ruggine_server::handler::user::profile_handler::profile;
+use ruggine_server::handler::user_handler::profile_handler::profile;
 use ruggine_server::dto::user_dto::UserReadDto;
 use ruggine_server::entity::user::User;
 use ruggine_server::factory::user_factory::UserFactory;
@@ -10,7 +10,6 @@ use crate::common::cleanup_user;
 
 #[cfg(test)]
 mod profile_handler_integration_tests {
-    use chrono::Utc;
     use ruggine_server::entity::user::UserStatus;
     use crate::get_database;
     use super::*;
@@ -234,7 +233,6 @@ mod profile_handler_integration_tests {
         assert_eq!(data.first_name, new_first_name);
         assert_eq!(data.last_name, new_last_name);
         assert_eq!(data.email, updated_user.email);
-        let updated_at = data.updated_at;
 
         assert!(
             data.updated_at > old_now,

@@ -2,7 +2,7 @@ use crate::entity::user::{UserStatus, UserType};
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
 use axum::extract::State;
-use axum::{http, http::Request, middleware::Next, response::IntoResponse, body::Body};
+use axum::{http, http::Request, middleware::Next, body::Body};
 use futures::future::BoxFuture;
 use jsonwebtoken::errors::ErrorKind;
 use headers::authorization::{Authorization, Bearer};

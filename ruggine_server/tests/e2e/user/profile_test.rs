@@ -1,12 +1,9 @@
 use axum::{
     body::Body,
-    http::{Request, StatusCode},
-    Router,
+    http::{Request, StatusCode}
 };
 use serde_json::json;
 use tower::ServiceExt;
-use ruggine_server::routes::{auth, user};
-use ruggine_server::state::{auth_state::AuthState, token_state::TokenState, user_state::UserState};
 use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;

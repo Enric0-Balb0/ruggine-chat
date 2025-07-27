@@ -45,7 +45,7 @@ mod login_tests {
     use crate::dto::token_dto::TokenReadDto;
     use crate::error::user_error::UserError;
     // Import the auto-generated mocks
-    use crate::service::user_service::MockUserServiceTrait;
+    use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use crate::service::token_service::MockTokenServiceTrait;
     use crate::repository::user_repository::MockUserRepositoryTrait;
     use mockall::predicate::*;

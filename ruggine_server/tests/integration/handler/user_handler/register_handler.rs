@@ -1,4 +1,4 @@
-use ruggine_server::handler::user::register_handler::register;
+use ruggine_server::handler::user_handler::register_handler::register;
 use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::service::user_service::UserService;

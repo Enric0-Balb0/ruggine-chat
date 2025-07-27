@@ -1,11 +1,6 @@
-use std::sync::Arc;
-use ruggine_server::config::database::DatabaseTrait;
-use ruggine_server::service::token_service::{TokenService, TokenServiceTrait};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::factory::user_factory::UserFactory;
-use ruggine_server::factory::token_factory::TokenFactory;
-use ruggine_server::error::token_error::TokenError;
 use chrono::Utc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -21,6 +16,7 @@ fn get_unique_jwt_secret(test_name: &str) -> String {
 
 #[cfg(test)]
 mod token_service_integration_tests {
+    use ruggine_server::service::token_service::{TokenService, TokenServiceTrait};
     use crate::get_database;
     use super::*;
 

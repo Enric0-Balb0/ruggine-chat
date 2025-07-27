@@ -1,15 +1,11 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
 use serde_json::json;
 use tower::ServiceExt;
-use ruggine_server::routes::user;
-use ruggine_server::state::{token_state::TokenState, user_state::UserState};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use ruggine_server::config::database::DatabaseTrait;
 use axum::body::to_bytes;
 use crate::common::{cleanup_user, create_user_router};
 

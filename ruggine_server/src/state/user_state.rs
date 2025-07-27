@@ -2,7 +2,8 @@ use mockall::automock;
 
 use crate::config::database::Database;
 use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use crate::service::user_service::{UserService, UserServiceTrait};
+use crate::service::user_service::{UserService};
+use crate::service::user_service::UserServiceTrait;
 
 use std::sync::Arc;
 

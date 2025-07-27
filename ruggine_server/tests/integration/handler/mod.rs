@@ -1,2 +1,2 @@
-pub mod auth;
-pub mod user;
+pub mod auth_handler;
+pub mod user_handler;

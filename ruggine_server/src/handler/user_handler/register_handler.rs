@@ -29,7 +29,7 @@ mod tests {
     use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
     use crate::error::user_error::UserError;
     use crate::factory::user_factory::UserFactory;
-    use crate::service::user_service::MockUserServiceTrait;
+    use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use crate::repository::user_repository::MockUserRepositoryTrait;
     use crate::state::user_state::UserState;
     use axum::extract::State;

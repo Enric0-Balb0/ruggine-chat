@@ -1,7 +1,7 @@
-use super::auth;
+use super::auth_route;
 use crate::config::database::Database;
 use crate::docs::ApiDoc;
-use crate::routes::user;
+use crate::routes::user_route;
 use crate::state::{auth_state::AuthState, token_state::TokenState, user_state::UserState};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -16,8 +16,8 @@ pub fn routes(db_conn: Arc<Database>) -> Router {
     let token_state = TokenState::new(&db_conn);
 
     let merged_router = Router::new()
-        .nest("/auth", auth::routes().with_state(auth_state))
-        .nest("/user", user::routes(user_state, token_state))
+        .nest("/auth", auth_route::routes().with_state(auth_state))
+        .nest("/user", user_route::routes(user_state, token_state))
         .route("/health", get(|| async { "Healthy..." }))
         .route("/api-docs/openapi.json", get(|| async { Json(ApiDoc::openapi()) }));
 

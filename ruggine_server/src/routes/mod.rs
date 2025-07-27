@@ -1,3 +1,3 @@
-pub mod auth;
+pub mod auth_route;
 pub mod root;
-pub mod user;
+pub mod user_route;

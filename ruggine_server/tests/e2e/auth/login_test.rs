@@ -1,12 +1,9 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
 use serde_json::json;
 use tower::ServiceExt;
-use ruggine_server::routes::auth;
-use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
@@ -117,7 +114,7 @@ mod login_e2e_tests {
     async fn test_login_failure_with_wrong_password() {
         // Arrange: Create router and test user
         let app = create_auth_router().await;
-        let (user_dto, password) = create_test_user("e2e_wrong_password").await;
+        let (user_dto, _) = create_test_user("e2e_wrong_password").await;
 
         let login_payload = json!({
             "email": user_dto.email,

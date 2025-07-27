@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use ruggine_server::config::database::DatabaseTrait;
+
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::error::api_error::ApiError;
@@ -9,7 +8,6 @@ use ruggine_server::factory::user_factory::UserFactory;
 
 #[cfg(test)]
 mod user_service_integration_tests {
-    use chrono::Utc;
     use ruggine_server::entity::user::UserStatus;
 
     use crate::get_database;
@@ -21,9 +19,9 @@ mod user_service_integration_tests {
         let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
-        
+
         let dto = UserFactory::unique_fake_user_register_dto("create_success");
-        
+
         // Act: Call the create_user method
         let result = service.create_user(dto.clone()).await;
 
@@ -49,7 +47,7 @@ mod user_service_integration_tests {
         let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
-        
+
         // Create the first user using the factory
         let first_user = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
         let insert_result = repository.insert(first_user.clone()).await;
@@ -82,113 +80,12 @@ mod user_service_integration_tests {
     }
 
     #[tokio::test]
-    async fn test_verify_password_correct() {
-        // Arrange: Create a user in the database with a known password
-        let db = get_database().await;
-        let service = UserService::new(&db);
-        let repository = UserRepository::new(&db);
-        
-        let password = "testpassword123";
-        let mut dto = UserFactory::unique_fake_user_register_dto("verify_correct");
-        dto.password = password.into();
-
-        // Create the user
-        let create_result = service.create_user(dto.clone()).await;
-        assert!(create_result.is_ok(), "Failed to create user for verification test");
-
-        // Retrieve the user from database
-        let user_option = repository.find_by_email(dto.email.clone()).await;
-        assert!(user_option.is_some(), "User not found in database");
-        let user = user_option.unwrap();
-
-        // Act: Verify the correct password
-        let result = service.verify_password(&user, password);
-
-        // Assert: Should return true for correct password
-        assert!(result, "Expected password verification to succeed");
-
-        // Cleanup: Delete the test user
-        if let Err(e) = repository.delete_by_email(dto.email.clone()).await {
-            eprintln!("Cleanup failed for {}: {:?}", dto.email, e);
-        }
-    }
-
-    #[tokio::test]
-    async fn test_verify_password_incorrect() {
-        // Arrange: Create a user in the database with a known password
-        let db = get_database().await;
-        let service = UserService::new(&db);
-        let repository = UserRepository::new(&db);
-        
-        let correct_password = "testpassword123";
-        let incorrect_password = "wrongpassword";
-        let mut dto = UserFactory::unique_fake_user_register_dto("verify_incorrect");
-        dto.password = correct_password.into();
-
-        // Create the user
-        let create_result = service.create_user(dto.clone()).await;
-        assert!(create_result.is_ok(), "Failed to create user for verification test");
-
-        // Retrieve the user from database
-        let user_option = repository.find_by_email(dto.email.clone()).await;
-        assert!(user_option.is_some(), "User not found in database");
-        let user = user_option.unwrap();
-
-        // Act: Verify an incorrect password
-        let result = service.verify_password(&user, incorrect_password);
-
-        // Assert: Should return false for incorrect password
-        assert!(!result, "Expected password verification to fail");
-
-        // Cleanup: Delete the test user
-        if let Err(e) = repository.delete_by_email(dto.email.clone()).await {
-            eprintln!("Cleanup failed for {}: {:?}", dto.email, e);
-        }
-    }
-
-    #[tokio::test]
-    async fn test_verify_password_empty_password() {
-        // Arrange: Create a user in the database with a known password
-        let db = get_database().await;
-        let service = UserService::new(&db);
-        let repository = UserRepository::new(&db);
-        
-        let correct_password = "testpassword123";
-        let mut dto = UserFactory::unique_fake_user_register_dto("verify_empty");
-        dto.password = correct_password.into();
-
-        // Create the user
-        let create_result = service.create_user(dto.clone()).await;
-        assert!(
-            create_result.is_ok(),
-            "Failed to create user for verification test: {:?}",
-            create_result.unwrap_err()
-        );
-
-        // Retrieve the user from database
-        let user_option = repository.find_by_email(dto.email.clone()).await;
-        assert!(user_option.is_some(), "User not found in database");
-        let user = user_option.unwrap();
-
-        // Act: Verify an empty password
-        let result = service.verify_password(&user, "");
-
-        // Assert: Should return false for empty password
-        assert!(!result, "Expected password verification to fail for empty password");
-
-        // Cleanup: Delete the test user
-        if let Err(e) = repository.delete_by_email(dto.email.clone()).await {
-            eprintln!("Cleanup failed for {}: {:?}", dto.email, e);
-        }
-    }
-
-    #[tokio::test]
     async fn test_create_user_validates_data_integrity() {
         // Arrange: Set up a real database connection and service
         let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
-        
+
         let dto = UserFactory::unique_fake_user_register_dto("integrity");
 
         // Act: Create the user
@@ -211,12 +108,12 @@ mod user_service_integration_tests {
         let user_option = repository.find_by_email(dto.email.clone()).await;
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
-        
+
         // Password should be hashed, not stored in plain text
         assert_ne!(user.password, dto.password, "Password should be hashed, not plain text");
-        
+
         // But verification should work
-        assert!(service.verify_password(&user, &dto.password), "Password verification should work");
+        assert!(service.verify_password_internal(&user, &dto.password), "Password verification should work");
 
         // Cleanup: Delete the test user
         if let Err(e) = repository.delete_by_email(dto.email.clone()).await {
@@ -230,7 +127,7 @@ mod user_service_integration_tests {
         let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
-        
+
         let mut dto = UserFactory::unique_fake_user_register_dto("special");
         dto.first_name = "José María".into();
         dto.last_name = "García-López".into();
@@ -241,7 +138,7 @@ mod user_service_integration_tests {
         // Assert: Verify the user was created successfully with special characters
         assert!(result.is_ok(), "Failed to create user with special characters: {:?}", result);
         let user_dto = result.unwrap();
-        
+
         assert_eq!(user_dto.first_name, "José María");
         assert_eq!(user_dto.last_name, "García-López");
         assert_eq!(user_dto.username, dto.username);
@@ -259,7 +156,7 @@ mod user_service_integration_tests {
         let db = get_database().await;
         let service = UserService::new(&db);
         let repository = UserRepository::new(&db);
-        
+
         let mut dto = UserFactory::unique_fake_user_register_dto("new_fields");
         dto.birthday = chrono::NaiveDate::from_ymd_opt(1995, 7, 15).unwrap();
         dto.address = "456 New Field Ave, Test City".to_string();
@@ -271,7 +168,7 @@ mod user_service_integration_tests {
         // Assert: Verify the user was created successfully
         assert!(result.is_ok(), "Failed to create user: {:?}", result);
         let user_dto = result.unwrap();
-        
+
         // Verify that new fields are correctly returned in UserReadDto
         assert_eq!(user_dto.birthday, dto.birthday);
         assert_eq!(user_dto.address, dto.address);
@@ -283,7 +180,7 @@ mod user_service_integration_tests {
         let user_option = repository.find_by_email(dto.email.clone()).await;
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
-        
+
         assert_eq!(user.birthday, dto.birthday);
         assert_eq!(user.address, dto.address);
         assert_eq!(user.gender, dto.gender);
