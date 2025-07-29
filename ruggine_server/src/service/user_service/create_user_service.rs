@@ -2,6 +2,7 @@ use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
 use crate::error::{api_error::ApiError, db_error::DbError, user_error::UserError};
 use crate::service::user_service::UserService;
 use sqlx::Error as SqlxError;
+use tracing::error;
 
 impl UserService {
     pub async fn create_user_internal(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
@@ -15,7 +16,7 @@ impl UserService {
                     Err(e) => match e {
                         SqlxError::Database(e) => match e.code() {
                             Some(code) => {
-                                println!("{}", e.to_string());
+                                error!("{}", e.to_string());
                                 if code == "23000" {
                                     Err(DbError::UniqueConstraintViolation(e.to_string()))?
                                 } else {
@@ -25,7 +26,7 @@ impl UserService {
                             _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
                         },
                         _ => {
-                            println!("{}", e.to_string());
+                            error!("{}", e.to_string());
                             Err(DbError::SomethingWentWrong(e.to_string()))?
                         }
                     },

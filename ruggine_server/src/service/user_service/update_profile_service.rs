@@ -3,6 +3,7 @@ use crate::entity::user::UpdateUser;
 use crate::error::{api_error::ApiError, db_error::DbError, user_error::UserError};
 use crate::service::user_service::UserService;
 use sqlx::Error as SqlxError;
+use tracing::error;
 
 impl UserService {
     pub async fn update_user_profile_internal(&self, user_id: i32, update_user: UpdateUser) -> Result<UserReadDto, ApiError> {
@@ -23,7 +24,7 @@ impl UserService {
                     Err(UserError::UserNotFound)?
                 }
                 _ => {
-                    println!("Update user profile error: {}", e.to_string());
+                    error!("Update user profile error: {}", e.to_string());
                     Err(DbError::SomethingWentWrong(e.to_string()))?
                 }
             }

@@ -10,6 +10,7 @@ use tower::ServiceExt;
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::entity::user::User;
 use ruggine_server::factory::user_factory::UserFactory;
+use ruggine_server::repository::group_chat_repository::GroupChatRepository;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
@@ -125,6 +126,13 @@ pub async fn login_and_get_token_for_user(user: &User, password: &str) -> String
     login_and_get_token(user.email.clone(), password.to_string()).await
 }
 
+pub async fn cleanup_group(group_id: i32) {
+    let db = get_database().await;
+    let group_repo = GroupChatRepository::new(&db);
+    if let Err(e) = group_repo.delete_by_id(group_id).await {
+        eprintln!("Failed to cleanup group {}: {:?}", group_id, e);
+    }
+}
 
 fn init_test_logging() {
     INIT_LOG.call_once(|| {

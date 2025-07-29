@@ -283,8 +283,8 @@ mod user_service_update_profile_integration_tests {
         let db = get_database().await;
         let service = UserService::new(&db);
 
-        // Test with address that's too long (over 255 characters)
-        let long_address = "a".repeat(256);
+        // Test with address that's too long (over 256 characters)
+        let long_address = "a".repeat(257);
         let invalid_update_dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
@@ -300,7 +300,7 @@ mod user_service_update_profile_integration_tests {
         assert!(result.is_err(), "Should fail with validation error for long address");
 
         // Test with very long first name
-        let long_first_name = "b".repeat(256);
+        let long_first_name = "b".repeat(257);
         let invalid_name_dto = ProfileUpdateDto {
             first_name: Some(long_first_name),
             last_name: None,

@@ -45,14 +45,24 @@ pub struct UserRegisterDto {
     ))]
     #[schema(example = "securepassword123")]
     pub password: String,
+    #[validate(length(
+        min = 1,
+        max = 256,
+        message = "Last name must be between 1 and 256 characters"
+    ))]
     #[schema(example = "John")]
     pub first_name: String,
+    #[validate(length(
+        min = 1,
+        max = 256,
+        message = "Last name must be between 1 and 256 characters"
+    ))]
     #[schema(example = "Doe")]
     pub last_name: String,
     #[validate(length(
         min = 3,
-        max = 50,
-        message = "Username must be between 3 and 50 characters"
+        max = 64,
+        message = "Username must be between 3 and 64 characters"
     ))]
     #[schema(example = "johndoe")]
     pub username: String,
@@ -60,8 +70,8 @@ pub struct UserRegisterDto {
     pub birthday: NaiveDate,
     #[validate(length(
         min = 1,
-        max = 255,
-        message = "Address must be between 1 and 255 characters"
+        max = 256,
+        message = "Address must be between 1 and 256 characters"
     ))]
     #[schema(example = "123 Main St")]
     pub address: String,
@@ -78,26 +88,26 @@ pub struct UserRegisterDto {
     "gender": "other"
 }))]
 pub struct ProfileUpdateDto {
-    // #[validate(length(
-    //     min = 1,
-    //     max = 100,
-    //     message = "First name must be between 1 and 100 characters"
-    // ))]
+    #[validate(length(
+        min = 1,
+        max = 256,
+        message = "First name must be between 1 and 256 characters"
+    ))]
     #[schema(example = "John")]
     pub first_name: Option<String>,
-    // #[validate(length(
-    //     min = 1,
-    //     max = 100,
-    //     message = "Last name must be between 1 and 100 characters"
-    // ))]
+    #[validate(length(
+        min = 1,
+        max = 256,
+        message = "Last name must be between 1 and 256 characters"
+    ))]
     #[schema(example = "Doe")]
     pub last_name: Option<String>,
     #[schema(example = "1990-01-01")]
     pub birthday: Option<NaiveDate>,
     #[validate(length(
         min = 1,
-        max = 255,
-        message = "Address must be between 1 and 255 characters"
+        max = 256,
+        message = "Address must be between 1 and 256 characters"
     ))]
     #[schema(example = "123 Main St")]
     pub address: Option<String>,
@@ -377,7 +387,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            username: "a".repeat(51), // More than 50 characters
+            username: "a".repeat(65), // More than 64 characters
             birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
             address: "123 Main St".to_string(),
             gender: Gender::Male,
@@ -537,7 +547,7 @@ mod tests {
             last_name: "Doe".to_string(),
             username: "johndoe".to_string(),
             birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
-            address: "a".repeat(256), // More than 255 characters
+            address: "a".repeat(257), // More than 256 characters
             gender: Gender::Male,
         };
 
@@ -652,7 +662,7 @@ mod tests {
             first_name: None,
             last_name: None,
             birthday: None,
-            address: Some("a".repeat(256)), // More than 255 characters
+            address: Some("a".repeat(257)), // More than 256 characters
             gender: None,
         };
 

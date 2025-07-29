@@ -149,7 +149,7 @@ mod update_profile_e2e_tests {
         let token = login_and_get_token(user.email.clone(), password.clone()).await;
         let app = create_user_router().await;
 
-        let long_address = "a".repeat(256); // Over 255 characters
+        let long_address = "a".repeat(257); // Over 256 characters
         let invalid_update_dto = json!({
             "first_name": null,
             "last_name": null,
