@@ -68,6 +68,42 @@ pub struct UserRegisterDto {
     pub gender: Gender,
 }
 
+#[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq, ToSchema)]
+#[schema(example = json!({
+    "first_name": "John",
+    "last_name": "Doe",
+    "birthday": "1990-01-01",
+    "address": "123 Main St",
+    "gender": "male"
+}))]
+pub struct UserUpdateDto {
+    // #[validate(length(
+    //     min = 1,
+    //     max = 100,
+    //     message = "First name must be between 1 and 100 characters"
+    // ))]
+    #[schema(example = "John")]
+    pub first_name: Option<String>,
+    // #[validate(length(
+    //     min = 1,
+    //     max = 100,
+    //     message = "Last name must be between 1 and 100 characters"
+    // ))]
+    #[schema(example = "Doe")]
+    pub last_name: Option<String>,
+    #[schema(example = "1990-01-01")]
+    pub birthday: Option<NaiveDate>,
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "Address must be between 1 and 255 characters"
+    ))]
+    #[schema(example = "123 Main St")]
+    pub address: Option<String>,
+    #[schema(example = "male")]
+    pub gender: Option<Gender>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
 #[schema(example = json!({
     "id": 1,
@@ -117,6 +153,7 @@ pub struct UserReadDto {
 }
 
 impl UserReadDto {
+    // TODO: Add test for from
     pub fn from(model: User) -> UserReadDto {
         Self {
             id: model.id,
@@ -152,6 +189,18 @@ impl std::fmt::Debug for UserRegisterDto {
             .field("last_name", &self.last_name)
             .field("username", &self.username)
             .field("email", &self.email)
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for UserUpdateDto {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UserUpdate")
+            .field("first_name", &self.first_name)
+            .field("last_name", &self.last_name)
+            .field("birthday", &self.birthday)
+            .field("address", &self.address)
+            .field("gender", &self.gender)
             .finish()
     }
 }
@@ -540,5 +589,188 @@ mod tests {
         assert_eq!(male_dto.gender, Gender::Male);
         assert_eq!(female_dto.gender, Gender::Female);
         assert_eq!(other_dto.gender, Gender::Other);
+    }
+
+    #[test]
+    fn test_user_update_dto_valid_complete() {
+        let update_dto = UserUpdateDto {
+            first_name: Some("Jane".to_string()),
+            last_name: Some("Smith".to_string()),
+            birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
+            address: Some("789 Pine St".to_string()),
+            gender: Some(Gender::Female),
+        };
+
+        assert!(update_dto.validate().is_ok());
+        assert_eq!(update_dto.first_name, Some("Jane".to_string()));
+        assert_eq!(update_dto.last_name, Some("Smith".to_string()));
+        assert_eq!(update_dto.birthday, Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()));
+        assert_eq!(update_dto.address, Some("789 Pine St".to_string()));
+        assert_eq!(update_dto.gender, Some(Gender::Female));
+    }
+
+    #[test]
+    fn test_user_update_dto_valid_partial() {
+        let update_dto = UserUpdateDto {
+            first_name: Some("UpdatedName".to_string()),
+            last_name: None,
+            birthday: None,
+            address: Some("Updated Address".to_string()),
+            gender: None,
+        };
+
+        assert!(update_dto.validate().is_ok());
+        assert_eq!(update_dto.first_name, Some("UpdatedName".to_string()));
+        assert_eq!(update_dto.last_name, None);
+        assert_eq!(update_dto.birthday, None);
+        assert_eq!(update_dto.address, Some("Updated Address".to_string()));
+        assert_eq!(update_dto.gender, None);
+    }
+
+    #[test]
+    fn test_user_update_dto_valid_empty() {
+        let update_dto = UserUpdateDto {
+            first_name: None,
+            last_name: None,
+            birthday: None,
+            address: None,
+            gender: None,
+        };
+
+        assert!(update_dto.validate().is_ok());
+        assert!(update_dto.first_name.is_none());
+        assert!(update_dto.last_name.is_none());
+        assert!(update_dto.birthday.is_none());
+        assert!(update_dto.address.is_none());
+        assert!(update_dto.gender.is_none());
+    }
+
+    #[test]
+    fn test_user_update_dto_address_too_long() {
+        let update_dto = UserUpdateDto {
+            first_name: None,
+            last_name: None,
+            birthday: None,
+            address: Some("a".repeat(256)), // More than 255 characters
+            gender: None,
+        };
+
+        let validation_result = update_dto.validate();
+        assert!(validation_result.is_err());
+        
+        let errors = validation_result.unwrap_err();
+        assert!(errors.field_errors().contains_key("address"));
+    }
+
+    #[test]
+    fn test_user_update_dto_address_empty_string() {
+        let update_dto = UserUpdateDto {
+            first_name: None,
+            last_name: None,
+            birthday: None,
+            address: Some("".to_string()), // Empty string
+            gender: None,
+        };
+
+        let validation_result = update_dto.validate();
+        assert!(validation_result.is_err());
+        
+        let errors = validation_result.unwrap_err();
+        assert!(errors.field_errors().contains_key("address"));
+    }
+
+    #[test]
+    fn test_user_update_dto_clone() {
+        let update_dto = UserUpdateDto {
+            first_name: Some("Jane".to_string()),
+            last_name: Some("Smith".to_string()),
+            birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
+            address: Some("789 Pine St".to_string()),
+            gender: Some(Gender::Female),
+        };
+
+        let cloned_dto = update_dto.clone();
+        assert_eq!(update_dto.first_name, cloned_dto.first_name);
+        assert_eq!(update_dto.last_name, cloned_dto.last_name);
+        assert_eq!(update_dto.birthday, cloned_dto.birthday);
+        assert_eq!(update_dto.address, cloned_dto.address);
+        assert_eq!(update_dto.gender, cloned_dto.gender);
+    }
+
+    #[test]
+    fn test_user_update_dto_serialization() {
+        let update_dto = UserUpdateDto {
+            first_name: Some("Jane".to_string()),
+            last_name: Some("Smith".to_string()),
+            birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
+            address: Some("789 Pine St".to_string()),
+            gender: Some(Gender::Female),
+        };
+
+        // Test serialization
+        let serialized = serde_json::to_string(&update_dto).unwrap();
+        assert!(serialized.contains("Jane"));
+        assert!(serialized.contains("Smith"));
+        assert!(serialized.contains("789 Pine St"));
+
+        // Test deserialization
+        let deserialized: UserUpdateDto = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(update_dto.first_name, deserialized.first_name);
+        assert_eq!(update_dto.last_name, deserialized.last_name);
+        assert_eq!(update_dto.birthday, deserialized.birthday);
+        assert_eq!(update_dto.address, deserialized.address);
+        assert_eq!(update_dto.gender, deserialized.gender);
+    }
+
+    #[test]
+    fn test_user_update_dto_debug_format() {
+        let update_dto = UserUpdateDto {
+            first_name: Some("Jane".to_string()),
+            last_name: Some("Smith".to_string()),
+            birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
+            address: Some("789 Pine St".to_string()),
+            gender: Some(Gender::Female),
+        };
+
+        let debug_string = format!("{:?}", update_dto);
+        assert!(debug_string.contains("Jane"));
+        assert!(debug_string.contains("Smith"));
+        assert!(debug_string.contains("789 Pine St"));
+        assert!(debug_string.contains("Female"));
+    }
+
+    #[test]
+    fn test_user_update_dto_with_different_genders() {
+        let male_dto = UserUpdateDto {
+            first_name: Some("John".to_string()),
+            last_name: None,
+            birthday: None,
+            address: None,
+            gender: Some(Gender::Male),
+        };
+
+        let female_dto = UserUpdateDto {
+            first_name: Some("Jane".to_string()),
+            last_name: None,
+            birthday: None,
+            address: None,
+            gender: Some(Gender::Female),
+        };
+
+        let other_dto = UserUpdateDto {
+            first_name: Some("Alex".to_string()),
+            last_name: None,
+            birthday: None,
+            address: None,
+            gender: Some(Gender::Other),
+        };
+
+        assert!(male_dto.validate().is_ok());
+        assert!(female_dto.validate().is_ok());
+        assert!(other_dto.validate().is_ok());
+        
+        assert_eq!(male_dto.gender, Some(Gender::Male));
+        assert_eq!(female_dto.gender, Some(Gender::Female));
+        assert_eq!(other_dto.gender, Some(Gender::Other));
     }
 }

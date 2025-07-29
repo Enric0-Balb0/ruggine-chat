@@ -72,6 +72,24 @@ async fn create_test_user_with_password(prefix: &str, password: String) -> User 
     user_option.unwrap()
 }
 
+/// Helper function to create a test user with default password
+pub async fn create_test_user(prefix: &str) -> (User, String) {
+    let password = "testpassword123".to_string();
+    let user = create_test_user_with_password(prefix, password.clone()).await;
+    (user, password)
+}
+
+/// Helper function to create multiple test users
+pub async fn create_test_users(prefix: &str, count: usize) -> Vec<(User, String)> {
+    let mut users = Vec::new();
+    for i in 0..count {
+        let user_prefix = format!("{}_{}", prefix, i);
+        let user_data = create_test_user(&user_prefix).await;
+        users.push(user_data);
+    }
+    users
+}
+
 // Helper function to log in and get token
 async fn login_and_get_token(email: String, password: String) -> String {
     let auth_app = create_auth_router().await;
@@ -100,6 +118,11 @@ async fn login_and_get_token(email: String, password: String) -> String {
     let data = &response_json["data"];
 
     data["token"].as_str().unwrap().to_string()
+}
+
+/// Public helper function to log in and get token for tests
+pub async fn login_and_get_token_for_user(user: &User, password: &str) -> String {
+    login_and_get_token(user.email.clone(), password.to_string()).await
 }
 
 

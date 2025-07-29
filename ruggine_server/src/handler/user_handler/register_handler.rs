@@ -26,8 +26,6 @@ pub async fn register(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-    use crate::entity::user::User;
     use crate::error::user_error::UserError;
     use crate::factory::user_factory::UserFactory;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;

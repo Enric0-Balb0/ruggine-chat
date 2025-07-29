@@ -3,12 +3,13 @@ pub mod user_repository_trait;
 mod find_by_email;
 mod find;
 mod insert;
+mod update_profile;
 
 use async_trait::async_trait;
 use sqlx::Error;
 pub use user_repository::UserRepository;
 pub use user_repository_trait::UserRepositoryTrait;
-use crate::entity::user::{NewUser, User};
+use crate::entity::user::{NewUser, User, UpdateUser};
 
 #[async_trait]
 impl UserRepositoryTrait for UserRepository {
@@ -22,5 +23,9 @@ impl UserRepositoryTrait for UserRepository {
 
     async fn insert(&self, new_user: NewUser) -> Result<i32, Error> {
         self.insert_inner(new_user).await
+    }
+
+    async fn update_profile(&self, user_id: i32, update_user: UpdateUser) -> Result<User, Error> {
+        self.update_profile_internal(user_id, update_user).await
     }
 }

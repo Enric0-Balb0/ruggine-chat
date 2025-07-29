@@ -1,4 +1,4 @@
-use crate::entity::user::{User, NewUser};
+use crate::entity::user::{User, NewUser, UpdateUser};
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::Error as SqlxError;
@@ -10,4 +10,5 @@ pub trait UserRepositoryTrait: Send + Sync {
     async fn find_by_email(&self, email: String) -> Option<User>;
     async fn find(&self, id: i32) -> Result<User, Error>;
     async fn insert(&self, new_user: NewUser) -> Result<i32, SqlxError>;
+    async fn update_profile(&self, user_id: i32, update_user: UpdateUser) -> Result<User, SqlxError>;
 }
