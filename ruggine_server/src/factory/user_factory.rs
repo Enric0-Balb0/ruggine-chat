@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::{Utc, NaiveDate};
 
-use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto, UserUpdateDto}, entity::user::{NewUser, User, UserStatus, CurrentAction, Gender}};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto, ProfileUpdateDto}, entity::user::{NewUser, User, UserStatus, CurrentAction, Gender}};
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -136,8 +136,8 @@ impl UserFactory {
         }
     }
 
-    pub fn fake_user_update_dto_from_user_read_dto(dto: &UserReadDto, prefix: &str) -> UserUpdateDto {
-        UserUpdateDto {
+    pub fn fake_user_update_dto_from_user_read_dto(dto: &UserReadDto, prefix: &str) -> ProfileUpdateDto {
+        ProfileUpdateDto {
             first_name: Some(format!("{}_{}", prefix, dto.first_name)),
             last_name: Some(format!("{}_{}", prefix, dto.last_name)),
             birthday: Some(dto.birthday.succ_opt().unwrap_or(dto.birthday)),
@@ -146,8 +146,8 @@ impl UserFactory {
         }
     }
 
-    pub fn fake_user_update_dto() -> UserUpdateDto {
-        UserUpdateDto {
+    pub fn fake_user_update_dto() -> ProfileUpdateDto {
+        ProfileUpdateDto {
             first_name: Some("JohnUpdate".to_string()),
             last_name: Some("DoeUpdate".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -156,8 +156,8 @@ impl UserFactory {
         }
     }
 
-    pub fn fake_user_update_dto_partial() -> UserUpdateDto {
-        UserUpdateDto {
+    pub fn fake_user_update_dto_partial() -> ProfileUpdateDto {
+        ProfileUpdateDto {
             first_name: Some("JohnUpdate".to_string()),
             last_name: None,
             birthday: None,
@@ -166,8 +166,8 @@ impl UserFactory {
         }
     }
 
-    pub fn fake_user_update_dto_empty() -> UserUpdateDto {
-        UserUpdateDto {
+    pub fn fake_user_update_dto_empty() -> ProfileUpdateDto {
+        ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,
@@ -176,9 +176,9 @@ impl UserFactory {
         }
     }
 
-    pub fn unique_fake_user_update_dto(prefix: &str) -> UserUpdateDto {
+    pub fn unique_fake_user_update_dto(prefix: &str) -> ProfileUpdateDto {
         let counter: u32 = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        UserUpdateDto {
+        ProfileUpdateDto {
             first_name: Some(format!("Updated{}{}", prefix, counter)),
             last_name: Some(format!("UpdatedLast{}", counter)),
             birthday: Some(NaiveDate::from_ymd_opt(1985, 8, 10).unwrap()),

@@ -113,6 +113,10 @@ pub enum Gender {
     Other,
 }
 
+pub fn all_genders() -> Vec<Gender> {
+    vec![Gender::Male, Gender::Female, Gender::Other]
+}
+
 impl Default for Gender {
     fn default() -> Self {
         Gender::Other
@@ -120,7 +124,7 @@ impl Default for Gender {
 }
 
 impl UpdateUser {
-    pub fn from_dto(dto: crate::dto::user_dto::UserUpdateDto) -> Self {
+    pub fn from_dto(dto: crate::dto::user_dto::ProfileUpdateDto) -> Self {
         Self {
             first_name: dto.first_name,
             last_name: dto.last_name,
@@ -143,12 +147,12 @@ impl UpdateUser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dto::user_dto::UserUpdateDto;
+    use crate::dto::user_dto::ProfileUpdateDto;
     use crate::factory::user_factory::UserFactory;
 
     #[test]
     fn test_update_user_from_dto_complete() {
-        let dto = UserUpdateDto {
+        let dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: Some("Smith".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -168,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_update_user_from_dto_partial() {
-        let dto = UserUpdateDto {
+        let dto = ProfileUpdateDto {
             first_name: Some("UpdatedName".to_string()),
             last_name: None,
             birthday: None,
@@ -188,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_update_user_from_dto_empty() {
-        let dto = UserUpdateDto {
+        let dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,
@@ -208,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_update_user_has_updates_single_field() {
-        let dto_with_name = UserUpdateDto {
+        let dto_with_name = ProfileUpdateDto {
             first_name: Some("John".to_string()),
             last_name: None,
             birthday: None,
@@ -219,7 +223,7 @@ mod tests {
         let update_user = UpdateUser::from_dto(dto_with_name);
         assert!(update_user.has_updates());
 
-        let dto_with_gender = UserUpdateDto {
+        let dto_with_gender = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,

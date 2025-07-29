@@ -17,6 +17,8 @@ pub enum UserError {
     UserNotActive,
     #[error("Insufficient permissions")]
     InsufficientPermissions,
+    #[error("No fields to update")]
+    NoFieldsToUpdate,
 }
 
 impl IntoResponse for UserError {
@@ -27,6 +29,7 @@ impl IntoResponse for UserError {
             UserError::InvalidPassword => StatusCode::UNAUTHORIZED,
             UserError::UserNotActive => StatusCode::FORBIDDEN,
             UserError::InsufficientPermissions => StatusCode::FORBIDDEN,
+            UserError::NoFieldsToUpdate => StatusCode::BAD_REQUEST,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

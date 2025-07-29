@@ -91,7 +91,7 @@ pub async fn create_test_users(prefix: &str, count: usize) -> Vec<(User, String)
 }
 
 // Helper function to log in and get token
-async fn login_and_get_token(email: String, password: String) -> String {
+pub async fn login_and_get_token(email: String, password: String) -> String {
     let auth_app = create_auth_router().await;
 
     let login_payload = json!({

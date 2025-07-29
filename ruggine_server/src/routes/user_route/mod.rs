@@ -16,6 +16,7 @@ pub fn routes(user_state: crate::state::user_state::UserState, token_state: crat
         )
         .merge(
             profile_route::routes()
+                .with_state(user_state.clone())
                 .layer(ServiceBuilder::new().layer(
                     middleware::from_fn_with_state(token_state, crate::middleware::auth_middleware::auth(all_user_types())),
                 ))

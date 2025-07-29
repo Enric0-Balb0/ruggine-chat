@@ -1,6 +1,7 @@
 use crate::entity::user::{User, UserStatus, UserType, CurrentAction, Gender};
 use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use validator::Validate;
 use utoipa::ToSchema;
 
@@ -70,13 +71,13 @@ pub struct UserRegisterDto {
 
 #[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq, ToSchema)]
 #[schema(example = json!({
-    "first_name": "John",
-    "last_name": "Doe",
-    "birthday": "1990-01-01",
-    "address": "123 Main St",
-    "gender": "male"
+    "first_name": "NewJohn",
+    "last_name": "NewDoe",
+    "birthday": "2000-01-01",
+    "address": "123 New Main St",
+    "gender": "other"
 }))]
-pub struct UserUpdateDto {
+pub struct ProfileUpdateDto {
     // #[validate(length(
     //     min = 1,
     //     max = 100,
@@ -193,7 +194,7 @@ impl std::fmt::Debug for UserRegisterDto {
     }
 }
 
-impl std::fmt::Debug for UserUpdateDto {
+impl std::fmt::Debug for ProfileUpdateDto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UserUpdate")
             .field("first_name", &self.first_name)
@@ -592,8 +593,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_valid_complete() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_valid_complete() {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: Some("Smith".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -610,8 +611,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_valid_partial() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_valid_partial() {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("UpdatedName".to_string()),
             last_name: None,
             birthday: None,
@@ -628,8 +629,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_valid_empty() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_valid_empty() {
+        let update_dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,
@@ -646,8 +647,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_address_too_long() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_address_too_long() {
+        let update_dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,
@@ -663,8 +664,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_address_empty_string() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_address_empty_string() {
+        let update_dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,
@@ -680,8 +681,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_clone() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_clone() {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: Some("Smith".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -698,8 +699,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_serialization() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_serialization() {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: Some("Smith".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -714,7 +715,7 @@ mod tests {
         assert!(serialized.contains("789 Pine St"));
 
         // Test deserialization
-        let deserialized: UserUpdateDto = serde_json::from_str(&serialized).unwrap();
+        let deserialized: ProfileUpdateDto = serde_json::from_str(&serialized).unwrap();
         assert_eq!(update_dto.first_name, deserialized.first_name);
         assert_eq!(update_dto.last_name, deserialized.last_name);
         assert_eq!(update_dto.birthday, deserialized.birthday);
@@ -723,8 +724,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_debug_format() {
-        let update_dto = UserUpdateDto {
+    fn test_profile_update_dto_debug_format() {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: Some("Smith".to_string()),
             birthday: Some(NaiveDate::from_ymd_opt(1995, 3, 20).unwrap()),
@@ -740,8 +741,8 @@ mod tests {
     }
 
     #[test]
-    fn test_user_update_dto_with_different_genders() {
-        let male_dto = UserUpdateDto {
+    fn test_profile_update_dto_with_different_genders() {
+        let male_dto = ProfileUpdateDto {
             first_name: Some("John".to_string()),
             last_name: None,
             birthday: None,
@@ -749,7 +750,7 @@ mod tests {
             gender: Some(Gender::Male),
         };
 
-        let female_dto = UserUpdateDto {
+        let female_dto = ProfileUpdateDto {
             first_name: Some("Jane".to_string()),
             last_name: None,
             birthday: None,
@@ -757,7 +758,7 @@ mod tests {
             gender: Some(Gender::Female),
         };
 
-        let other_dto = UserUpdateDto {
+        let other_dto = ProfileUpdateDto {
             first_name: Some("Alex".to_string()),
             last_name: None,
             birthday: None,

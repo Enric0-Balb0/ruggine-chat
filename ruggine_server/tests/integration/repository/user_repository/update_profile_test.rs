@@ -1,7 +1,7 @@
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::entity::user::{UpdateUser, User};
 use ruggine_server::factory::user_factory::UserFactory;
-use ruggine_server::dto::user_dto::UserUpdateDto;
+use ruggine_server::dto::user_dto::ProfileUpdateDto;
 use crate::common::{get_database, create_test_user, cleanup_user};
 
 #[cfg(test)]
@@ -15,7 +15,7 @@ mod update_profile_integration_tests {
         let repository = UserRepository::new(&db);
         let (user, _password) = create_test_user("update_complete").await;
 
-        let update_dto = UserUpdateDto {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("UpdatedFirst".to_string()),
             last_name: Some("UpdatedLast".to_string()),
             birthday: Some(chrono::NaiveDate::from_ymd_opt(1985, 6, 15).unwrap()),
@@ -57,7 +57,7 @@ mod update_profile_integration_tests {
         let repository = UserRepository::new(&db);
         let (mut user, _password) = create_test_user("update_partial").await;
 
-        let update_dto = UserUpdateDto {
+        let update_dto = ProfileUpdateDto {
             first_name: Some("PartiallyUpdated".to_string()),
             last_name: None,
             birthday: None,
@@ -163,7 +163,7 @@ mod update_profile_integration_tests {
         let repository = UserRepository::new(&db);
         let (mut user, _password) = create_test_user("update_gender").await;
 
-        let update_dto = UserUpdateDto {
+        let update_dto = ProfileUpdateDto {
             first_name: None,
             last_name: None,
             birthday: None,

@@ -1,10 +1,10 @@
 use utoipa::OpenApi;
 use crate::{dto::{
-    user_dto::{UserLoginDto, UserRegisterDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto
+    user_dto::{UserLoginDto, UserRegisterDto, ProfileUpdateDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto
 }, entity::user::{CurrentAction, Gender, UserStatus, UserType}};
 use crate::handler::{
     auth_handler::login_handler,
-    user_handler::{profile_handler, register_handler}
+    user_handler::{profile_handler, register_handler, update_profile_handler}
 };
 
 #[derive(OpenApi)]
@@ -12,12 +12,14 @@ use crate::handler::{
     paths(
         login_handler::login,
         profile_handler::profile,
+        update_profile_handler::update_profile,
         register_handler::register,
     ),
     components(
         schemas(
             UserLoginDto,
             UserRegisterDto,
+            ProfileUpdateDto,
             ApiSuccessResponseUserReadDto,
             ApiSuccessResponseTokenReadDto,
             UserType,
