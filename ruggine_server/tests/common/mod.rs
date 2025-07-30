@@ -8,9 +8,11 @@ use axum::Router;
 use serde_json::json;
 use tower::ServiceExt;
 use ruggine_server::config::database::DatabaseTrait;
+use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::user::User;
+use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
-use ruggine_server::repository::group_chat_repository::GroupChatRepository;
+use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route, group_chat_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
@@ -138,6 +140,22 @@ pub async fn create_login_and_get_token(prefix: String) -> (User, String, String
     let (user, password) = create_test_user(prefix.as_str()).await;
     let token = login_and_get_token_for_user(&user, &password).await;
     (user, password, token)
+}
+
+/// Helper function to create a real group chat in the database
+pub async fn create_test_group_chat(prefix: &str, created_by: i32) -> GroupChat {
+    let db = get_database().await;
+    let repository = GroupChatRepository::new(&db);
+
+    let new_group = GroupChatFactory::unique_fake_new_group_chat(prefix, created_by);
+
+    let inserted_id = repository.insert(new_group.clone()).await
+        .expect("Failed to insert test group chat");
+
+    // Get the created group from database
+    let group_option = repository.find_by_id(inserted_id).await;
+    assert!(group_option.is_ok(), "Group chat not found in database");
+    group_option.unwrap()
 }
 
 pub async fn cleanup_group(group_id: i32) {

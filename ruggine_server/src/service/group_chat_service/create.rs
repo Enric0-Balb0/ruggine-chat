@@ -41,7 +41,7 @@ impl GroupChatService {
         };
 
         // Return the created group chat as DTO
-        let now = chrono::Utc::now().naive_utc();
+        let now = chrono::Utc::now();
         Ok(GroupChatReadDto {
             id: group_id,
             name: payload.name,

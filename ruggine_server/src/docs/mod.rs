@@ -20,6 +20,7 @@ use crate::handler::{
         user_handler::update_profile_handler::update_profile,
         user_handler::register_handler::register,
         group_chat_handler::create::create,
+        group_chat_handler::find_by_id::find_by_id,
     ),
     components(
         schemas(

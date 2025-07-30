@@ -1,4 +1,5 @@
 pub mod create;
+pub mod find_by_id;
 
 use axum::Router;
 
@@ -11,6 +12,13 @@ pub fn routes(group_chat_state: crate::state::group_chat_state::GroupChatState, 
     Router::new()
         .merge(
             create::routes()
+                .with_state(group_chat_state.clone())
+                .layer(ServiceBuilder::new().layer(
+                    middleware::from_fn_with_state(token_state.clone(), crate::middleware::auth_middleware::auth(all_user_types())),
+                ))
+        )
+        .merge(
+            find_by_id::routes()
                 .with_state(group_chat_state.clone())
                 .layer(ServiceBuilder::new().layer(
                     middleware::from_fn_with_state(token_state, crate::middleware::auth_middleware::auth(all_user_types())),

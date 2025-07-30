@@ -3,11 +3,10 @@ use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::Error as SqlxError;
 use mockall::automock;
-use crate::entity::user::User;
 
 #[async_trait]
 #[automock]
 pub trait GroupChatRepositoryTrait: Send + Sync {
     async fn insert(&self, new_group_chat: NewGroupChat) -> Result<i32, SqlxError>;
-    async fn find_by_id(&self, id: i32) -> Result<User, SqlxError>;
+    async fn find_by_id(&self, id: i32) -> Result<GroupChat, SqlxError>;
 }

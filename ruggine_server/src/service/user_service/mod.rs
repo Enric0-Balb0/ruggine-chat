@@ -2,7 +2,7 @@ mod create_user_service;
 mod verify_password_service;
 mod add_user;
 mod update_profile_service;
-mod find_by_id_service;
+mod find_by_id;
 pub mod user_service;
 pub mod user_service_trait;
 

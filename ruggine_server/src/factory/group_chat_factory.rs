@@ -78,14 +78,20 @@ impl GroupChatFactory {
     }
 
     pub fn fake_group_chat_read_dto() -> GroupChatReadDto {
-        use chrono::NaiveDate;
+        use chrono::{NaiveDate, DateTime, Utc};
+
+        let naive_dt = NaiveDate::from_ymd_opt(2025, 7, 29)
+            .unwrap()
+            .and_hms_opt(10, 0, 0)
+            .unwrap();
+
         GroupChatReadDto {
             id: 1,
             name: "Test Group".to_string(),
             description: "This is a test group description".to_string(),
             created_by: 1,
-            created_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
-            updated_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
+            created_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
+            updated_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
         }
     }
 
@@ -135,6 +141,17 @@ impl GroupChatFactory {
     pub fn with_description(mut new_group: NewGroupChat, description: String) -> NewGroupChat {
         new_group.description = description;
         new_group
+    }
+
+    // Utility methods for DTOs
+    pub fn with_name_dto(mut dto: GroupChatCreateDto, name: String) -> GroupChatCreateDto {
+        dto.name = name;
+        dto
+    }
+
+    pub fn with_description_dto(mut dto: GroupChatCreateDto, description: String) -> GroupChatCreateDto {
+        dto.description = description;
+        dto
     }
 }
 

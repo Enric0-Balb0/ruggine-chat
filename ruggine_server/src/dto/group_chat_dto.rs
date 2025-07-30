@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
+use crate::entity::group_chat::GroupChat;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 pub struct GroupChatCreateDto {
@@ -25,9 +26,23 @@ pub struct GroupChatReadDto {
     #[schema(example = 42)]
     pub created_by: i32,
     #[schema(example = "2025-07-29T10:00:00Z")]
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     #[schema(example = "2025-07-29T10:00:00Z")]
-    pub updated_at: NaiveDateTime,
+    pub updated_at: DateTime<Utc>,
+}
+
+// TODO: Do some test
+impl From<GroupChat> for GroupChatReadDto {
+    fn from(group_chat: GroupChat) -> Self {
+        GroupChatReadDto {
+            id: group_chat.id,
+            name: group_chat.name,
+            description: group_chat.description,
+            created_by: group_chat.created_by,
+            created_at: group_chat.created_at,
+            updated_at: group_chat.updated_at,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
@@ -269,35 +284,51 @@ mod tests {
     #[test]
     fn test_group_chat_read_dto_creation() {
         use chrono::NaiveDate;
-        
+
+        let naive_datetime = NaiveDate::from_ymd_opt(2025, 7, 29)
+            .unwrap()
+            .and_hms_opt(10, 0, 0)
+            .unwrap();
+
         let read_dto = GroupChatReadDto {
             id: 1,
             name: "Test Group".to_string(),
             description: "Test description".to_string(),
             created_by: 42,
-            created_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
-            updated_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
+            created_at: DateTime::from_naive_utc_and_offset(naive_datetime, Utc),
+            updated_at: DateTime::from_naive_utc_and_offset(naive_datetime, Utc),
         };
 
         assert_eq!(read_dto.id, 1);
         assert_eq!(read_dto.name, "Test Group");
         assert_eq!(read_dto.description, "Test description");
         assert_eq!(read_dto.created_by, 42);
-        assert_eq!(read_dto.created_at.date(), NaiveDate::from_ymd_opt(2025, 7, 29).unwrap());
-        assert_eq!(read_dto.updated_at.date(), NaiveDate::from_ymd_opt(2025, 7, 29).unwrap());
+        assert_eq!(
+            read_dto.created_at.date_naive(),
+            NaiveDate::from_ymd_opt(2025, 7, 29).unwrap()
+        );
+        assert_eq!(
+            read_dto.updated_at.date_naive(),
+            NaiveDate::from_ymd_opt(2025, 7, 29).unwrap()
+        );
     }
 
     #[test]
     fn test_group_chat_read_dto_serialization() {
         use chrono::NaiveDate;
-        
+
+        let naive_dt = NaiveDate::from_ymd_opt(2025, 7, 29)
+            .unwrap()
+            .and_hms_opt(10, 0, 0)
+            .unwrap();
+
         let read_dto = GroupChatReadDto {
             id: 1,
             name: "Test Group".to_string(),
             description: "Test description".to_string(),
             created_by: 42,
-            created_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
-            updated_at: NaiveDate::from_ymd_opt(2025, 7, 29).unwrap().and_hms_opt(10, 0, 0).unwrap(),
+            created_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
+            updated_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
         };
 
         // Test serialization to JSON

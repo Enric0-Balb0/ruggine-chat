@@ -33,8 +33,8 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group_dto.name, create_dto.name);
         assert_eq!(group_dto.description, create_dto.description);
         assert_eq!(group_dto.created_by, user.id);
-        assert!(group_dto.created_at <= chrono::Utc::now().naive_utc());
-        assert!(group_dto.updated_at <= chrono::Utc::now().naive_utc());
+        assert!(group_dto.created_at <= chrono::Utc::now());
+        assert!(group_dto.updated_at <= chrono::Utc::now());
 
         // Verify the group exists in the database
         /* let group_in_db = group_repo.find_by_id(group_dto.id).await;
