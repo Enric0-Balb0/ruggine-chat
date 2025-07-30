@@ -85,5 +85,4 @@ mod user_repository_find_tests {
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::RowNotFound));
     }
-
 }

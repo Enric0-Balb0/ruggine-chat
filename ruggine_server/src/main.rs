@@ -20,6 +20,8 @@ mod middleware;
 mod handler;
 mod factory;
 
+mod utils;
+
 #[tokio::main]
 async fn main() {
     // Initialize logging first

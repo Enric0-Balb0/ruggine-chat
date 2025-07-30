@@ -28,8 +28,6 @@ impl GroupChatRepository {
 #[cfg(test)]
 mod group_chat_repository_insert_tests {
     use super::*;
-    use crate::entity::group_chat::{NewGroupChat, GroupChat};
-    use chrono::Utc;
     use mockall::predicate::*;
     use crate::factory::group_chat_factory::GroupChatFactory;
     use crate::repository::group_chat_repository::group_chat_repository_trait::MockGroupChatRepositoryTrait;
@@ -175,9 +173,6 @@ mod group_chat_repository_insert_tests {
 
     #[tokio::test]
     async fn test_insert_empty_name_validation() {
-        use std::pin::Pin;
-        use std::future::Future;
-
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
         let mut group = GroupChatFactory::fake_new_group_chat();

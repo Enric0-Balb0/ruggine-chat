@@ -11,6 +11,8 @@ pub enum DbError {
     SomethingWentWrong(String),
     #[error("Duplicate entry exists")]
     UniqueConstraintViolation(String),
+    #[error("{0}")]
+    ForeignKeyViolation(String)
 }
 
 impl IntoResponse for DbError {
@@ -18,6 +20,7 @@ impl IntoResponse for DbError {
         let status_code = match self {
             DbError::SomethingWentWrong(_) => StatusCode::INTERNAL_SERVER_ERROR,
             DbError::UniqueConstraintViolation(_) => StatusCode::CONFLICT,
+            DbError::ForeignKeyViolation(_) => StatusCode::UNPROCESSABLE_ENTITY,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

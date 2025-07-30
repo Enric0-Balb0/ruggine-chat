@@ -1,7 +1,7 @@
 pub mod group_chat_repository;
 pub mod group_chat_repository_trait;
 mod insert;
-
+pub mod find_by_id;
 
 use async_trait::async_trait;
 use sqlx::Error;

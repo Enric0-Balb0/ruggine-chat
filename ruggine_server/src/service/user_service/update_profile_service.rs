@@ -1,4 +1,4 @@
-use crate::dto::user_dto::UserReadDto;
+use crate::dto::user_dto::{ProfileUpdateDto, UserReadDto};
 use crate::entity::user::UpdateUser;
 use crate::error::{api_error::ApiError, db_error::DbError, user_error::UserError};
 use crate::service::user_service::UserService;
@@ -6,8 +6,14 @@ use sqlx::Error as SqlxError;
 use tracing::error;
 
 impl UserService {
-    pub async fn update_user_profile_internal(&self, user_id: i32, update_user: UpdateUser) -> Result<UserReadDto, ApiError> {
-        let updated_user = self.user_repo.update_profile(user_id, update_user).await;
+    pub async fn update_user_profile_internal(&self, user_id: i32, update_user: ProfileUpdateDto) -> Result<UserReadDto, ApiError> {
+        let update_user_entity = UpdateUser::from_dto(update_user);
+
+        if !update_user_entity.has_updates() {
+            return Err(ApiError::UserError(UserError::NoFieldsToUpdate));
+        }
+
+        let updated_user = self.user_repo.update_profile(user_id, update_user_entity).await;
 
         match updated_user {
             Ok(user) => Ok(UserReadDto::from(user)),
@@ -45,7 +51,7 @@ mod tests {
     async fn test_update_user_profile_success() {
         // Arrange
         let user = UserFactory::fake_user();
-        let update_user = UpdateUser::from_dto(UserFactory::fake_user_update_dto());
+        let update_user = UserFactory::fake_user_update_dto();
         let expected_user = user.clone();
 
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -73,7 +79,7 @@ mod tests {
     async fn test_update_user_profile_user_not_found() {
         // Arrange
         let user_id = 999;
-        let update_user = UpdateUser::from_dto(UserFactory::fake_user_update_dto());
+        let update_user = UserFactory::fake_user_update_dto();
 
         let mut mock_repo = MockUserRepositoryTrait::new();
         mock_repo
@@ -104,7 +110,7 @@ mod tests {
     async fn test_update_user_profile_database_error() {
         // Arrange
         let user = UserFactory::fake_user();
-        let update_user = UpdateUser::from_dto(UserFactory::fake_user_update_dto());
+        let update_user = UserFactory::fake_user_update_dto();
 
         let mut mock_repo = MockUserRepositoryTrait::new();
         mock_repo
@@ -133,7 +139,7 @@ mod tests {
     async fn test_update_user_profile_partial_update() {
         // Arrange
         let user = UserFactory::fake_user();
-        let update_user = UpdateUser::from_dto(UserFactory::fake_user_update_dto_partial());
+        let update_user = UserFactory::fake_user_update_dto_partial();
         let expected_user = user.clone();
 
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -156,4 +162,6 @@ mod tests {
         // Assert
         assert!(result.is_ok());
     }
+
+    // TODO: Test with no fields to updated
 }

@@ -6,12 +6,12 @@ use tracing::error;
 
 impl UserService {
     pub async fn create_user_internal(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
-        return match self.user_repo.find_by_email(payload.email.to_owned()).await {
+        match self.user_repo.find_by_email(payload.email.to_owned()).await {
             Some(_) => Err(UserError::UserAlreadyExists("Username or email already taken".to_string()))?,
             None => {
                 let user = self.add_user(payload).await;
 
-                return match user {
+                match user {
                     Ok(user) => Ok(UserReadDto::from(user)),
                     Err(e) => match e {
                         SqlxError::Database(e) => match e.code() {
@@ -30,9 +30,9 @@ impl UserService {
                             Err(DbError::SomethingWentWrong(e.to_string()))?
                         }
                     },
-                };
+                }
             }
-        };
+        }
     }
 }
 
@@ -47,6 +47,7 @@ mod tests {
     use mockall::predicate::*;
     use std::pin::Pin;
     use std::future::Future;
+    use crate::utils::mock_database_error::MockDatabaseError;
 
     #[tokio::test]
     async fn test_create_user_success() {
@@ -310,51 +311,5 @@ mod tests {
         assert!(result.is_err());
         let error = result.unwrap_err();
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
-    }
-
-    // Helper struct to mock database errors
-    #[derive(Debug)]
-    struct MockDatabaseError {
-        code: String,
-        message: String,
-    }
-
-    impl MockDatabaseError {
-        fn new(code: String) -> Self {
-            Self {
-                code: code.clone(),
-                message: format!("Mock database error with code: {}", code),
-            }
-        }
-    }
-
-    impl std::fmt::Display for MockDatabaseError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.message)
-        }
-    }
-
-    impl std::error::Error for MockDatabaseError {}
-
-    impl sqlx::error::DatabaseError for MockDatabaseError {
-        fn message(&self) -> &str {
-            &self.message
-        }
-
-        fn code(&self) -> Option<std::borrow::Cow<'_, str>> {
-            Some(std::borrow::Cow::Borrowed(&self.code))
-        }
-
-        fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
-            self
-        }
-
-        fn as_error_mut(&mut self) -> &mut (dyn std::error::Error + Send + Sync + 'static) {
-            self
-        }
-
-        fn into_error(self: Box<Self>) -> Box<dyn std::error::Error + Send + Sync + 'static> {
-            self
-        }
     }
 }

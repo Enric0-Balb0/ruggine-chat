@@ -1,27 +1,36 @@
 use utoipa::OpenApi;
 use crate::{dto::{
-    user_dto::{UserLoginDto, UserRegisterDto, ProfileUpdateDto}, ApiSuccessResponseTokenReadDto, ApiSuccessResponseUserReadDto
+    user_dto::{UserLoginDto, UserRegisterDto, ProfileUpdateDto}, 
+    group_chat_dto::{GroupChatCreateDto, GroupChatReadDto},
+    ApiSuccessResponseTokenReadDto, 
+    ApiSuccessResponseUserReadDto,
+    ApiSuccessResponseGroupChatReadDto
 }, entity::user::{CurrentAction, Gender, UserStatus, UserType}};
 use crate::handler::{
-    auth_handler::login_handler,
-    user_handler::{profile_handler, register_handler, update_profile_handler}
+    auth_handler,
+    user_handler,
+    group_chat_handler
 };
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        login_handler::login,
-        profile_handler::profile,
-        update_profile_handler::update_profile,
-        register_handler::register,
+        auth_handler::login_handler::login,
+        user_handler::profile_handler::profile,
+        user_handler::update_profile_handler::update_profile,
+        user_handler::register_handler::register,
+        group_chat_handler::create::create,
     ),
     components(
         schemas(
             UserLoginDto,
             UserRegisterDto,
             ProfileUpdateDto,
+            GroupChatCreateDto,
+            GroupChatReadDto,
             ApiSuccessResponseUserReadDto,
             ApiSuccessResponseTokenReadDto,
+            ApiSuccessResponseGroupChatReadDto,
             UserType,
             UserStatus,
             Gender,
@@ -31,7 +40,8 @@ use crate::handler::{
     modifiers(&SecurityAddon),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
-        (name = "User", description = "User management endpoints")
+        (name = "User", description = "User management endpoints"),
+        (name = "GroupChat", description = "Group chat management endpoints")
     ),
     info(
         title = "Ruggine Server API",

@@ -12,9 +12,10 @@ use ruggine_server::entity::user::User;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::group_chat_repository::GroupChatRepository;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use ruggine_server::routes::{auth_route, user_route};
+use ruggine_server::routes::{auth_route, user_route, group_chat_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
+use ruggine_server::state::group_chat_state::GroupChatState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
 
@@ -54,6 +55,13 @@ pub async fn create_auth_router() -> Router {
     let db = get_database().await;
     let auth_state = AuthState::new(&db);
     auth_route::routes().with_state(auth_state)
+}
+
+pub async fn create_group_chat_router() -> Router {
+    let db = get_database().await;
+    let group_chat_state = GroupChatState::new(&db);
+    let token_state = TokenState::new(&db);
+    group_chat_route::routes(group_chat_state, token_state)
 }
 
 /// Helper function to create a real user in the database
@@ -126,12 +134,24 @@ pub async fn login_and_get_token_for_user(user: &User, password: &str) -> String
     login_and_get_token(user.email.clone(), password.to_string()).await
 }
 
+pub async fn create_login_and_get_token(prefix: String) -> (User, String, String) {
+    let (user, password) = create_test_user(prefix.as_str()).await;
+    let token = login_and_get_token_for_user(&user, &password).await;
+    (user, password, token)
+}
+
 pub async fn cleanup_group(group_id: i32) {
     let db = get_database().await;
     let group_repo = GroupChatRepository::new(&db);
     if let Err(e) = group_repo.delete_by_id(group_id).await {
         eprintln!("Failed to cleanup group {}: {:?}", group_id, e);
     }
+}
+
+/// Helper function to create a real group chat state with database connections
+pub async fn create_group_chat_state() -> GroupChatState {
+    let db = get_database().await;
+    GroupChatState::new(&db)
 }
 
 fn init_test_logging() {

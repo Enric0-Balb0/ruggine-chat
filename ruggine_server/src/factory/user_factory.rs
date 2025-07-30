@@ -55,6 +55,29 @@ impl UserFactory {
         }
     }
 
+    pub fn unique_fake_user(prefix: &str, user_status: UserStatus) -> User {
+        let (email, username, full_name) = Self::get_unique_user_information(prefix);
+        let counter: u32 = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let now = Utc::now();
+        User {
+            id: counter as i32,
+            email,
+            username,
+            first_name: full_name.clone(),
+            last_name: "Test".to_string(),
+            password: "hashed_password".to_string(), // Placeholder for hashed password
+            user_status,
+            user_type: Default::default(), // Default user type
+            birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
+            address: format!("{}_{}", prefix, "456 Oak Ave"),
+            gender: Gender::Male,
+            created_at: now,
+            updated_at: now,
+            is_online: Default::default(),
+            current_action: Default::default(),
+        }
+    }
+
     pub fn fake_new_user() -> NewUser {
         NewUser {
             first_name: "John".to_string(),

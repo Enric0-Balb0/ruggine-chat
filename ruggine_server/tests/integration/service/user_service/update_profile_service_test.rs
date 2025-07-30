@@ -11,7 +11,6 @@ use crate::common::cleanup_user;
 #[cfg(test)]
 mod user_service_update_profile_integration_tests {
     use ruggine_server::dto::user_dto::UserReadDto;
-    use ruggine_server::entity::user::UpdateUser;
     use crate::get_database;
     use super::*;
 
@@ -47,7 +46,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Call the update_user_profile method
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto.clone())).await;
+        let result = service.update_user_profile(user.id, update_dto.clone()).await;
 
         // Assert: Verify the update was successful
         assert!(result.is_ok(), "Update user profile should succeed");
@@ -81,7 +80,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Call the update_user_profile method
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto.clone())).await;
+        let result = service.update_user_profile(user.id, update_dto.clone()).await;
 
         // Assert: Verify only specified fields were updated
         assert!(result.is_ok(), "Partial update should succeed");
@@ -107,13 +106,16 @@ mod user_service_update_profile_integration_tests {
         let empty_update_dto = UserFactory::fake_user_update_dto_empty();
 
         // Act: Call the update_user_profile method
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(empty_update_dto)).await;
+        let result = service.update_user_profile(user.id, empty_update_dto).await;
 
         // Assert: Verify no updates error
-        assert!(result.is_ok(), "Expected ok, got: {:?}", result);
-        let updated_user = result.unwrap();
-        user.updated_at = updated_user.updated_at;
-        assert_eq!(updated_user, UserReadDto::from(user.clone()));
+        assert!(result.is_err(), "Expected err, got: {:?}", result);
+        assert!(
+            matches!(result, Err(ApiError::UserError(UserError::NoFieldsToUpdate))),
+            "Expected UserError::NoFieldsToUpdate, got: {:?}",
+            result
+        );
+
 
 
         // Cleanup
@@ -136,7 +138,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Call the update_user_profile method
-        let result = service.update_user_profile(non_existent_id, UpdateUser::from_dto(update_dto)).await;
+        let result = service.update_user_profile(non_existent_id, update_dto).await;
 
         // Assert: Verify user not found error
         assert!(result.is_err(), "Should fail with user not found error");
@@ -166,7 +168,7 @@ mod user_service_update_profile_integration_tests {
             };
 
             // Act: Update the user
-            let result = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto)).await;
+            let result = service.update_user_profile(user.id, update_dto).await;
 
             // Assert: Verify the update was successful
             assert!(result.is_ok(), "Gender update should succeed for {:?}", gender);
@@ -197,7 +199,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Update with future birthday
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto)).await;
+        let result = service.update_user_profile(user.id, update_dto).await;
 
         // Assert: Should succeed (no business rule against future birthdays in this system)
         assert!(result.is_ok(), "Future birthday should be allowed");
@@ -214,7 +216,7 @@ mod user_service_update_profile_integration_tests {
             gender: None,
         };
 
-        let result_old = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto_old)).await;
+        let result_old = service.update_user_profile(user.id, update_dto_old).await;
         assert!(result_old.is_ok(), "Old birthday should be allowed");
         let updated_user_old = result_old.unwrap();
         assert_eq!(updated_user_old.birthday, old_birthday);
@@ -248,7 +250,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Update profile fields
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(update_dto)).await;
+        let result = service.update_user_profile(user.id, update_dto).await;
 
         // Assert: Verify critical fields are preserved
         assert!(result.is_ok(), "Update should succeed");
@@ -294,7 +296,7 @@ mod user_service_update_profile_integration_tests {
         };
 
         // Act: Call the update_user_profile method
-        let result = service.update_user_profile(user.id, UpdateUser::from_dto(invalid_update_dto)).await;
+        let result = service.update_user_profile(user.id, invalid_update_dto).await;
 
         // Assert: Verify validation error
         assert!(result.is_err(), "Should fail with validation error for long address");
@@ -309,7 +311,7 @@ mod user_service_update_profile_integration_tests {
             gender: None,
         };
 
-        let result_name = service.update_user_profile(user.id, UpdateUser::from_dto(invalid_name_dto)).await;
+        let result_name = service.update_user_profile(user.id, invalid_name_dto).await;
         assert!(result_name.is_err(), "Should fail with validation error for long first name");
 
         // Cleanup

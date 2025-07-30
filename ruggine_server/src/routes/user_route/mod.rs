@@ -1,5 +1,5 @@
-pub mod profile_route;
-pub mod register_route;
+pub mod profile;
+pub mod register;
 
 use axum::Router;
 
@@ -11,11 +11,11 @@ pub fn routes(user_state: crate::state::user_state::UserState, token_state: crat
 
     Router::new()
         .merge(
-            register_route::routes()
+            register::routes()
                 .with_state(user_state.clone()) // state per il register
         )
         .merge(
-            profile_route::routes()
+            profile::routes()
                 .with_state(user_state.clone())
                 .layer(ServiceBuilder::new().layer(
                     middleware::from_fn_with_state(token_state, crate::middleware::auth_middleware::auth(all_user_types())),

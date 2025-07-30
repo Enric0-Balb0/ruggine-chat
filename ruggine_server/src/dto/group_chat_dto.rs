@@ -6,9 +6,11 @@ use chrono::NaiveDateTime;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 pub struct GroupChatCreateDto {
     #[validate(length(min = 1, max = 256, message = "Group name must be between 1 and 256 characters"))]
+    #[schema(example = "New Group")]
     pub name: String,
     
     #[validate(length(min = 1, max = 1024, message = "Group description must be between 1 and 1024 characters"))]
+    #[schema(example = "New Group is the best group in the world.")]
     pub description: String,
 }
 
@@ -31,9 +33,11 @@ pub struct GroupChatReadDto {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 pub struct GroupChatUpdateDto {
     #[validate(length(min = 1, max = 256, message = "Group name must be between 1 and 256 characters"))]
+    #[schema(example = "New Group Update")]
     pub name: Option<String>,
     
     #[validate(length(min = 1, max = 1024, message = "Group description must be between 1 and 1024 characters"))]
+    #[schema(example = "New Group was the second best group in the world, now it is the best one.")]
     pub description: Option<String>,
 }
 

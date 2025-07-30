@@ -26,16 +26,8 @@ pub async fn update_profile(
     State(state): State<UserState>,
     ValidatedRequest(payload): ValidatedRequest<ProfileUpdateDto>,
 ) -> Result<Json<ApiSuccessResponse<UserReadDto>>, ApiError> {
-    // Convert DTO to UpdateUser entity
-    let update_user = UpdateUser::from_dto(payload);
-
-    // Check if there are actually fields to update
-    if !update_user.has_updates() {
-        return Err(ApiError::UserError(UserError::NoFieldsToUpdate));
-    }
-
     // Update the user profile
-    let updated_user = state.user_service.update_user_profile(current_user.id, update_user).await?;
+    let updated_user = state.user_service.update_user_profile(current_user.id, payload).await?;
 
     Ok(Json(ApiSuccessResponse::send(updated_user)))
 }
@@ -65,8 +57,8 @@ mod tests {
         
         mock_service
             .expect_update_user_profile()
-            .with(eq(user.id), function(|update_user: &UpdateUser| {
-                update_user.has_updates()
+            .with(eq(user.id), function(|update_user: &ProfileUpdateDto| {
+                UpdateUser::from_dto(update_user.clone()).has_updates()
             }))
             .times(1)
             .returning(move |_, _| {
@@ -100,8 +92,20 @@ mod tests {
         let user = UserFactory::fake_user();
         let empty_update_dto = UserFactory::fake_user_update_dto_empty();
 
-        let mock_service = MockUserServiceTrait::new();
+        let mut mock_service = MockUserServiceTrait::new();
         let mock_repo = MockUserRepositoryTrait::new();
+        
+        mock_service
+            .expect_update_user_profile()
+            .with(eq(user.id), function(|update_dto: &ProfileUpdateDto| {
+                UpdateUser::from_dto(update_dto.clone()).has_updates() == false
+            }))
+            .times(1)
+            .returning(move |_, _| {
+                Box::pin(async move { 
+                    Err(ApiError::UserError(UserError::NoFieldsToUpdate))
+                })
+            });
         
         let state = UserState {
             user_service: Arc::new(mock_service),
@@ -176,10 +180,10 @@ mod tests {
         
         mock_service
             .expect_update_user_profile()
-            .with(eq(user.id), function(|update_user: &UpdateUser| {
-                update_user.first_name.is_some() &&
-                    update_user.last_name.is_none() &&
-                    update_user.address.is_some()
+            .with(eq(user.id), function(|update_dto: &ProfileUpdateDto| {
+                update_dto.first_name.is_some() &&
+                    update_dto.last_name.is_none() &&
+                    update_dto.address.is_some()
             }))
             .times(1)
             .returning(move |_, _| {
