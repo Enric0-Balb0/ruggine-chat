@@ -1,6 +1,5 @@
 use crate::entity::group_chat::{GroupChat, NewGroupChat, UpdateGroupChat};
 use async_trait::async_trait;
-use sqlx::Error;
 use sqlx::Error as SqlxError;
 use mockall::automock;
 

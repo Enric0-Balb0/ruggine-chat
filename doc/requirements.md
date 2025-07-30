@@ -112,10 +112,7 @@ ruggine_developer -u-> UC1
 | FR2.3   | Display group chat history between users |
 | **FR3** | Group chat management |
 | FR3.1   | Create a new group chat |
-| FR3.2   | Invite users to a group chat |
-| FR3.3   | Accept or decline group invitations |
-| FR3.4   | Send and receive messages within a group |
-| FR3.5   | Retrieve group chat participants and informations |
+| FR3.3   | Retrieve group chat participants and informations |
 | **FR4** | Cross-platform compatibility |
 | FR4.1   | Run the app on at least two platforms (e.g., Android and Windows) |
 | **FR5** | Performance and resource monitoring |
@@ -130,6 +127,19 @@ ruggine_developer -u-> UC1
 | FR7.2   | Authenticate users using their unique ID on subsequent app launches |
 | FR7.3   | Prevent unregistered users from accessing chat functionalities |
 | FR7.4   | Ensure group access is only granted upon valid invitation |
+| **FR8** | Invitation Management |
+| FR8.1   | Invite users to a group chat |
+| FR8.2   | Accept or decline group invitations |
+| FR8.3   | Only the creator of the group can send invitations |
+| FR8.4   | A creator cannot send more than one invitation to a specific user when there is a pending invitation or he is already in the group or send to himself the invitation |
+| FR8.5   | Display pending invitations to the user |
+| **FR9** | Messages Management |
+| FR9.1   | Send and receive messages within a group only if you are a participant |
+| FR9.2   | Display messages in the group chat history only if you are a participant |
+| **FR10** | Group Chat Memebership Management |
+| FR10.1   | Add a user to a group |
+| FR10.2   | Remove a user from a group |
+
 
 ## Non Functional Requirements
 
@@ -161,12 +171,12 @@ rectangle "Ruggine Chat System" {
   usecase "Retrieve User Info\n(FR1.2)" as UC_RetrieveUser
   
   usecase "Create Group Chat\n(FR3.1)" as UC_CreateGroup
-  usecase "Retrieve Group Info\n(FR3.5)" as UC_RetrieveGroup
-  usecase "Invite to Group\n(FR3.2)" as UC_InviteGroup
-  usecase "Accept/Decline Invite\n(FR3.3, FR7.4)" as UC_InviteResponse
+  usecase "Retrieve Group Info\n(FR3.3)" as UC_RetrieveGroup
+  usecase "Invite to Group\n(FR8.1, FR8.3, FR8.4)" as UC_InviteGroup
+  usecase "Accept/Decline Invite\n(FR8.2, FR7.4, FR8.5)" as UC_InviteResponse
   
-  usecase "Send Message to Group\n(FR2.1, FR3.4)" as UC_SendMsg
-  usecase "Receive Message from Group\n(FR2.2, FR3.4)" as UC_ReceiveMsg
+  usecase "Send Message to Group\n(FR2.1, FR3.2)" as UC_SendMsg
+  usecase "Receive Message from Group\n(FR2.2, FR3.2)" as UC_ReceiveMsg
   usecase "Display Group Chat History\n(FR2.3)" as UC_DisplayHistory
   
   usecase "Access Logs via CLI/File\n(FR6.1)" as UC_AccessLogs
@@ -174,6 +184,8 @@ rectangle "Ruggine Chat System" {
   
   usecase "Log CPU Usage\n(FR5.1, FR5.2)" as UC_LogCPU
   usecase "Run on Multiple Platforms\n(FR4.1)" as UC_CrossPlatform
+
+  usecase "Take part/leave Group Membership\n(FR10.1, FR10.2)" as UC_ManageGroup
 }
 
 User --> UC_Register
@@ -186,6 +198,7 @@ User --> UC_SendMsg
 User --> UC_ReceiveMsg
 User --> UC_DisplayHistory
 User --> UC_RetrieveGroup
+User --> UC_ManageGroup
 
 AdminDev --> UC_AccessLogs
 AdminDev --> UC_NotifyCPU
@@ -304,7 +317,7 @@ AdminDev --> UC_CrossPlatform
 |   Precondition   | User is group admin                                                     |
 |  Post condition  |  Invited users receive group invitations                                |
 | Nominal Scenario |         User invites others to join group chat                          |
-|     Variants     | [Invitee already in group](#scenario-51-invitee-already-in-group)       |
+|     Variants     | [Invited already in group, pending invitation or already in the group chat](#scenario-51-invitee-already-in-group)       |
 |    Exceptions    | Server error, invalid user to invite                                   |
 
 ##### Scenario 5.1: Successful Group Invitation
@@ -337,9 +350,10 @@ AdminDev --> UC_CrossPlatform
 |  Precondition  | User has a pending invitation                                         |
 | Post condition | User is added to the group                                           |
 |     Step#      |                                Description                              |
-| 1             | User selects "Accept" invitation                                      |
-| 2             | Server updates group membership                                       |
-| 3             | User gains access to group chat                                       |
+| 1             | User gets all pending invitations                                     |
+| 2             | User selects "Accept" invitation                                      |
+| 3             | Server updates group membership                                       |
+| 4             | User gains access to group chat                                       |
 
 ##### Scenario 6.2: Decline Invitation
 
@@ -348,9 +362,10 @@ AdminDev --> UC_CrossPlatform
 |  Precondition  | User has a pending invitation                                         |
 | Post condition | User is not added to the group                                        |
 |     Step#      |                                Description                              |
-| 1             | User selects "Decline" invitation                                     |
-| 2             | Server removes pending invitation                                    |
-| 3             | User cannot access group chat                                        |
+| 1             | User gets all pending invitations                                     |
+| 2             | User selects "Decline" invitation                                     |
+| 3             | Server removes pending invitation                                    |
+| 4             | User cannot access group chat                                        |
 
 ---
 
@@ -588,6 +603,8 @@ abstract class User {
   + register()
   + authenticate()
   + retrieveInfo()
+  + getAllUsers()
+  + updateProfile()
 }
 
 class EndUser {
@@ -611,6 +628,7 @@ class GroupChat {
   + addMember(user: User)
   + removeMember(user: User)
   + getGroupInfo()
+  + getAllGroups()
 }
 
 class Message {
@@ -628,6 +646,7 @@ class Invitation {
   - toUser: User
   - groupChat: GroupChat
   - status: InvitationStatus
+  - sentAt: DateTime
   + sendInvite()
   + respondInvite(response: String)
 }

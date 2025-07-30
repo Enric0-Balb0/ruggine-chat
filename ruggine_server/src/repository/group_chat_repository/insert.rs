@@ -63,7 +63,7 @@ mod group_chat_repository_insert_tests {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
         let new_group_chat = GroupChatFactory::unique_fake_new_group_chat("test_error", 1);
-        let expected_error = sqlx::Error::RowNotFound;
+        let expected_error = sqlx::Error::PoolClosed;
 
         mock_group_chat_repo
             .expect_insert()
@@ -71,7 +71,7 @@ mod group_chat_repository_insert_tests {
             .times(1)
             .returning(move |_| {
                 Box::pin(async move {
-                    Err(sqlx::Error::RowNotFound)
+                    Err(sqlx::Error::PoolClosed)
                 })
             });
 
@@ -81,8 +81,8 @@ mod group_chat_repository_insert_tests {
         // Assert
         assert!(result.is_err());
         match result.unwrap_err() {
-            sqlx::Error::RowNotFound => {}, // Expected
-            other => panic!("Expected RowNotFound error, got: {:?}", other),
+            sqlx::Error::PoolClosed => {}, // Expected
+            other => panic!("Expected PoolClosed error, got: {:?}", other),
         }
     }
 
@@ -143,7 +143,7 @@ mod group_chat_repository_insert_tests {
     async fn test_insert_with_factory_utilities() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
-        
+
         let base_group = GroupChatFactory::fake_new_group_chat();
         let custom_group = GroupChatFactory::with_specific_creator(
             GroupChatFactory::with_name(

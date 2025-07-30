@@ -10,10 +10,12 @@ use tower::ServiceExt;
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::user::User;
+use ruggine_server::entity::invitation::{Invitation, NewInvitation};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
+use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route, group_chat_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
@@ -22,22 +24,27 @@ use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
 
 static INIT_LOG: Once = Once::new();
-static DATABASE: OnceCell<Arc<Database>> = OnceCell::const_new();
+static DB_INSTANCE: OnceCell<Arc<Database>> = OnceCell::const_new();
+
 pub async fn get_database() -> Arc<Database> {
-    init_test_logging();
-    dotenv::dotenv().ok();
+    DB_INSTANCE
+        .get_or_init(|| async {
+            dotenv::dotenv().ok();
 
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "mysql://testuser:testpass@localhost/ruggine_test".to_string());
+            let database_url = std::env::var("TEST_DATABASE_URL")
+                .unwrap_or_else(|_| "mysql://testuser:testpass@localhost/ruggine_test".to_string());
 
-    let db = Database::init(database_url)
+            let db = Database::init(database_url)
+                .await
+                .expect("Failed to connect to test database");
+
+            Arc::new(db)
+        })
         .await
-        .expect("Failed to connect to test database");
-
-    Arc::new(db)
+        .clone()
 }
 
-/// Helper function to cleanup user after test
+/// Helper function to clea nup user after test
 pub async fn cleanup_user(email: String) {
     let db = get_database().await;
     let repository = UserRepository::new(&db);
@@ -170,6 +177,36 @@ pub async fn cleanup_group(group_id: i32) {
 pub async fn create_group_chat_state() -> GroupChatState {
     let db = get_database().await;
     GroupChatState::new(&db)
+}
+
+/// Helper function to create a test invitation in the database
+pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_chat_id: i32) -> Invitation {
+    let db = get_database().await;
+    let repository = InvitationRepository::new(&db);
+
+    let new_invitation = NewInvitation {
+        from_user_id,
+        to_user_id,
+        group_chat_id,
+    };
+
+    let inserted_id = repository.insert(new_invitation.clone()).await
+        .expect("Failed to insert test invitation");
+
+    // Get the created invitation from database
+    let invitation_result = repository.find_by_id(inserted_id).await;
+    assert!(invitation_result.is_ok(), "Invitation not found in database");
+    invitation_result.unwrap()
+}
+
+/// Helper function to clean up invitation after test
+pub async fn cleanup_invitation(invitation_id: i32) {
+    let db = get_database().await;
+    let repository = InvitationRepository::new(&db);
+
+    if let Err(e) = repository.delete_by_id(invitation_id).await {
+        panic!("Cleanup failed for invitation with id {}: {:?}", invitation_id, e);
+    }
 }
 
 fn init_test_logging() {

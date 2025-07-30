@@ -175,7 +175,7 @@ mod tests {
     fn test_unique_fake_new_group_chat() {
         let group1 = GroupChatFactory::unique_fake_new_group_chat("test", 1);
         let group2 = GroupChatFactory::unique_fake_new_group_chat("test", 1);
-        
+
         assert_ne!(group1.name, group2.name);
         assert_ne!(group1.description, group2.description);
         assert_eq!(group1.created_by, group2.created_by);
@@ -200,13 +200,13 @@ mod tests {
     #[test]
     fn test_utility_methods() {
         let mut group = GroupChatFactory::fake_new_group_chat();
-        
+
         group = GroupChatFactory::with_specific_creator(group, 42);
         assert_eq!(group.created_by, 42);
-        
+
         group = GroupChatFactory::with_name(group, "Custom Name".to_string());
         assert_eq!(group.name, "Custom Name");
-        
+
         group = GroupChatFactory::with_description(group, "Custom Description".to_string());
         assert_eq!(group.description, "Custom Description");
     }
