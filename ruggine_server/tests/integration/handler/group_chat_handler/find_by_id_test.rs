@@ -2,8 +2,8 @@ use ruggine_server::handler::group_chat_handler::find_by_id::find_by_id;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::service::group_chat_service::{GroupChatService, GroupChatServiceTrait};
 use ruggine_server::service::user_service::{UserServiceTrait};
-use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
-use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
+use ruggine_server::repository::group_chat_repository::{GroupChatRepositoryTrait};
+use ruggine_server::repository::user_repository::{UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::state::group_chat_state::GroupChatState;
 use axum::{Extension, extract::{Path, State}};
@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 mod find_by_id_handler_integration_tests {
+    use ruggine_server::service::user_service::UserService;
     use super::*;
 
     #[tokio::test]
@@ -23,13 +24,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act
@@ -62,13 +61,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act
@@ -94,13 +91,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act: Find both groups
@@ -142,13 +137,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act: Both users try to find the same group
@@ -188,13 +181,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act
@@ -218,13 +209,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
         
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Create group chat using service
@@ -262,13 +251,11 @@ mod find_by_id_handler_integration_tests {
         
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
-        let group_chat_repo = GroupChatRepository::new(&db);
-        let user_repo = UserRepository::new(&db);
+        let user_service = UserService::new(&db);
 
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
-            group_chat_repo: Arc::new(group_chat_repo),
-            user_repo: Arc::new(user_repo),
+            user_service: Arc::new(user_service),
         };
 
         // Act: Multiple concurrent find operations

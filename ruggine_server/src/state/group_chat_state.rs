@@ -1,38 +1,32 @@
 use crate::config::database::Database;
-use crate::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
-use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use crate::service::group_chat_service::{GroupChatService, GroupChatServiceTrait};
 use std::sync::Arc;
+use crate::service::user_service::{UserService, UserServiceTrait};
 
 #[derive(Clone)]
 pub struct GroupChatState {
     pub group_chat_service: Arc<dyn GroupChatServiceTrait>,
-    pub group_chat_repo: Arc<dyn GroupChatRepositoryTrait>,
-    pub user_repo: Arc<dyn UserRepositoryTrait>,
+    pub user_service: Arc<dyn UserServiceTrait>,
 }
 
 impl GroupChatState {
     pub fn new(db_conn: &Arc<Database>) -> Self {
-        let group_chat_repo = Arc::new(GroupChatRepository::new(db_conn));
-        let user_repo = Arc::new(UserRepository::new(db_conn));
+        let user_service = Arc::new(UserService::new(db_conn));
         let group_chat_service = Arc::new(GroupChatService::new(db_conn));
 
         Self {
             group_chat_service,
-            group_chat_repo,
-            user_repo,
+            user_service,
         }
     }
 
     pub fn with_dependencies(
         group_chat_service: Arc<dyn GroupChatServiceTrait>,
-        group_chat_repo: Arc<dyn GroupChatRepositoryTrait>,
-        user_repo: Arc<dyn UserRepositoryTrait>,
+        user_service: Arc<dyn UserServiceTrait>,
     ) -> Self {
         Self {
             group_chat_service,
-            group_chat_repo,
-            user_repo,
+            user_service,
         }
     }
 }
