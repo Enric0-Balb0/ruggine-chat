@@ -7,6 +7,7 @@ use crate::common::{cleanup_user, create_test_user, cleanup_group, create_test_g
 
 #[cfg(test)]
 mod invitation_repository_integration_tests {
+    use ruggine_server::config::database::DatabaseTrait;
     use ruggine_server::entity::invitation::NewInvitation;
     use crate::get_database;
     use super::*;
@@ -41,6 +42,7 @@ mod invitation_repository_integration_tests {
         assert!(invitation.responded_at.is_none());
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_invitation(invitation_id).await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
@@ -64,6 +66,7 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_group(group_chat.id).await;
         cleanup_user(to_user.email).await;
     }
@@ -85,8 +88,10 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
+
     }
 
     #[tokio::test]
@@ -106,6 +111,7 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -148,6 +154,7 @@ mod invitation_repository_integration_tests {
         assert_ne!(invitation_id1, invitation_id3);
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
         cleanup_invitation(invitation_id3).await;
@@ -195,6 +202,7 @@ mod invitation_repository_integration_tests {
         assert_eq!(invitation.group_chat_id, group_chat.id);
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_invitation(invitation_id).await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
@@ -234,6 +242,7 @@ mod invitation_repository_integration_tests {
         assert_ne!(invitation_id1, invitation_id2, "Concurrent invitation IDs should be different");
 
         // Cleanup
+        db.get_pool().close().await;
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
         cleanup_group(group_chat.id).await;
@@ -276,6 +285,8 @@ mod invitation_repository_integration_tests {
         if let Ok(id) = result1 {
             cleanup_invitation(id).await;
         }
+
+        db.get_pool().close().await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
