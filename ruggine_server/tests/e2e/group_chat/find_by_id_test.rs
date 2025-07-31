@@ -10,7 +10,7 @@ use crate::common::{cleanup_user, cleanup_group, create_group_chat_router, creat
 mod find_by_id_group_chat_e2e_tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_chat_success() {
         // Arrange: Create router, login user and create group chat
         let app = create_group_chat_router().await;
@@ -50,7 +50,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_chat_unauthorized_no_token() {
         // Arrange: Create router, user and group chat
         let app = create_group_chat_router().await;
@@ -74,7 +74,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_chat_unauthorized_invalid_token() {
         // Arrange: Create router, user and group chat
         let app = create_group_chat_router().await;
@@ -99,7 +99,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_chat_not_found() {
         // Arrange: Create router and login user (but no group chat)
         let app = create_group_chat_router().await;
@@ -126,7 +126,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_chat_invalid_id() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -150,7 +150,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_multiple_groups_same_user() {
         // Arrange: Create router, login user and create multiple groups
         let app = create_group_chat_router().await;
@@ -190,7 +190,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_different_users_same_group() {
         // Arrange: Create router, login two users and create one group
         let app = create_group_chat_router().await;
@@ -240,7 +240,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_after_creation() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -295,7 +295,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_concurrent_requests() {
         // Arrange: Create router, login user and create group
         let app = create_group_chat_router().await;
@@ -304,7 +304,7 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Act: Make multiple concurrent find requests
         let mut handles = vec![];
-        for i in 0..5 {
+        for _i in 0..5 {
             let app_clone = app.clone();
             let token_clone = token.clone();
             let group_id = group.id;
@@ -354,7 +354,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_zero_id() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;

@@ -8,7 +8,7 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group,
 mod invitation_repository_find_by_id_integration_tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let (from_user, _) = create_test_user("find_invitation_from").await;
@@ -47,7 +47,7 @@ mod invitation_repository_find_by_id_integration_tests {
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let db = get_database().await;
@@ -65,7 +65,7 @@ mod invitation_repository_find_by_id_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_negative_id() {
         // Arrange
         let db = get_database().await;
@@ -79,7 +79,7 @@ mod invitation_repository_find_by_id_integration_tests {
         assert!(result.is_err(), "Should not find invitation with negative ID");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_zero_id() {
         // Arrange
         let db = get_database().await;
@@ -93,7 +93,7 @@ mod invitation_repository_find_by_id_integration_tests {
         assert!(result.is_err(), "Should not find invitation with zero ID");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_multiple_invitations() {
         // Arrange
         let (from_user, _) = create_test_user("multi_find_from").await;
@@ -138,7 +138,7 @@ mod invitation_repository_find_by_id_integration_tests {
         cleanup_user(to_user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_concurrent_access() {
         // Arrange
         let (from_user, _) = create_test_user("concurrent_find_from").await;
@@ -180,7 +180,7 @@ mod invitation_repository_find_by_id_integration_tests {
         cleanup_user(to_user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_timestamp_validation() {
         // Arrange
         let (from_user, _) = create_test_user("timestamp_find_from").await;
@@ -213,7 +213,7 @@ mod invitation_repository_find_by_id_integration_tests {
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_database_consistency() {
         // Arrange
         let (from_user, _) = create_test_user("consistency_find_from").await;

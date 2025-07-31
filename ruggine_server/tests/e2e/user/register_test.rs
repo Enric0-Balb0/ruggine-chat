@@ -16,7 +16,7 @@ mod register_e2e_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_success_with_valid_data() {
         // Arrange: Create router and registration data
         let app = create_user_router().await;
@@ -93,7 +93,7 @@ mod register_e2e_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_creates_user_in_database() {
         // Arrange: Create router and registration data
         let app = create_user_router().await;
@@ -151,7 +151,7 @@ mod register_e2e_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_duplicate_email() {
         // Arrange: Create router and register a user first
         let app = create_user_router().await;
@@ -205,7 +205,7 @@ mod register_e2e_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_malformed_json() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -226,7 +226,7 @@ mod register_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_missing_required_fields() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -260,7 +260,7 @@ mod register_e2e_tests {
         assert_eq!(response_json["code"], 400);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_invalid_email_format() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -296,7 +296,7 @@ mod register_e2e_tests {
         assert_eq!(response_json["code"], 400);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_empty_fields() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -332,7 +332,7 @@ mod register_e2e_tests {
         assert_eq!(response_json["code"], 400);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_wrong_http_method() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -362,7 +362,7 @@ mod register_e2e_tests {
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_with_special_characters() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -412,7 +412,7 @@ mod register_e2e_tests {
         cleanup_user("special.chars+test@example.com".to_string()).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_missing_content_type() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -453,7 +453,7 @@ mod register_e2e_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_concurrent_different_users() {
         // Arrange: Create router and multiple registration data
         let register_dto1 = UserFactory::unique_fake_user_register_dto("e2e_concurrent1");
@@ -525,7 +525,7 @@ mod register_e2e_tests {
         cleanup_user(register_dto2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_response_structure_consistency() {
         // Arrange: Create router and registration data
         let app = create_user_router().await;

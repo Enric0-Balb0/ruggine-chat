@@ -46,7 +46,7 @@ mod tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(response.data().description, expected_group_dto.description);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -124,7 +124,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_service_error() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -165,7 +165,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_with_different_users() {
         // Arrange
         let user1 = UserFactory::unique_fake_user("find_test_1", crate::entity::user::UserStatus::Active);
@@ -216,7 +216,7 @@ mod tests {
         assert_eq!(response1.data().name, response2.data().name);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_invalid_id() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -257,7 +257,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_response_structure() {
         // Arrange
         let user = UserFactory::fake_user();

@@ -13,7 +13,7 @@ mod group_chat_create_handler_integration_tests {
     use crate::create_login_and_get_token;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_success() {
         // Arrange: Create a real user and group chat state
         let group_chat_state = create_group_chat_state().await;
@@ -46,7 +46,7 @@ mod group_chat_create_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_with_empty_description() {
         // Arrange: Create a real user and group chat state
         let group_chat_state = create_group_chat_state().await;
@@ -78,7 +78,7 @@ mod group_chat_create_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    /* #[tokio::test]
+    /* #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_with_invalid_payload_empty_name() {
         // Arrange: Create a real user and group chat state
         let group_chat_state = create_group_chat_state().await;
@@ -104,7 +104,7 @@ mod group_chat_create_handler_integration_tests {
         cleanup_user(user.email).await;
     } */
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_with_nonexistent_user() {
         // Arrange: Create group chat state and fake user
         let group_chat_state = create_group_chat_state().await;
@@ -132,7 +132,7 @@ mod group_chat_create_handler_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_multiple_groups_same_user() {
         // Arrange: Create a real user and group chat state
         let group_chat_state = create_group_chat_state().await;

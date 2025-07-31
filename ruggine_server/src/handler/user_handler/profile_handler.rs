@@ -29,7 +29,7 @@ mod tests {
     use crate::factory::user_factory::UserFactory;
     use axum::Extension;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_returns_expected_user_dto() {
         // Arrange: create a mock user
         let user = UserFactory::fake_user();
@@ -46,7 +46,7 @@ mod tests {
         assert_eq!(*data, expected_dto);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_inactive_user() {
         // Arrange: create an inactive user using the factory
         let mut user = UserFactory::fake_user();
@@ -65,7 +65,7 @@ mod tests {
         assert_eq!(data.user_status, UserStatus::Deleted);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_preserves_all_user_fields() {
         // Arrange: create a user with specific field values
         let user = User {
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(data.gender, user.gender);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_response_structure() {
         // Arrange: create a mock user
         let user = UserFactory::fake_user();
@@ -127,7 +127,7 @@ mod tests {
         assert!(data.email.contains('@'));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_includes_new_fields() {
         // Arrange: create a user with all new fields set
         let user = User {

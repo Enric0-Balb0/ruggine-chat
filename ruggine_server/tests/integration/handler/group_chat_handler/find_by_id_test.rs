@@ -16,7 +16,7 @@ mod find_by_id_handler_integration_tests {
     use ruggine_server::service::user_service::UserService;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_existing_group() {
         // Arrange: Create user and group chat
         let (user, _) = create_test_user("find_handler_existing").await;
@@ -53,7 +53,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_non_existent_group() {
         // Arrange: Create user but no group chat
         let (user, _) = create_test_user("find_handler_non_existent").await;
@@ -82,7 +82,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_multiple_groups() {
         // Arrange: Create user and multiple group chats
         let (user, _) = create_test_user("find_handler_multiple").await;
@@ -128,7 +128,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_different_users_same_group() {
         // Arrange: Create two users and one group chat
         let (user1, _) = create_test_user("find_handler_user1").await;
@@ -173,7 +173,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_invalid_id() {
         // Arrange: Create user
         let (user, _) = create_test_user("find_handler_invalid").await;
@@ -202,7 +202,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_after_creation() {
         // Arrange: Create user
         let (user, _) = create_test_user("find_handler_after_create").await;
@@ -243,7 +243,7 @@ mod find_by_id_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_concurrent_access() {
         // Arrange: Create user and group chat
         let (user, _) = create_test_user("find_handler_concurrent").await;

@@ -126,7 +126,7 @@ mod login_tests {
     // - User is active
     // - Password is correct
     // - Token generation succeeds
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_success() {
         // ARRANGE - Set up the test data and mock expectations
         let mut mock_user_repo = MockUserRepositoryTrait::new(); // Auto-generated mock!
@@ -189,7 +189,7 @@ mod login_tests {
 
     // TEST CASE 2: User Not Found
     // This test verifies that login fails correctly when the user doesn't exist
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_user_not_found() {
         // ARRANGE
         let mut mock_user_repo = MockUserRepositoryTrait::new(); // Auto-generated mock!
@@ -230,7 +230,7 @@ mod login_tests {
 
     // TEST CASE 3: Inactive User
     // This test verifies that login fails when user exists but is inactive
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_user_not_active() {
         // ARRANGE
         let mut mock_user_repo = MockUserRepositoryTrait::new(); // Auto-generated mock!
@@ -276,7 +276,7 @@ mod login_tests {
 
     // TEST CASE 4: Invalid Password
     // This test verifies that login fails when password is incorrect
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_invalid_password() {
         // ARRANGE
         let mut mock_user_repo = MockUserRepositoryTrait::new(); // Auto-generated mock!
@@ -329,7 +329,7 @@ mod login_tests {
 
     // TEST CASE 5: Token Generation Failure
     // This test verifies that login fails when JWT token generation fails
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_token_generation_failure() {
         // ARRANGE
         let mut mock_user_repo = MockUserRepositoryTrait::new(); // Auto-generated mock!

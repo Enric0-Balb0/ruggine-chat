@@ -44,7 +44,7 @@ mod user_repository_insert_tests {
     use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::repository::user_repository::UserRepositoryTrait;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_success() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
@@ -69,7 +69,7 @@ mod user_repository_insert_tests {
         assert_eq!(result.unwrap(), expected_id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_with_duplicate_email() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
@@ -91,7 +91,7 @@ mod user_repository_insert_tests {
         assert!(result.is_err());
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_inactive_user() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
@@ -114,7 +114,7 @@ mod user_repository_insert_tests {
         assert_eq!(result.unwrap(), expected_id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_multiple_operations_with_factory() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();

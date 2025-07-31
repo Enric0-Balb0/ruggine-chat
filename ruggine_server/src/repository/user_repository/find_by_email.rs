@@ -22,7 +22,7 @@ mod user_repository_find_by_email_tests {
     use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::repository::user_repository::UserRepositoryTrait;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_email_success() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();
@@ -66,7 +66,7 @@ mod user_repository_find_by_email_tests {
         assert_eq!(user.last_name, "Doe");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_email_not_found() {
         // Arrange
         let mut mock_user_repo = MockUserRepositoryTrait::new();

@@ -51,7 +51,7 @@ mod login_handler_integration_tests {
     }
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_success_with_real_user() {
         // Arrange: Create a real user and auth state
         let jwt_secret = TokenFactory::get_unique_jwt_secret("login_success");
@@ -83,7 +83,7 @@ mod login_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_user_not_found() {
         // Arrange: Create auth state but no user in database
         let jwt_secret = TokenFactory::get_unique_jwt_secret("user_not_found");
@@ -110,7 +110,7 @@ mod login_handler_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_user_not_active() {
         // Arrange: Create user and then deactivate them
         let jwt_secret = TokenFactory::get_unique_jwt_secret("user_not_active");
@@ -151,7 +151,7 @@ mod login_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_invalid_password() {
         // Arrange: Create a real user with known password
         let jwt_secret = TokenFactory::get_unique_jwt_secret("invalid_password");
@@ -182,7 +182,7 @@ mod login_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_empty_email() {
         // Arrange: Create auth state
         let jwt_secret = TokenFactory::get_unique_jwt_secret("empty_email");
@@ -209,7 +209,7 @@ mod login_handler_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_empty_password() {
         // Arrange: Create a real user
         let jwt_secret = TokenFactory::get_unique_jwt_secret("empty_password");
@@ -240,7 +240,7 @@ mod login_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_case_sensitive_email() {
         // Arrange: Create a real user with lowercase email
         let jwt_secret = TokenFactory::get_unique_jwt_secret("case_sensitive");
@@ -266,7 +266,7 @@ mod login_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_multiple_users_with_different_credentials() {
         // Arrange: Create multiple users with different credentials
         let jwt_secret = TokenFactory::get_unique_jwt_secret("multiple_users");

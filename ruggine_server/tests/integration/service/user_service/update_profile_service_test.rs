@@ -30,7 +30,7 @@ mod user_service_update_profile_integration_tests {
         user_option.unwrap()
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_success_complete() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_complete").await;
@@ -64,7 +64,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_success_partial() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_partial").await;
@@ -96,7 +96,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_no_updates() {
         // Arrange: Create a user in the database
         let mut user = create_test_user_for_update("service_update_empty").await;
@@ -122,7 +122,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_user_not_found() {
         // Arrange: Use a non-existent user ID
         let db = get_database().await;
@@ -148,7 +148,7 @@ mod user_service_update_profile_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_with_all_genders() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_genders").await;
@@ -181,7 +181,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_birthday_validation() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_birthday").await;
@@ -225,7 +225,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_preserves_critical_fields() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_preserve").await;
@@ -278,7 +278,7 @@ mod user_service_update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_string_length_validation() {
         // Arrange: Create a user in the database
         let user = create_test_user_for_update("service_update_length").await;

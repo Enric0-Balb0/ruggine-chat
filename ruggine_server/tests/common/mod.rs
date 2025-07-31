@@ -6,6 +6,7 @@ use axum::body::{to_bytes, Body};
 use axum::http::{Request, StatusCode};
 use axum::Router;
 use serde_json::json;
+use sqlx::PgPool;
 use tower::ServiceExt;
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::entity::group_chat::GroupChat;
@@ -24,18 +25,26 @@ use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
 
 static INIT_LOG: Once = Once::new();
+static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
+
+
 pub async fn get_database() -> Arc<Database> {
     init_test_logging();
     dotenv::dotenv().ok();
 
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "mysql://testuser:testpass@localhost/ruggine_test".to_string());
+    // Inizializza il pool una volta sola in modo async-safe
+    let pool = DB_POOL
+        .get_or_init(|| async {
+            let database_url = std::env::var("TEST_DATABASE_URL")
+                .unwrap_or_else(|_| "postgres://testuser:testpass@localhost/ruggine_test".to_string());
 
-    let db = Database::init(database_url)
-        .await
-        .expect("Failed to connect to test database");
+            PgPool::connect(&database_url)
+                .await
+                .expect("Failed to connect to test database")
+        })
+        .await;
 
-    Arc::new(db)
+    Arc::new(Database { pool: pool.clone() })
 }
 
 /// Helper function to clea nup user after test
@@ -45,7 +54,7 @@ pub async fn cleanup_user(email: String) {
     if let Err(e) = repository.delete_by_email(email.clone()).await {
         panic!("Cleanup failed for {}: {:?}", email, e);
     }
-    db.get_pool().close().await;
+    
 }
 
 pub async fn create_user_router() -> Router {
@@ -82,7 +91,7 @@ async fn create_test_user_with_password(prefix: &str, password: String) -> User 
     // Get the created user from database
     let user_option = repository.find_by_email(user_dto.email.clone()).await;
     assert!(user_option.is_some(), "User not found in database");
-    db.get_pool().close().await;
+    
     user_option.unwrap()
 }
 
@@ -167,7 +176,7 @@ pub async fn cleanup_group(group_id: i32) {
     if let Err(e) = group_repo.delete_by_id(group_id).await {
         eprintln!("Failed to cleanup group {}: {:?}", group_id, e);
     }
-    db.get_pool().close().await;
+    
 }
 
 /// Helper function to create a real group chat state with database connections
@@ -204,7 +213,7 @@ pub async fn cleanup_invitation(invitation_id: i32) {
     if let Err(e) = repository.delete_by_id(invitation_id).await {
         panic!("Cleanup failed for invitation with id {}: {:?}", invitation_id, e);
     }
-    db.get_pool().close().await;
+    
 }
 
 fn init_test_logging() {

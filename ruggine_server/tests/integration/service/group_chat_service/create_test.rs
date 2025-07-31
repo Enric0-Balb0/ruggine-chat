@@ -9,7 +9,7 @@ mod group_chat_create_service_integration_tests {
     use crate::cleanup_user;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_real_user() {
         // Arrange: Create a real user in the database
         let db = get_database().await;
@@ -49,7 +49,7 @@ mod group_chat_create_service_integration_tests {
         cleanup_user(user.email.clone()).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_nonexistent_user() {
         // Arrange: Set up group chat service
         let db = get_database().await;
@@ -72,7 +72,7 @@ mod group_chat_create_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_duplicate_name() {
         // Arrange: Create a real user and first group chat
         let db = get_database().await;
@@ -112,7 +112,7 @@ mod group_chat_create_service_integration_tests {
         cleanup_user(user.email.clone()).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_multiple_groups_for_same_user() {
         // Arrange: Create a real user
         let db = get_database().await;

@@ -62,7 +62,7 @@ mod auth_middleware_integration_tests {
         (user, token_data.token, state)
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_success_with_real_user_and_token() {
         // Arrange: Create a real user and valid token
         let (user, token, state) = create_user_and_token("auth_success").await;
@@ -89,7 +89,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_missing_authorization_header() {
         // Arrange: Create token state but no authorization header
         let jwt_secret = TokenFactory::get_unique_jwt_secret("missing_header");
@@ -113,7 +113,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_invalid_authorization_header_format() {
         // Arrange: Create token state with malformed authorization header
         let jwt_secret = TokenFactory::get_unique_jwt_secret("invalid_header");
@@ -138,7 +138,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_invalid_token_wrong_secret() {
         // Arrange: Create a token with one secret, try to verify with another
         let (user, token, _) = create_user_and_token("wrong_secret").await;
@@ -169,7 +169,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_user_not_found_deleted_user() {
         // Arrange: Create user and token, then delete the user
         let (user, token, state) = create_user_and_token("deleted_user").await;
@@ -196,7 +196,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_user_not_active() {
         // Setup
 
@@ -233,7 +233,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_malformed_bearer_token() {
         // Arrange: Create token state with malformed Bearer token
         let jwt_secret = TokenFactory::get_unique_jwt_secret("malformed_token");
@@ -258,7 +258,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_empty_bearer_token() {
         // Arrange: Create token state with empty Bearer token
         let jwt_secret = TokenFactory::get_unique_jwt_secret("empty_token");
@@ -283,7 +283,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_token_without_bearer_prefix() {
         // Arrange: Create token state with token that doesn't have Bearer prefix
         let jwt_secret = TokenFactory::get_unique_jwt_secret("no_bearer");
@@ -308,7 +308,7 @@ mod auth_middleware_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_with_allowed_user_type_success() {
         // Arrange: Create a real user with Admin type and valid token
         let (mut user, token, state) = create_user_and_token("auth_admin_success").await;
@@ -347,7 +347,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_with_disallowed_user_type_fails() {
         // Arrange: Create a real user with User type and valid token
         let (mut user, token, state) = create_user_and_token("auth_user_fail").await;
@@ -387,7 +387,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_inner_with_multiple_allowed_user_types() {
         // Arrange: Create a real user with User type and valid token
         let (user, token, state) = create_user_and_token("auth_multi_types").await;
@@ -409,7 +409,7 @@ mod auth_middleware_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_all_user_types_helper_function() {
         // Act: Call the helper function
         let all_types = all_user_types();

@@ -11,7 +11,7 @@ mod group_chat_service_find_by_id_integration_tests {
     use ruggine_server::error::group_chat_error::GroupChatError;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_existing_group() {
         // Arrange
         let (user, _) = create_test_user("service_find_creator").await;
@@ -41,7 +41,7 @@ mod group_chat_service_find_by_id_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_non_existent_group() {
         // Arrange
         let db = get_database().await;
@@ -61,7 +61,7 @@ mod group_chat_service_find_by_id_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_invalid_id() {
         // Arrange
         let db = get_database().await;
@@ -75,7 +75,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(result.is_err(), "Should not find group with invalid ID");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_multiple_groups() {
         // Arrange
         let (user, _) = create_test_user("multi_service_find_creator").await;
@@ -112,7 +112,7 @@ mod group_chat_service_find_by_id_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_after_create() {
         // Arrange
         let (user, _) = create_test_user("create_find_service_creator").await;
@@ -146,7 +146,7 @@ mod group_chat_service_find_by_id_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_concurrent_access() {
         // Arrange
         let (user, _) = create_test_user("concurrent_service_find_creator").await;
@@ -188,7 +188,7 @@ mod group_chat_service_find_by_id_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_verify_timestamps() {
         // Arrange
         let (user, _) = create_test_user("timestamp_service_find_creator").await;

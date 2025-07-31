@@ -28,7 +28,7 @@ mod register_handler_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_creates_user_successfully_with_valid_data() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
@@ -66,7 +66,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_fails_when_user_already_exists() {
         // Arrange: Create user state and register a user first
         let user_state = create_user_state().await;
@@ -98,7 +98,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_persists_user_data_to_database() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
@@ -141,7 +141,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_hashes_password_before_storage() {
         // Arrange: Create user state and registration data with known password
         let user_state = create_user_state().await;
@@ -173,7 +173,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_handles_special_characters_in_user_data() {
         // Arrange: Create user state and registration data with special characters
         let user_state = create_user_state().await;
@@ -212,7 +212,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_supports_concurrent_user_registrations() {
         // Arrange: Create user state and multiple registration data
         let user_state = create_user_state().await;
@@ -241,7 +241,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_preserves_all_input_data_in_response() {
         // Arrange: Create user state with specific input data
         let user_state = create_user_state().await;
@@ -289,7 +289,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_sets_new_user_status_to_active_by_default() {
         // Arrange: Create user state and registration data
         let user_state = create_user_state().await;
@@ -319,7 +319,7 @@ mod register_handler_integration_tests {
         cleanup_user(register_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handler_correctly_stores_all_user_fields_to_database() {
         // Arrange: Create user state and registration data with new fields
         let user_state = create_user_state().await;

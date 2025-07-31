@@ -32,7 +32,7 @@ mod login_e2e_tests {
         (user_dto, original_password)
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_success_with_valid_credentials() {
         // Arrange: Create router and test user
         let app = create_auth_router().await;
@@ -77,7 +77,7 @@ mod login_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_invalid_email() {
         // Arrange: Create router (no user needed)
         let app = create_auth_router().await;
@@ -110,7 +110,7 @@ mod login_e2e_tests {
         assert_eq!(response_json["code"], 404);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_wrong_password() {
         // Arrange: Create router and test user
         let app = create_auth_router().await;
@@ -151,7 +151,7 @@ mod login_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_inactive_user() {
         // Arrange: Create router and test user, then deactivate
         let app = create_auth_router().await;
@@ -198,7 +198,7 @@ mod login_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_malformed_json() {
         // Arrange: Create router
         let app = create_auth_router().await;
@@ -219,7 +219,7 @@ mod login_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_missing_fields() {
         // Arrange: Create router
         let app = create_auth_router().await;
@@ -252,7 +252,7 @@ mod login_e2e_tests {
         assert_eq!(response_json["code"], 400);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_failure_with_empty_fields() {
         // Arrange: Create router
         let app = create_auth_router().await;
@@ -279,7 +279,7 @@ mod login_e2e_tests {
         );
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_wrong_http_method() {
         // Arrange: Create router
         let app = create_auth_router().await;
@@ -303,7 +303,7 @@ mod login_e2e_tests {
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_missing_content_type() {
         // Arrange: Create router and test user
         let app = create_auth_router().await;
@@ -336,7 +336,7 @@ mod login_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_login_token_validity_and_structure() {
         // Arrange: Create router and test user
         let app = create_auth_router().await;

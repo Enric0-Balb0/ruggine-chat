@@ -11,7 +11,7 @@ mod user_repository_integration_tests {
     use super::*;
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id() {
         // Arrange
         let db = get_database().await;
@@ -38,7 +38,7 @@ mod user_repository_integration_tests {
         assert!(repository.find_by_email(new_user.email.clone()).await.is_none(), "User should be deleted");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let db = get_database().await;

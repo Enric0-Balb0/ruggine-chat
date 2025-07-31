@@ -49,7 +49,7 @@ mod tests {
     use std::future::Future;
     use crate::utils::mock_database_error::MockDatabaseError;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_success() {
         // Arrange: Set up a mock repository with successful responses
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -122,7 +122,7 @@ mod tests {
         assert_eq!(user.username, "testuser");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_already_exists() {
         // Arrange: Set up a mock repository where user already exists
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -176,7 +176,7 @@ mod tests {
         assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_database_unique_constraint_violation() {
         // Arrange: Set up a mock repository that returns a unique constraint violation
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -219,7 +219,7 @@ mod tests {
         assert!(matches!(error, ApiError::DbError(DbError::UniqueConstraintViolation(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_database_general_error() {
         // Arrange: Set up a mock repository that returns a general database error
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -262,7 +262,7 @@ mod tests {
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_find_user_after_insert_fails() {
         // Arrange: Set up a mock repository where insert succeeds but find fails
         let mut mock_repo = MockUserRepositoryTrait::new();

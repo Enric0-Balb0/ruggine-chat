@@ -62,7 +62,7 @@ mod profile_e2e_tests {
         data["token"].as_str().unwrap().to_string()
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_success_with_valid_token() {
         // Arrange: Create router, user, and get token
         let app = create_user_router().await;
@@ -128,7 +128,7 @@ mod profile_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_failure_without_token() {
         // Arrange: Create router only (no token)
         let app = create_user_router().await;
@@ -155,7 +155,7 @@ mod profile_e2e_tests {
         assert_eq!(response_json["code"], 401);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_failure_with_invalid_token() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -183,7 +183,7 @@ mod profile_e2e_tests {
         assert_eq!(response_json["code"], 401);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_failure_with_malformed_token() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -211,7 +211,7 @@ mod profile_e2e_tests {
         assert_eq!(response_json["code"], 401);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_failure_with_empty_bearer_token() {
         // Arrange: Create router
         let app = create_user_router().await;
@@ -239,7 +239,7 @@ mod profile_e2e_tests {
         assert_eq!(response_json["code"], 401);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_failure_with_inactive_user() {
         // Arrange: Create router, user, get token, then deactivate user
         let app = create_user_router().await;
@@ -282,7 +282,7 @@ mod profile_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_wrong_http_method() {
         // Arrange: Create router, user, and get token
         let app = create_user_router().await;
@@ -306,7 +306,7 @@ mod profile_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_updated_user_data() {
         // Arrange: Create router, user, get token, and update user data
         let app = create_user_router().await;
@@ -371,7 +371,7 @@ mod profile_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_response_structure_consistency() {
         // Arrange: Create router, user, and get token
         let app = create_user_router().await;
@@ -435,7 +435,7 @@ mod profile_e2e_tests {
         cleanup_user(user_dto.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_concurrent_requests() {
         // Arrange: Create router, user, and get token
         let app = create_user_router().await;

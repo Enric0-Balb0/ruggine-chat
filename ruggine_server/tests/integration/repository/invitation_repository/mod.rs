@@ -1,2 +1,4 @@
 mod insert_test;
 mod find_by_id_test;
+mod find_pending_invitations_for_user_test;
+mod find_pending_invitation_between_users_test;

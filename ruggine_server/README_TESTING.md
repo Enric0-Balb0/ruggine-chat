@@ -175,7 +175,7 @@ mock! {
 // Per test che non possono essere paralleli
 use serial_test::serial;
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 #[serial]
 async fn test_that_needs_isolation() {
     // test code

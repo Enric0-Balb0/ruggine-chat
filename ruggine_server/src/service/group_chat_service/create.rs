@@ -63,7 +63,7 @@ mod tests {
     use crate::utils::mock_database_error::MockDatabaseError;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_success() {
         // Arrange: Set up mock repositories with successful responses
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(group_dto.created_by, created_by);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_unique_constraint_violation() {
         // Arrange: Set up mocks where group insertion fails with unique constraint violation
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -134,7 +134,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_database_error() {
         // Arrange: Set up mocks where group insertion fails with general database error
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();

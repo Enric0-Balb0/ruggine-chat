@@ -11,7 +11,7 @@ mod user_repository_integration_tests {
 
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_duplicate_email() {
         // Arrange
         let db = get_database().await;
@@ -37,7 +37,7 @@ mod user_repository_integration_tests {
         assert!(repository.find_by_email(user1.email.clone()).await.is_none(), "User should be deleted");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_repository_concurrent_access() {
         use tokio::sync::Mutex;
 

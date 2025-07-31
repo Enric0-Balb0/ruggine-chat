@@ -16,7 +16,7 @@ mod update_profile_e2e_tests {
     use ruggine_server::entity::user::all_genders;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_complete() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_success").await;
@@ -61,7 +61,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_partial() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_success_partial").await;
@@ -103,7 +103,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_validation_error_empty_address() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_validation").await;
@@ -142,7 +142,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_validation_error_address_too_long() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_long_addr").await;
@@ -182,7 +182,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_no_updates() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_no_fields").await;
@@ -215,7 +215,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_unauthorized_no_token() {
         // Arrange: Create app but don't log in
         let app = create_user_router().await;
@@ -242,7 +242,7 @@ mod update_profile_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_unauthorized_invalid_token() {
         // Arrange: Create app
         let app = create_user_router().await;
@@ -270,7 +270,7 @@ mod update_profile_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_with_all_genders() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_with_all_genders").await;
@@ -315,7 +315,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_malformed_json() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_malformed_json").await;
@@ -340,7 +340,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_wrong_content_type() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_wrong_content_type").await;
@@ -376,7 +376,7 @@ mod update_profile_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_preserves_unchanged_fields() {
         // Arrange: Create user and get token
         let (user, password) = create_test_user("e2e_update_profile_preserve").await;

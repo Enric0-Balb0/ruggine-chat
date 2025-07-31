@@ -35,7 +35,7 @@ mod find_by_id_service_tests {
     use std::sync::Arc;
     use crate::entity::user::UserStatus;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -65,7 +65,7 @@ mod find_by_id_service_tests {
         assert_eq!(dto, expected_dto);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -90,7 +90,7 @@ mod find_by_id_service_tests {
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_database_error() {
         // Arrange
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -116,7 +116,7 @@ mod find_by_id_service_tests {
         let error = result.unwrap_err();
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
     }
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_with_factory_users() {
         // Arrange
         let mut mock_repo = MockUserRepositoryTrait::new();

@@ -43,7 +43,7 @@ mod tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -86,7 +86,7 @@ mod tests {
     }
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_no_updates() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -128,7 +128,7 @@ mod tests {
     }
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_service_error() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -166,7 +166,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_partial_update() {
         // Arrange
         let user = UserFactory::fake_user();

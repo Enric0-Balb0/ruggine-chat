@@ -33,7 +33,7 @@ mod invitation_repository_insert_tests {
     use crate::repository::invitation_repository::InvitationRepositoryTrait;
     use crate::utils::mock_database_error::MockDatabaseError;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_success() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -58,7 +58,7 @@ mod invitation_repository_insert_tests {
         assert_eq!(result.unwrap(), expected_id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_database_error() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -85,7 +85,7 @@ mod invitation_repository_insert_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_with_different_users() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -138,7 +138,7 @@ mod invitation_repository_insert_tests {
         assert_eq!(result3.unwrap(), 103);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_with_factory_utilities() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -170,7 +170,7 @@ mod invitation_repository_insert_tests {
         assert_eq!(result.unwrap(), 999);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_foreign_key_constraint_error() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -194,7 +194,7 @@ mod invitation_repository_insert_tests {
         assert!(result.is_err(), "Expected a foreign key constraint error");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_multiple_unique_invitations() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -249,7 +249,7 @@ mod invitation_repository_insert_tests {
         assert_eq!(results.2.unwrap(), 203);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_duplicate_pending_invitation_should_fail() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();

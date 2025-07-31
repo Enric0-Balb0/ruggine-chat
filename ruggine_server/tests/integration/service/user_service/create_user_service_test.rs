@@ -13,7 +13,7 @@ mod user_service_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_success() {
         // Arrange: Set up a real database connection and service
         let db = get_database().await;
@@ -41,7 +41,7 @@ mod user_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_already_exists() {
         // Arrange: Create a user first, then try to create another with same email
         let db = get_database().await;
@@ -79,7 +79,7 @@ mod user_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_validates_data_integrity() {
         // Arrange: Set up a real database connection and service
         let db = get_database().await;
@@ -121,7 +121,7 @@ mod user_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_with_special_characters() {
         // Arrange: Test with special characters in names
         let db = get_database().await;
@@ -150,7 +150,7 @@ mod user_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_user_with_new_fields() {
         // Arrange: Test that new fields are properly stored
         let db = get_database().await;

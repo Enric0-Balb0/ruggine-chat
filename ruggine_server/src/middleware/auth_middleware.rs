@@ -102,7 +102,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_success() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(body_str, "passed");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_missing_authorization_header() {
         let mock_token_service = MockTokenServiceTrait::new();
         let mock_user_repo = MockUserRepositoryTrait::new();
@@ -165,7 +165,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_invalid_authorization_header() {
         let mock_token_service = MockTokenServiceTrait::new();
         let mock_user_repo = MockUserRepositoryTrait::new();
@@ -191,7 +191,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_expired_token() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -224,7 +224,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_invalid_token() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -257,7 +257,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_user_not_found() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -290,7 +290,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_user_not_active() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -327,7 +327,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_bearer_token_without_bearer_prefix() {
         let mock_token_service = MockTokenServiceTrait::new();
         let mock_user_repo = MockUserRepositoryTrait::new();
@@ -353,7 +353,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_empty_bearer_token() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -386,7 +386,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_with_allowed_user_type_success() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service
@@ -419,7 +419,7 @@ mod tests {
         assert!(result.is_ok(), "Auth should succeed with allowed user type");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_auth_with_disallowed_user_type_fails() {
         let mut mock_token_service = MockTokenServiceTrait::new();
         mock_token_service

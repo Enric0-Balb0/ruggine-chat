@@ -21,7 +21,7 @@ mod invitation_repository_find_tests {
     use crate::repository::invitation_repository::InvitationRepositoryTrait;
     use crate::factory::invitation_factory::InvitationFactory;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -50,7 +50,7 @@ mod invitation_repository_find_tests {
         assert_eq!(found_invitation.status, expected_invitation.status);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
@@ -75,7 +75,7 @@ mod invitation_repository_find_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_database_error() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();

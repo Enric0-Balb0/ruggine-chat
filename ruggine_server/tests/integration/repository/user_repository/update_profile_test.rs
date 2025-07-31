@@ -8,7 +8,7 @@ use crate::common::{get_database, create_test_user, cleanup_user};
 mod update_profile_integration_tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_complete_update() {
         // Arrange: Create a test user and update DTO
         let db = get_database().await;
@@ -50,7 +50,7 @@ mod update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_partial_update() {
         // Arrange: Create a test user and partial update DTO
         let db = get_database().await;
@@ -86,7 +86,7 @@ mod update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_empty_update() {
         // Arrange: Create a test user and empty update DTO
         let db = get_database().await;
@@ -112,7 +112,7 @@ mod update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_nonexistent_user() {
         // Arrange: Use a non-existent user ID
         let db = get_database().await;
@@ -129,7 +129,7 @@ mod update_profile_integration_tests {
         assert!(result.is_err(), "Update should fail for non-existent user");
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_using_factory_dto() {
         // Arrange: Create a test user and use factory DTO
         let db = get_database().await;
@@ -156,7 +156,7 @@ mod update_profile_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_only_gender() {
         // Arrange: Create a test user and update only gender
         let db = get_database().await;

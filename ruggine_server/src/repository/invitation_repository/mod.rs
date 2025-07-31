@@ -2,6 +2,8 @@ pub mod invitation_repository;
 pub mod invitation_repository_trait;
 mod insert;
 mod find_by_id;
+mod find_pending_invitations_for_user;
+mod find_pending_invitations_between_users;
 
 use async_trait::async_trait;
 use sqlx::Error;
@@ -17,5 +19,13 @@ impl InvitationRepositoryTrait for InvitationRepository {
 
     async fn find_by_id(&self, id: i32) -> Result<Invitation, Error> {
         self.find_by_id_inner(id).await
+    }
+
+    async fn find_pending_invitations_for_user(&self, user_id: i32) -> Result<Vec<Invitation>, Error> {
+        self.find_pending_invitations_for_user_inner(user_id).await
+    }
+
+    async fn find_pending_invitation_between_users(&self, from_user_id: i32, to_user_id: i32) -> Result<Option<Invitation>, Error> {
+        self.find_pending_invitation_between_users_inner(from_user_id, to_user_id).await
     }
 }

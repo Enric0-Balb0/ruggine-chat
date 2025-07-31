@@ -12,7 +12,7 @@ mod invitation_repository_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_success() {
         // Arrange
         let (from_user, _) = create_test_user("invitation_from_user").await;
@@ -42,14 +42,14 @@ mod invitation_repository_integration_tests {
         assert!(invitation.responded_at.is_none());
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_invitation(invitation_id).await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_nonexistent_from_user() {
         // Arrange
         let (to_user, _) = create_test_user("invitation_to_user_invalid").await;
@@ -66,12 +66,12 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_group(group_chat.id).await;
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_nonexistent_to_user() {
         // Arrange
         let (from_user, _) = create_test_user("invitation_from_user_invalid").await;
@@ -88,13 +88,13 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
 
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_nonexistent_group_chat() {
         // Arrange
         let (from_user, _) = create_test_user("invitation_from_user_invalid_group").await;
@@ -111,12 +111,12 @@ mod invitation_repository_integration_tests {
         assert!(result.is_err(), "Should fail with foreign key constraint error");
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_multiple_invitations_same_group() {
         // Arrange
         let (from_user, _) = create_test_user("multi_invitation_from").await;
@@ -154,7 +154,7 @@ mod invitation_repository_integration_tests {
         assert_ne!(invitation_id1, invitation_id3);
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
         cleanup_invitation(invitation_id3).await;
@@ -165,7 +165,7 @@ mod invitation_repository_integration_tests {
         cleanup_user(to_user3.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_with_factory_utilities() {
         // Arrange
         let (from_user, _) = create_test_user("factory_invitation_from").await;
@@ -202,14 +202,14 @@ mod invitation_repository_integration_tests {
         assert_eq!(invitation.group_chat_id, group_chat.id);
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_invitation(invitation_id).await;
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_concurrent() {
         // Arrange
         let (from_user, _) = create_test_user("concurrent_invitation_from").await;
@@ -242,7 +242,7 @@ mod invitation_repository_integration_tests {
         assert_ne!(invitation_id1, invitation_id2, "Concurrent invitation IDs should be different");
 
         // Cleanup
-        db.get_pool().close().await;
+        
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
         cleanup_group(group_chat.id).await;
@@ -251,7 +251,7 @@ mod invitation_repository_integration_tests {
         cleanup_user(to_user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_invitation_duplicate_pending_fails() {
         // Arrange
         let (from_user, _) = create_test_user("dup_pending_from").await;
@@ -286,7 +286,7 @@ mod invitation_repository_integration_tests {
             cleanup_invitation(id).await;
         }
 
-        db.get_pool().close().await;
+        
         cleanup_group(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;

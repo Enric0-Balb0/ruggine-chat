@@ -47,7 +47,7 @@ mod tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_success() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -75,7 +75,7 @@ mod tests {
         assert_eq!(user_dto.id, user.id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_user_not_found() {
         // Arrange
         let user_id = 999;
@@ -106,7 +106,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_database_error() {
         // Arrange
         let user = UserFactory::fake_user();
@@ -135,7 +135,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_profile_partial_update() {
         // Arrange
         let user = UserFactory::fake_user();

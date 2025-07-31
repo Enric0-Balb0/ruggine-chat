@@ -41,7 +41,7 @@ mod find_by_id_service_tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -77,7 +77,7 @@ mod find_by_id_service_tests {
         assert_eq!(dto.created_by, expected_dto.created_by);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -106,7 +106,7 @@ mod find_by_id_service_tests {
         assert!(matches!(error, ApiError::GroupChatError(GroupChatError::GroupChatNotFound)));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_database_error() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -135,7 +135,7 @@ mod find_by_id_service_tests {
         assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_with_different_groups() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
@@ -188,7 +188,7 @@ mod find_by_id_service_tests {
         assert_ne!(dto1.name, dto2.name);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_invalid_id() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();

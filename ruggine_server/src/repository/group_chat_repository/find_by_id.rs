@@ -21,7 +21,7 @@ mod group_chat_repository_find_tests {
     use crate::repository::group_chat_repository::GroupChatRepositoryTrait;
     use crate::factory::group_chat_factory::GroupChatFactory;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -49,7 +49,7 @@ mod group_chat_repository_find_tests {
         assert_eq!(found_group.created_by, expected_group.created_by);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -73,7 +73,7 @@ mod group_chat_repository_find_tests {
         assert!(matches!(result.unwrap_err(), Error::RowNotFound));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_database_error() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -97,7 +97,7 @@ mod group_chat_repository_find_tests {
         assert!(matches!(result.unwrap_err(), Error::PoolClosed));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_with_different_groups() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -144,7 +144,7 @@ mod group_chat_repository_find_tests {
         assert_ne!(found_group1.name, found_group2.name);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_invalid_id() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();

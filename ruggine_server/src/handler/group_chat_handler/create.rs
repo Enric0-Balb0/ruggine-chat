@@ -48,7 +48,7 @@ mod tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_success() {
         // Arrange
         let input = GroupChatFactory::fake_group_chat_create_dto();
@@ -83,7 +83,7 @@ mod tests {
         assert_eq!(*response.data(), expected_output);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_user_not_found() {
         // Arrange
         let input = GroupChatFactory::fake_group_chat_create_dto();
@@ -119,7 +119,7 @@ mod tests {
         assert!(matches!(error, ApiError::UserError(_)));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_database_error() {
         // Arrange
         let input = GroupChatFactory::fake_group_chat_create_dto();
@@ -155,7 +155,7 @@ mod tests {
         assert!(matches!(error, ApiError::DatabaseError(_)));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_factory_data() {
         // Arrange - using unique factory data
         let input = GroupChatFactory::unique_fake_group_chat_create_dto("test_handler");
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(*response.data(), expected_output);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_propagates_service_errors() {
         // Arrange
         let input = GroupChatFactory::fake_group_chat_create_dto();

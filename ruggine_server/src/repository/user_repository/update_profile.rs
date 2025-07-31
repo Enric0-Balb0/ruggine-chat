@@ -62,7 +62,7 @@ mod tests {
     use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::repository::user_repository::UserRepositoryTrait;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_internal_success() {
         // This test would require a real database connection
         // Since we're testing the internal method, we focus on the logic
@@ -80,7 +80,7 @@ mod tests {
         assert_eq!(update_user.gender, update_dto.gender);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_trait_with_mock() {
         // Arrange: Create a mock repository
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(updated_user.id, expected_user.id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_mock_failure() {
         // Arrange: Create a mock repository that fails
         let mut mock_repo = MockUserRepositoryTrait::new();
@@ -137,7 +137,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_from_dto_preserves_data() {
         // Arrange: Create different types of update DTOs
         let complete_dto = UserFactory::fake_user_update_dto();
@@ -163,7 +163,7 @@ mod tests {
         assert!(empty_update.last_name.is_none());
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_user_updated_at_is_current() {
         // Arrange: Create update DTO
         let update_dto = UserFactory::fake_user_update_dto();

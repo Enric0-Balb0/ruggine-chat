@@ -11,7 +11,7 @@ mod group_chat_repository_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_chat_success() {
         // Arrange
         let (user, _) = create_test_user("group_creator").await;
@@ -32,7 +32,7 @@ mod group_chat_repository_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_chat_duplicate_name() {
         // Arrange
         let (user, _) = create_test_user("group_creator_dup").await;
@@ -62,7 +62,7 @@ mod group_chat_repository_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_chat_invalid_creator() {
         // Arrange
         let db = get_database().await;
@@ -86,7 +86,7 @@ mod group_chat_repository_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_repository_concurrent_group_creation() {
         use tokio::sync::Mutex;
 
@@ -142,7 +142,7 @@ mod group_chat_repository_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_with_long_name() {
         // Arrange
         let (user, _) = create_test_user("long_name_creator").await;
@@ -165,7 +165,7 @@ mod group_chat_repository_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_with_long_description() {
         // Arrange
         let (user, _) = create_test_user("long_desc_creator").await;
@@ -188,7 +188,7 @@ mod group_chat_repository_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_multiple_groups_same_creator() {
         // Arrange
         let (user, _) = create_test_user("multi_group_creator").await;
@@ -225,7 +225,7 @@ mod group_chat_repository_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_group_with_factory_utilities() {
         // Arrange
         let (user, _) = create_test_user("factory_util_creator").await;

@@ -12,7 +12,7 @@ mod user_service_find_by_id_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_existing_user() {
         // Arrange
         let db = get_database().await;
@@ -43,7 +43,7 @@ mod user_service_find_by_id_integration_tests {
         cleanup_user(found_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_non_existent_user() {
         // Arrange
         let db = get_database().await;
@@ -60,7 +60,7 @@ mod user_service_find_by_id_integration_tests {
         // Should return a database error for row not found
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_multiple_users() {
         // Arrange
         let db = get_database().await;
@@ -107,7 +107,7 @@ mod user_service_find_by_id_integration_tests {
         cleanup_user(user3.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_after_insert_and_update() {
         // Arrange
         let db = get_database().await;
@@ -148,7 +148,7 @@ mod user_service_find_by_id_integration_tests {
         cleanup_user(found_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_with_different_user_statuses() {
         // Arrange
         let db = get_database().await;
@@ -183,7 +183,7 @@ mod user_service_find_by_id_integration_tests {
         cleanup_user(found_inactive.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_concurrent_access() {
         // Arrange
         let db = get_database().await;

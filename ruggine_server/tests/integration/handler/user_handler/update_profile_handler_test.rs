@@ -34,7 +34,7 @@ mod update_profile_handler_integration_tests {
         (user_option.unwrap(), user_dto.password.clone())
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_complete() {
         // Arrange: Create a user and prepare update data
         let (user, _) = create_test_user("update_complete").await;
@@ -70,7 +70,7 @@ mod update_profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_success_partial() {
         // Arrange: Create a user and prepare partial update data
         let (user, _) = create_test_user("update_partial").await;
@@ -107,7 +107,7 @@ mod update_profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_no_updates() {
         // Arrange: Create a user and prepare empty update data
         let (user, _) = create_test_user("update_empty").await;
@@ -136,7 +136,7 @@ mod update_profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_with_different_genders() {
         // Arrange: Create a user
         let (user, _) = create_test_user("update_genders").await;
@@ -174,7 +174,7 @@ mod update_profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_update_profile_preserves_unchanged_fields() {
         // Arrange: Create a user and save original values
         let (user, _) = create_test_user("update_preserve").await;

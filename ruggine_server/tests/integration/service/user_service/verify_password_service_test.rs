@@ -9,7 +9,7 @@ mod user_service_verify_password_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_verify_password_correct() {
         // Arrange: Create a user in the database with a known password
         let db = get_database().await;
@@ -41,7 +41,7 @@ mod user_service_verify_password_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_verify_password_incorrect() {
         // Arrange: Create a user in the database with a known password
         let db = get_database().await;
@@ -74,7 +74,7 @@ mod user_service_verify_password_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_verify_password_empty_password() {
         // Arrange: Create a user in the database with a known password
         let db = get_database().await;

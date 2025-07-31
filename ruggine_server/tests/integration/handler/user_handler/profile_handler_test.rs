@@ -30,7 +30,7 @@ mod profile_handler_integration_tests {
         (user_option.unwrap(), user_dto.password.clone())
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_returns_correct_user_data() {
         // Arrange
         let (user, _) = create_test_user("profile_correct_data").await;
@@ -52,7 +52,7 @@ mod profile_handler_integration_tests {
     }
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_active_user() {
         // Arrange: Create an active user
         let (user, _) = create_test_user("profile_active_user").await;
@@ -74,7 +74,7 @@ mod profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_inactive_user() {
         // Arrange: create and deactivate user
         let (user, _) = create_test_user("profile_inactive_user").await;
@@ -111,7 +111,7 @@ mod profile_handler_integration_tests {
     }
 
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_preserves_all_user_fields() {
         // Arrange: Create a user with specific data
         let (user, _) = create_test_user("profile_all_fields").await;
@@ -127,7 +127,7 @@ mod profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_response_structure() {
         // Arrange: Create a real user
         let (user, _) = create_test_user("profile_response_structure").await;
@@ -152,7 +152,7 @@ mod profile_handler_integration_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_updated_user() {
         // Arrange: Create user and update some fields
         let (user, _) = create_test_user("profile_updated_user").await;
@@ -202,7 +202,7 @@ mod profile_handler_integration_tests {
         cleanup_user(updated_user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_profile_with_different_user_types() {
         // Arrange: Create multiple users with different characteristics
         let (user1, _) = create_test_user("profile_type1").await;

@@ -36,7 +36,7 @@ mod tests {
     use mockall::predicate::*;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_returns_created_user() {
         // Arrange: mock input and expected output
         let input = UserFactory::fake_user_register_dto();
@@ -68,7 +68,7 @@ mod tests {
         assert_eq!(*user.data(), expected_output);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_handles_user_already_exists_error() {
         // Arrange: mock input and service error
         let input = UserFactory::fake_user_register_dto();
@@ -99,7 +99,7 @@ mod tests {
         assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))));
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_with_factory_data() {
         // Arrange: use factory to create test data
         let input = UserFactory::fake_user_register_dto();
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(user.data().last_name, expected_output.last_name);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_register_propagates_service_errors() {
         // Arrange: mock input and database error
         let input = UserFactory::fake_user_register_dto();

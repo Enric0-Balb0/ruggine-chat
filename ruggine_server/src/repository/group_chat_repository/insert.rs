@@ -33,7 +33,7 @@ mod group_chat_repository_insert_tests {
     use crate::repository::group_chat_repository::group_chat_repository_trait::MockGroupChatRepositoryTrait;
     use crate::repository::group_chat_repository::GroupChatRepositoryTrait;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_success() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -58,7 +58,7 @@ mod group_chat_repository_insert_tests {
         assert_eq!(result.unwrap(), expected_id);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_database_error() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -86,7 +86,7 @@ mod group_chat_repository_insert_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_with_different_creators() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -139,7 +139,7 @@ mod group_chat_repository_insert_tests {
         assert_eq!(result3.unwrap(), 103);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_with_factory_utilities() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
@@ -171,7 +171,7 @@ mod group_chat_repository_insert_tests {
         assert_eq!(result.unwrap(), 999);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_insert_empty_name_validation() {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();

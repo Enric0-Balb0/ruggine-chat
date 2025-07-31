@@ -12,7 +12,7 @@ use crate::common::{cleanup_user, cleanup_group, create_group_chat_router, creat
 mod create_group_chat_e2e_tests {
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_success() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -61,7 +61,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_unauthorized_no_token() {
         // Arrange: Create router and group chat data
         let app = create_group_chat_router().await;
@@ -86,7 +86,7 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_unauthorized_invalid_token() {
         // Arrange: Create router and group chat data
         let app = create_group_chat_router().await;
@@ -112,7 +112,7 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_bad_request_empty_name() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -142,7 +142,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_bad_request_missing_name() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -171,7 +171,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_empty_description() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -203,7 +203,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_multiple_groups_same_user() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -262,7 +262,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_groups_same_name_different_users() {
         // Arrange: Create router and login two different users
         let app = create_group_chat_router().await;
@@ -329,7 +329,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user2.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_groups_same_name_same_user() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;
@@ -396,7 +396,7 @@ mod create_group_chat_e2e_tests {
         cleanup_user(user.email).await;
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_malformed_json() {
         // Arrange: Create router and login user
         let app = create_group_chat_router().await;

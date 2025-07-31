@@ -20,7 +20,7 @@ mod token_service_integration_tests {
     use crate::get_database;
     use super::*;
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_generate_token_with_real_user() {
         // Arrange: Create a real user in the database
         let db = get_database().await;
@@ -59,7 +59,7 @@ mod token_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_generate_and_retrieve_token_claims_roundtrip() {
         // Arrange: Create a real user and generate a token
         let db = get_database().await;
@@ -102,7 +102,7 @@ mod token_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_retrieve_token_claims_with_invalid_token() {
         // Arrange: Set up token service
         let jwt_secret = get_unique_jwt_secret("invalid");
@@ -125,7 +125,7 @@ mod token_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_retrieve_token_claims_with_wrong_secret() {
         // Arrange: Create a token with one secret, try to decode with another
         let db = get_database().await;
@@ -168,7 +168,7 @@ mod token_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_token_expiration_time() {
         // Arrange: Create a real user
         let db = get_database().await;
@@ -216,7 +216,7 @@ mod token_service_integration_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_token_uniqueness() {
         // Arrange: Create multiple users
         let db = get_database().await;

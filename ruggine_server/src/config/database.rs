@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::{Error, PgPool, Pool, Postgres};
 
 pub struct Database {
-    pool: Pool<Postgres>,
+    pub pool: Pool<Postgres>,
 }
 
 #[async_trait]
