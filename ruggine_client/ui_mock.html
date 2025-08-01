@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruggine - Business Chat Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f2f1;
+            color: #323130;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 48px 1fr;
+            grid-template-areas: 
+                "sidebar header"
+                "sidebar main";
+            height: 100vh;
+            background: #ffffff;
+        }
+
+        /* Header */
+        .top-header {
+            grid-area: header;
+            background: #464775;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid #e1dfdd;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .app-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .group-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: #6264a7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            grid-area: sidebar;
+            background: #f8f8f8;
+            border-right: 1px solid #e1dfdd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e1dfdd;
+        }
+
+        .teams-section {
+            flex: 1;
+        }
+
+        .quick-section {
+            flex-shrink: 0;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+
+        .add-team-btn {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            margin-top: 8px;
+            color: #6264a7;
+            font-size: 13px;
+        }
+
+        .add-team-btn:hover {
+            background: #f3f2f1;
+        }
+
+        .status-indicator {
+            background: #ffffff;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #e1dfdd;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot-large {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot-large.online {
+            background: #107c10;
+        }
+
+        .status-info {
+            flex: 1;
+        }
+
+        .status-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #323130;
+            margin-bottom: 2px;
+        }
+
+        .status-subtext {
+            font-size: 11px;
+            color: #605e5c;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #605e5c;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: #f3f2f1;
+        }
+
+        .nav-item.active {
+            background: #edebe9;
+            border-left: 3px solid #464775;
+            margin-left: -3px;
+            padding-left: 9px;
+        }
+
+        .nav-icon {
+            width: 16px;
+            margin-right: 12px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .nav-text {
+            font-size: 14px;
+            color: #323130;
+            flex: 1;
+        }
+
+        .nav-badge {
+            background: #c4314b;
+            color: white;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 8px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .group-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .group-item:hover {
+            background: #f3f2f1;
+        }
+
+        .group-item.active {
+            background: #edebe9;
+            border-left: 3px solid #464775;
+            margin-left: -3px;
+            padding-left: 9px;
+        }
+
+        .group-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .group-avatar.dev { background: #464775; }
+        .group-avatar.qa { background: #107c10; }
+        .group-avatar.ops { background: #038387; }
+
+        /* Main content */
+        .main-content {
+            grid-area: main;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e1dfdd;
+            background: #faf9f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .group-menu-btn {
+            background: #ffffff;
+            border: 1px solid #e1dfdd;
+            color: #323130;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .group-menu-btn:hover {
+            background: #f3f2f1;
+            border-color: #c8c6c4;
+        }
+
+        .group-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e1dfdd;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            min-width: 160px;
+            display: none;
+        }
+
+        .group-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #323130;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f3f2f1;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f3f2f1;
+        }
+
+        .dropdown-item.danger {
+            color: #c4314b;
+        }
+
+        .dropdown-item.danger:hover {
+            background: #fef6f6;
+        }
+
+        .dropdown-icon {
+            font-size: 14px;
+        }
+
+        .chat-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #323130;
+            margin-bottom: 4px;
+        }
+
+        .chat-subtitle {
+            font-size: 12px;
+            color: #605e5c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #107c10;
+            border-radius: 50%;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            position: relative;
+        }
+
+        /* Unread messages banner */
+        .unread-banner {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #6264a7 0%, #464775 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: -16px -24px 20px -24px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(98, 100, 167, 0.3);
+            border-left: 4px solid #ffffff;
+        }
+
+        .unread-banner:hover {
+            background: linear-gradient(135deg, #464775 0%, #323454 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(98, 100, 167, 0.4);
+        }
+
+        .system-message {
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            font-style: italic;
+            padding: 12px 20px;
+            margin: 16px auto;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #6c757d;
+            max-width: 80%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .system-message::before {
+            content: "ℹ️";
+            margin-right: 8px;
+            font-style: normal;
+        }
+
+        /* Event message styling - for join/leave events */
+        .system-message.event {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left-color: #2196f3;
+            color: #1976d2;
+        }
+
+        .system-message.event::before {
+            content: "👥";
+        }
+
+        /* Warning/Alert message styling */
+        .system-message.warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left-color: #ff9800;
+            color: #f57c00;
+        }
+
+        .system-message.warning::before {
+            content: "⚠️";
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            font-size: 12px;
+            color: #605e5c;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 2px;
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background: #605e5c;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Own messages styling */
+        .message.own {
+            flex-direction: row-reverse;
+        }
+
+        .message.own .message-content {
+            background: #e8f4f8;
+            padding: 12px 16px;
+            border-radius: 12px 12px 4px 12px;
+            border: 1px solid #c7e0f4;
+            max-width: 70%;
+        }
+
+        .message.own .message-header {
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .message.own .message-author {
+            color: #0078d4;
+        }
+
+        .message.own .message-text {
+            color: #323130;
+            text-align: left;
+        }
+
+        /* Other users' messages */
+        .message:not(.own) .message-content {
+            max-width: 80%;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .message-avatar.sofia { background: #464775; }
+        .message-avatar.marco { background: #c4314b; }
+        .message-avatar.laura { background: #107c10; }
+        .message-avatar.system { background: #605e5c; }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .message-author {
+            font-size: 14px;
+            font-weight: 600;
+            color: #323130;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #605e5c;
+        }
+
+        .message-text {
+            font-size: 14px;
+            color: #323130;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 24px;
+            border-top: 1px solid #e1dfdd;
+            background: #faf9f8;
+        }
+
+        .input-container {
+            position: relative;
+            background: white;
+            border: 1px solid #e1dfdd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .message-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            padding: 12px 50px 12px 16px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 24px;
+            max-height: 120px;
+        }
+
+        .message-input::placeholder {
+            color: #a19f9d;
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #464775;
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #6264a7;
+        }
+
+        .send-btn:disabled {
+            background: #e1dfdd;
+            cursor: not-allowed;
+        }
+
+
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f3f2f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c8c6c4;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a19f9d;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="top-header">
+            <div class="header-left">
+                <div class="app-title">Ruggine</div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn">+ Nuovo</button>
+                <button class="header-btn">Cerca</button>
+                <div class="user-avatar">SN</div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Teams/Groups Section -->
+            <div class="sidebar-section teams-section">
+                <div class="section-title">Team e Gruppi</div>
+                <!-- Team attivi -->
+                <div class="group-item active">
+                    <div class="group-avatar dev">DEV</div>
+                    <span class="nav-text">Team Sviluppo</span>
+                    <span class="nav-badge">5</span>
+                </div>
+                <div class="group-item">
+                    <div class="group-avatar qa">QA</div>
+                    <span class="nav-text">Quality Assurance</span>
+                </div>
+                <div class="group-item">
+                    <div class="group-avatar ops">OPS</div>
+                    <span class="nav-text">DevOps</span>
+                    <span class="nav-badge">2</span>
+                </div>
+                <div class="group-item">
+                    <div class="group-avatar" style="background: #8b5a3c;">MGT</div>
+                    <span class="nav-text">Management</span>
+                </div>
+                <div class="group-item">
+                    <div class="group-avatar" style="background: #d13438;">MKT</div>
+                    <span class="nav-text">Marketing</span>
+                    <span class="nav-badge">8</span>
+                </div>
+                <div class="group-item">
+                    <div class="group-avatar" style="background: #486860;">SUP</div>
+                    <span class="nav-text">Support</span>
+                    <span class="nav-badge">12</span>
+                </div>
+                
+                <!-- Separatore visivo -->
+                <div style="height: 1px; background: #e1dfdd; margin: 12px 0;"></div>
+                
+                <!-- Sezione accesso rapido -->
+                <div class="nav-item">
+                    <div class="nav-icon">⭐</div>
+                    <span class="nav-text">Preferiti</span>
+                </div>
+                <div class="nav-item">
+                    <div class="nav-icon">📁</div>
+                    <span class="nav-text">File condivisi</span>
+                    <span class="nav-badge">12</span>
+                </div>
+            </div>
+
+            <!-- Sezione bottom con opzioni utente -->
+            <div class="sidebar-bottom">
+                <div class="sidebar-section">
+                    <div class="section-title">Opzioni</div>
+                    <div class="add-team-btn">
+                        <div class="nav-icon">+</div>
+                        <span class="nav-text">Crea nuovo team</span>
+                    </div>
+                    <div class="nav-item">
+                        <div class="nav-icon">📮</div>
+                        <span class="nav-text">Inviti</span>
+                        <span class="nav-badge">2</span>
+                    </div>
+                    <div class="nav-item">
+                        <div class="nav-icon">⚙️</div>
+                        <span class="nav-text">Impostazioni</span>
+                    </div>
+                </div>
+
+                <div class="status-indicator">
+                    <div class="status-item">
+                        <div class="status-dot-large online"></div>
+                        <div class="status-info">
+                            <div class="status-text">Online</div>
+                            <div class="status-subtext">156 utenti connessi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <div class="chat-info">
+                    <div class="chat-title">Team Sviluppo</div>
+                    <div class="chat-subtitle">
+                        <div class="status-dot"></div>
+                        <span>4 membri online</span>
+                        <span>•</span>
+                        <span>Ultimo messaggio 2 min fa</span>
+                    </div>
+                </div>
+                <div class="chat-controls">
+                    <button class="group-menu-btn" id="groupMenuBtn">
+                        <span>Opzioni gruppo</span>
+                        <span>⋮</span>
+                    </button>
+                    <div class="group-dropdown" id="groupDropdown">
+                        <div class="dropdown-item" onclick="inviteToGroup()">
+                            <span class="dropdown-icon">👥</span>
+                            <span>Invita membri</span>
+                        </div>
+                        <div class="dropdown-item" onclick="viewMembers()">
+                            <span class="dropdown-icon">📋</span>
+                            <span>Visualizza membri</span>
+                        </div>
+                        <div class="dropdown-item" onclick="groupSettings()">
+                            <span class="dropdown-icon">⚙️</span>
+                            <span>Impostazioni gruppo</span>
+                        </div>
+                        <div class="dropdown-item danger" onclick="leaveGroup()">
+                            <span class="dropdown-icon">🚪</span>
+                            <span>Abbandona gruppo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-container">
+                <div class="unread-banner">
+                    📩 3 messaggi non letti - Clicca per andare al primo messaggio
+                </div>
+
+                <div class="system-message event">
+                    Sofia Neri è stata aggiunta al gruppo
+                </div>
+
+                <div class="message own">
+                    <div class="message-avatar sofia">SN</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Sofia Neri</span>
+                            <span class="message-time">08:45</span>
+                        </div>
+                        <div class="message-text">Buongiorno team! Come procede il progetto questa settimana?</div>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="message-avatar marco">MB</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Marco Bianchi</span>
+                            <span class="message-time">09:15</span>
+                        </div>
+                        <div class="message-text">Tutto bene! I server sono stabili e le performance sono ottime. Non ci sono stati problemi durante il weekend 📊</div>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="message-avatar laura">LR</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Laura Rossi</span>
+                            <span class="message-time">09:22</span>
+                        </div>
+                        <div class="message-text">Il deploy di ieri sera è andato tutto liscio! ✅</div>
+                        <div class="message-text">Stasera dovremmo anche avere la versione mobile pronta per i test</div>
+                    </div>
+                </div>
+
+                <div class="message own">
+                    <div class="message-avatar sofia">SN</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Sofia Neri</span>
+                            <span class="message-time">09:28</span>
+                        </div>
+                        <div class="message-text">Perfetto! Siamo sulla buona strada. Ricordatevi il meeting di standup alle 15:00</div>
+                    </div>
+                </div>
+
+                <div class="typing-indicator">
+                    <span>Marco Bianchi sta scrivendo</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea class="message-input" placeholder="Scrivi un messaggio..." rows="1"></textarea>
+                    <button class="send-btn" disabled>→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-resize textarea and send functionality
+        const messageInput = document.querySelector('.message-input');
+        const sendBtn = document.querySelector('.send-btn');
+
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            sendBtn.disabled = !this.value.trim();
+        });
+
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            const messagesContainer = document.querySelector('.messages-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message own';
+            messageDiv.innerHTML = `
+                <div class="message-avatar sofia">SN</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author">Sofia Neri</span>
+                        <span class="message-time">${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}</span>
+                    </div>
+                    <div class="message-text">${message}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            sendBtn.disabled = true;
+        }
+
+        // Navigation functionality
+        document.querySelectorAll('.nav-item, .group-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all items
+                document.querySelectorAll('.nav-item, .group-item').forEach(i => i.classList.remove('active'));
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Handle specific menu items
+                const text = this.querySelector('.nav-text')?.textContent;
+                if (text === 'Inviti') {
+                    showGroupInvites();
+                } else if (text === 'Impostazioni') {
+                    showSettings();
+                }
+            });
+        });
+
+        // Functions for new sidebar options
+        function showGroupInvites() {
+            const invites = [
+                'Team Frontend - Marco Verdi',
+                'Gruppo Design - Anna Rosa'
+            ];
+            const response = confirm(`Hai ${invites.length} inviti in sospeso:\n\n${invites.join('\n')}\n\nVuoi gestire gli inviti?`);
+            if (response) {
+                // Simulate joining a group
+                const messagesContainer = document.querySelector('.messages-container');
+                const systemMsg = document.createElement('div');
+                systemMsg.className = 'system-message event';
+                systemMsg.textContent = 'Ti sei unito al Team Frontend!';
+                messagesContainer.appendChild(systemMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+
+        function showSettings() {
+            alert('Impostazioni utente:\n\n• Notifiche: Attive\n• Tema: Chiaro\n• Lingua: Italiano\n• Privacy: Standard\n• Stato: Online');
+        }
+
+        // Add team button functionality
+        document.querySelector('.add-team-btn')?.addEventListener('click', function() {
+            const teamName = prompt('Inserisci il nome del nuovo team:');
+            if (teamName && teamName.trim()) {
+                const messagesContainer = document.querySelector('.messages-container');
+                const systemMsg = document.createElement('div');
+                systemMsg.className = 'system-message event';
+                systemMsg.textContent = `Nuovo team "${teamName}" creato con successo!`;
+                messagesContainer.appendChild(systemMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        });
+
+        // Unread messages banner functionality
+        document.querySelector('.unread-banner')?.addEventListener('click', function() {
+            // Scroll to first unread message (simulated)
+            const messagesContainer = document.querySelector('.messages-container');
+            const firstMessage = document.querySelector('.message');
+            if (firstMessage) {
+                firstMessage.scrollIntoView({ behavior: 'smooth' });
+            }
+            // Hide banner after click
+            setTimeout(() => {
+                this.style.display = 'none';
+            }, 1000);
+        });
+
+        // Group menu functionality
+        const groupMenuBtn = document.getElementById('groupMenuBtn');
+        const groupDropdown = document.getElementById('groupDropdown');
+
+        groupMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            groupDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            groupDropdown.classList.remove('show');
+        });
+
+        // Group control functions
+        function inviteToGroup() {
+            const email = prompt('Inserisci l\'email del membro da invitare:');
+            if (email && email.trim()) {
+                // Add system message
+                const messagesContainer = document.querySelector('.messages-container');
+                const systemMsg = document.createElement('div');
+                systemMsg.className = 'system-message event';
+                systemMsg.textContent = `Invito inviato a ${email}`;
+                messagesContainer.appendChild(systemMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            groupDropdown.classList.remove('show');
+        }
+
+        function viewMembers() {
+            const members = [
+                'Sofia Neri (Tu)',
+                'Marco Bianchi - Admin',
+                'Laura Rossi - Developer', 
+                'Anna Bianchi - QA Engineer'
+            ];
+            alert('Membri del gruppo:\n\n' + members.join('\n'));
+            groupDropdown.classList.remove('show');
+        }
+
+        function groupSettings() {
+            alert('Impostazioni gruppo:\n\n• Nome: Team Sviluppo\n• Tipo: Privato\n• Creato da: Marco Bianchi\n• Data creazione: 15/07/2025');
+            groupDropdown.classList.remove('show');
+        }
+
+        function leaveGroup() {
+            const confirm = window.confirm('Sei sicuro di voler abbandonare il gruppo "Team Sviluppo"?\n\nNon potrai più accedere ai messaggi e dovrai essere reinvitato per tornare.');
+            if (confirm) {
+                // Add system message and simulate leaving
+                const messagesContainer = document.querySelector('.messages-container');
+                const systemMsg = document.createElement('div');
+                systemMsg.className = 'system-message warning';
+                systemMsg.textContent = 'Hai abbandonato il gruppo';
+                messagesContainer.appendChild(systemMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Disable input after leaving
+                setTimeout(() => {
+                    document.querySelector('.message-input').disabled = true;
+                    document.querySelector('.message-input').placeholder = 'Non puoi più scrivere in questo gruppo';
+                    document.querySelector('.send-btn').disabled = true;
+                }, 1000);
+            }
+            groupDropdown.classList.remove('show');
+        }
+
+        // Simulate real-time user count updates
+        setInterval(() => {
+            const statusSubtext = document.querySelector('.status-subtext');
+            if (statusSubtext) {
+                const currentCount = parseInt(statusSubtext.textContent.match(/\d+/)[0]);
+                const newCount = Math.max(150, Math.min(200, currentCount + (Math.random() - 0.5) * 10));
+                statusSubtext.textContent = `${Math.round(newCount)} utenti connessi`;
+            }
+        }, 30000); // Update every 30 seconds
+    </script>
+</body>
+</html>
