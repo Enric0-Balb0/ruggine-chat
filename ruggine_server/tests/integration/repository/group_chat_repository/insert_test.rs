@@ -4,7 +4,7 @@ use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::entity::user::UserStatus;
-use crate::common::{cleanup_user, create_test_user, cleanup_group};
+use crate::common::{cleanup_user, create_test_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_repository_integration_tests {
@@ -28,7 +28,7 @@ mod group_chat_repository_integration_tests {
         assert!(group_id > 0, "Group ID should be positive");
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -56,8 +56,8 @@ mod group_chat_repository_integration_tests {
         assert_ne!(first_group_id, second_group_id, "Same name, but group ids should not be equal");
 
         // Cleanup
-        cleanup_group(first_group_id).await;
-        cleanup_group(second_group_id).await;
+        cleanup_group_chat(first_group_id).await;
+        cleanup_group_chat(second_group_id).await;
         
         cleanup_user(user.email).await;
     }
@@ -131,7 +131,7 @@ mod group_chat_repository_integration_tests {
         
         let cleanup_handle = tokio::task::spawn(async move {
             for group_id in group_ids {
-                cleanup_group(group_id).await;
+                cleanup_group_chat(group_id).await;
             }
             cleanup_user(user.email).await;
         });
@@ -161,7 +161,7 @@ mod group_chat_repository_integration_tests {
         let group_id = result.unwrap();
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -184,7 +184,7 @@ mod group_chat_repository_integration_tests {
         let group_id = result.unwrap();
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -219,9 +219,9 @@ mod group_chat_repository_integration_tests {
         assert_ne!(group_id1, group_id3);
 
         // Cleanup
-        cleanup_group(group_id1).await;
-        cleanup_group(group_id2).await;
-        cleanup_group(group_id3).await;
+        cleanup_group_chat(group_id1).await;
+        cleanup_group_chat(group_id2).await;
+        cleanup_group_chat(group_id3).await;
         cleanup_user(user.email).await;
     }
 
@@ -258,7 +258,7 @@ mod group_chat_repository_integration_tests {
         assert_eq!(custom_group.created_by, user.id);
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 }

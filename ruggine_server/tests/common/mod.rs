@@ -17,10 +17,11 @@ use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
-use ruggine_server::routes::{auth_route, user_route, group_chat_route};
+use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::group_chat_state::GroupChatState;
+use ruggine_server::state::invitation_state::InvitationState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
 
@@ -75,6 +76,13 @@ pub async fn create_group_chat_router() -> Router {
     let group_chat_state = GroupChatState::new(&db);
     let token_state = TokenState::new(&db);
     group_chat_route::routes(group_chat_state, token_state)
+}
+
+pub async fn create_invitation_router() -> Router {
+    let db = get_database().await;
+    let invitation_state = InvitationState::new(&db);
+    let token_state = TokenState::new(&db);
+    invitation_route::routes(invitation_state, token_state)
 }
 
 /// Helper function to create a real user in the database
@@ -170,7 +178,7 @@ pub async fn create_test_group_chat(prefix: &str, created_by: i32) -> GroupChat 
     group_option.unwrap()
 }
 
-pub async fn cleanup_group(group_id: i32) {
+pub async fn cleanup_group_chat(group_id: i32) {
     let db = get_database().await;
     let group_repo = GroupChatRepository::new(&db);
     if let Err(e) = group_repo.delete_by_id(group_id).await {
@@ -200,7 +208,7 @@ pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_ch
         .expect("Failed to insert test invitation");
 
     // Get the created invitation from database
-    let invitation_result = repository.find_by_id(inserted_id).await;
+    let invitation_result = repository.find_by_id(inserted_id, to_user_id).await;
     assert!(invitation_result.is_ok(), "Invitation not found in database");
     invitation_result.unwrap()
 }

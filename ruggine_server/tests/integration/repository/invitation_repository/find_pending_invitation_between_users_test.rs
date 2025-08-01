@@ -1,6 +1,6 @@
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::entity::invitation::InvitationStatus;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group, create_test_group_chat, create_test_invitation, cleanup_invitation};
+use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_invitation, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_repository_find_pending_between_users_integration_tests {
@@ -21,7 +21,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
 
         // Act
-        let result = repository.find_pending_invitation_between_users(from_user.id, to_user.id).await;
+        let result = repository.find_pending_invitation_between_users(from_user.id, to_user.id, group_chat.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should find the pending invitation successfully");
@@ -38,7 +38,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
 
         // Cleanup
         cleanup_invitation(invitation.id).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -48,12 +48,13 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         // Arrange
         let (user1, _) = create_test_user("find_between_user1").await;
         let (user2, _) = create_test_user("find_between_user2").await;
+        let group_chat = create_test_group_chat("find_between_group", user1.id).await;
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
 
         // Act - search for invitation between users with no pending invitations
-        let result = repository.find_pending_invitation_between_users(user1.id, user2.id).await;
+        let result = repository.find_pending_invitation_between_users(user1.id, user2.id, group_chat.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should return None successfully");
@@ -61,6 +62,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         assert!(found_invitation.is_none(), "Should find no invitation between users");
 
         // Cleanup
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
     }
@@ -71,8 +73,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let (from_user, _) = create_test_user("find_between_mixed_from").await;
         let (to_user, _) = create_test_user("find_between_mixed_to").await;
         let group_chat1 = create_test_group_chat("find_between_mixed_group1", from_user.id).await;
-        let group_chat2 = create_test_group_chat("find_between_mixed_group2", from_user.id).await;
-        
+
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
         
@@ -97,7 +98,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let rejected_id = repository.insert(NewInvitation {
             from_user_id: from_user.id,
             to_user_id: to_user.id,
-            group_chat_id: group_chat2.id,
+            group_chat_id: group_chat1.id,
         }).await.unwrap();
 
         // Update status to rejected
@@ -110,7 +111,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         .unwrap();
 
         // Act
-        let result = repository.find_pending_invitation_between_users(from_user.id, to_user.id).await;
+        let result = repository.find_pending_invitation_between_users(from_user.id, to_user.id, group_chat1.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should return None for non-pending invitations");
@@ -120,8 +121,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         // Cleanup
         cleanup_invitation(accepted_id).await;
         cleanup_invitation(rejected_id).await;
-        cleanup_group(group_chat1.id).await;
-        cleanup_group(group_chat2.id).await;
+        cleanup_group_chat(group_chat1.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -140,10 +140,10 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let invitation = create_test_invitation(user1.id, user2.id, group_chat.id).await;
 
         // Act - search in the same direction (should find)
-        let result1 = repository.find_pending_invitation_between_users(user1.id, user2.id).await;
+        let result1 = repository.find_pending_invitation_between_users(user1.id, user2.id, group_chat.id).await;
         
         // Act - search in reverse direction (should not find with current implementation)
-        let result2 = repository.find_pending_invitation_between_users(user2.id, user1.id).await;
+        let result2 = repository.find_pending_invitation_between_users(user2.id, user1.id, group_chat.id).await;
 
         // Assert
         assert!(result1.is_ok(), "Should find invitation in correct direction");
@@ -156,7 +156,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
 
         // Cleanup
         cleanup_invitation(invitation.id).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
     }
@@ -177,29 +177,34 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let invitation2 = create_test_invitation(from_user.id, to_user.id, group_chat2.id).await;
 
         // Act
-        let result = repository.find_pending_invitation_between_users(from_user.id, to_user.id).await;
+        let result1 = repository.find_pending_invitation_between_users(from_user.id, to_user.id, group_chat1.id).await;
+        let result2 = repository.find_pending_invitation_between_users(from_user.id, to_user.id, group_chat2.id).await;
 
         // Assert
-        assert!(result.is_ok(), "Should find a pending invitation successfully");
-        let found_invitation = result.unwrap();
-        assert!(found_invitation.is_some(), "Should find at least one invitation");
-        
-        let invitation_data = found_invitation.unwrap();
-        assert_eq!(invitation_data.from_user_id, from_user.id);
-        assert_eq!(invitation_data.to_user_id, to_user.id);
-        assert_eq!(invitation_data.status, InvitationStatus::Pending);
-        
-        // Should find one of the invitations (the query doesn't specify which one)
-        assert!(
-            invitation_data.id == invitation1.id || invitation_data.id == invitation2.id,
-            "Should find one of the created invitations"
-        );
+        match result1 {
+            Ok(Some(found1)) => {
+                assert_eq!(found1.id, invitation1.id, "Expected invitation1 but got a different one");
+            }
+            Ok(None) => panic!("Expected an invitation for group_chat1, but got None"),
+            Err(e) => panic!("Error retrieving invitation for group_chat1: {:?}", e),
+        }
+
+        match result2 {
+            Ok(Some(found2)) => {
+                assert_eq!(found2.id, invitation2.id, "Expected invitation2 but got a different one");
+            }
+            Ok(None) => panic!("Expected an invitation for group_chat2, but got None"),
+            Err(e) => panic!("Error retrieving invitation for group_chat2: {:?}", e),
+        }
+
+
+
 
         // Cleanup
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
-        cleanup_group(group_chat1.id).await;
-        cleanup_group(group_chat2.id).await;
+        cleanup_group_chat(group_chat1.id).await;
+        cleanup_group_chat(group_chat2.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -211,9 +216,10 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         let repository = InvitationRepository::new(&db);
         let nonexistent_user1_id = -1;
         let nonexistent_user2_id = -2;
+        let nonexistent_group_id = -3;
 
         // Act
-        let result = repository.find_pending_invitation_between_users(nonexistent_user1_id, nonexistent_user2_id).await;
+        let result = repository.find_pending_invitation_between_users(nonexistent_user1_id, nonexistent_user2_id, nonexistent_group_id).await;
 
         // Assert
         assert!(result.is_ok(), "Should return None for nonexistent users");
@@ -225,12 +231,13 @@ mod invitation_repository_find_pending_between_users_integration_tests {
     async fn test_find_pending_invitation_between_users_same_user() {
         // Arrange
         let (user, _) = create_test_user("find_between_same_user").await;
+        let group_chat = create_test_group_chat("find_between_same_user", user.id).await;
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
 
         // Act - search for invitation from user to themselves
-        let result = repository.find_pending_invitation_between_users(user.id, user.id).await;
+        let result = repository.find_pending_invitation_between_users(user.id, user.id, group_chat.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should return None for same user");
@@ -238,6 +245,7 @@ mod invitation_repository_find_pending_between_users_integration_tests {
         assert!(found_invitation.is_none(), "Should find no invitation from user to themselves");
 
         // Cleanup
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(user.email).await;
     }
 }

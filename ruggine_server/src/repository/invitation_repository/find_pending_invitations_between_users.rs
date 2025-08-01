@@ -8,15 +8,17 @@ impl InvitationRepository {
         &self,
         from_user_id: i32,
         to_user_id: i32,
+        group_chat_id: i32,
     ) -> Result<Option<Invitation>, Error> {
         let invitation = sqlx::query_as::<_, Invitation>(
             r#"
         SELECT * FROM "invitation"
-        WHERE from_user_id = $1 AND to_user_id = $2 AND status = $3
+        WHERE from_user_id = $1 AND to_user_id = $2 AND group_chat_id = $3 AND status = $4
         "#,
         )
             .bind(from_user_id)
             .bind(to_user_id)
+            .bind(group_chat_id)
             .bind(InvitationStatus::Pending)
             .fetch_optional(self.db_conn.get_pool())
             .await;
@@ -43,9 +45,9 @@ mod invitation_repository_find_pending_between_users_tests {
 
         mock_invitation_repo
             .expect_find_pending_invitation_between_users()
-            .with(eq(from_user_id), eq(to_user_id))
+            .with(eq(from_user_id), eq(to_user_id), eq(1))
             .times(1)
-            .returning(move |_from_id, _to_id| {
+            .returning(move |_from_id, _to_id, _group_chat_id| {
                 let value = expected_invitation_clone.clone();
                 Box::pin(async move {
                     Ok(Some(value))
@@ -53,7 +55,7 @@ mod invitation_repository_find_pending_between_users_tests {
             });
 
         // Act
-        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id).await;
+        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id, 1).await;
 
         // Assert
         assert!(result.is_ok());
@@ -70,17 +72,18 @@ mod invitation_repository_find_pending_between_users_tests {
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let from_user_id = 999;
         let to_user_id = 998;
+        let group_chat_id = 1;
 
         mock_invitation_repo
             .expect_find_pending_invitation_between_users()
-            .with(eq(from_user_id), eq(to_user_id))
+            .with(eq(from_user_id), eq(to_user_id), eq(group_chat_id))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 Box::pin(async move { Ok(None) })
             });
 
         // Act
-        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id).await;
+        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id, group_chat_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -94,17 +97,18 @@ mod invitation_repository_find_pending_between_users_tests {
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let from_user_id = 1;
         let to_user_id = 2;
+        let group_chat_id = 1;
 
         mock_invitation_repo
             .expect_find_pending_invitation_between_users()
-            .with(eq(from_user_id), eq(to_user_id))
+            .with(eq(from_user_id), eq(to_user_id), eq(group_chat_id))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _,_| {
                 Box::pin(async move { Err(sqlx::Error::PoolClosed) })
             });
 
         // Act
-        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id).await;
+        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id, group_chat_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -122,9 +126,9 @@ mod invitation_repository_find_pending_between_users_tests {
 
         mock_invitation_repo
             .expect_find_pending_invitation_between_users()
-            .with(eq(from_user_id), eq(to_user_id))
+            .with(eq(from_user_id), eq(to_user_id), eq(3))
             .times(1)
-            .returning(move |_from_id, _to_id| {
+            .returning(move |_from_id, _to_id, _group_chat_id| {
                 let value = expected_invitation_clone.clone();
                 Box::pin(async move {
                     Ok(Some(value))
@@ -132,7 +136,7 @@ mod invitation_repository_find_pending_between_users_tests {
             });
 
         // Act
-        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id).await;
+        let result = mock_invitation_repo.find_pending_invitation_between_users(from_user_id, to_user_id, 3).await;
 
         // Assert
         assert!(result.is_ok());

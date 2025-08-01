@@ -4,7 +4,7 @@ use ruggine_server::repository::group_chat_repository::{GroupChatRepositoryTrait
 use ruggine_server::service::user_service::{UserServiceTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::error::api_error::ApiError;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group};
+use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_service_find_by_id_integration_tests {
@@ -37,7 +37,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.created_at <= found_group.updated_at);
 
         // Cleanup
-        cleanup_group(created_group.id).await;
+        cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -107,8 +107,8 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_ne!(found_group1.id, found_group2.id);
 
         // Cleanup
-        cleanup_group(group1.id).await;
-        cleanup_group(group2.id).await;
+        cleanup_group_chat(group1.id).await;
+        cleanup_group_chat(group2.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -142,7 +142,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_eq!(found_group.created_by, user.id);
 
         // Cleanup
-        cleanup_group(created_group.id).await;
+        cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -184,7 +184,7 @@ mod group_chat_service_find_by_id_integration_tests {
         }
 
         // Cleanup
-        cleanup_group(created_group.id).await;
+        cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -211,7 +211,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.updated_at <= chrono::Utc::now());
 
         // Cleanup
-        cleanup_group(created_group.id).await;
+        cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
 

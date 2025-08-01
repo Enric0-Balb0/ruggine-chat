@@ -3,7 +3,7 @@ use ruggine_server::repository::invitation_repository::{InvitationRepository, In
 use ruggine_server::factory::invitation_factory::InvitationFactory;
 use ruggine_server::repository::user_repository::{UserRepositoryTrait};
 use ruggine_server::repository::group_chat_repository::{GroupChatRepositoryTrait};
-use crate::common::{cleanup_user, create_test_user, cleanup_group, create_test_group_chat, cleanup_invitation};
+use crate::common::{cleanup_user, create_test_user, cleanup_group_chat, create_test_group_chat, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_repository_integration_tests {
@@ -32,7 +32,7 @@ mod invitation_repository_integration_tests {
         assert!(invitation_id > 0, "Invitation ID should be positive");
 
         // Verify invitation was created correctly
-        let retrieved_invitation = repository.find_by_id(invitation_id).await;
+        let retrieved_invitation = repository.find_by_id(invitation_id, to_user.id).await;
         assert!(retrieved_invitation.is_ok(), "Should be able to retrieve created invitation");
         let invitation = retrieved_invitation.unwrap();
         assert_eq!(invitation.from_user_id, from_user.id);
@@ -44,7 +44,7 @@ mod invitation_repository_integration_tests {
         // Cleanup
         
         cleanup_invitation(invitation_id).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -67,7 +67,7 @@ mod invitation_repository_integration_tests {
 
         // Cleanup
         
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(to_user.email).await;
     }
 
@@ -89,7 +89,7 @@ mod invitation_repository_integration_tests {
 
         // Cleanup
         
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
 
     }
@@ -158,7 +158,7 @@ mod invitation_repository_integration_tests {
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
         cleanup_invitation(invitation_id3).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user1.email).await;
         cleanup_user(to_user2.email).await;
@@ -194,7 +194,7 @@ mod invitation_repository_integration_tests {
         assert!(invitation_id > 0, "Invitation ID should be positive");
 
         // Verify the invitation
-        let retrieved_invitation = repository.find_by_id(invitation_id).await;
+        let retrieved_invitation = repository.find_by_id(invitation_id, to_user.id).await;
         assert!(retrieved_invitation.is_ok());
         let invitation = retrieved_invitation.unwrap();
         assert_eq!(invitation.from_user_id, from_user.id);
@@ -204,7 +204,7 @@ mod invitation_repository_integration_tests {
         // Cleanup
         
         cleanup_invitation(invitation_id).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }
@@ -245,7 +245,7 @@ mod invitation_repository_integration_tests {
         
         cleanup_invitation(invitation_id1).await;
         cleanup_invitation(invitation_id2).await;
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user1.email).await;
         cleanup_user(to_user2.email).await;
@@ -287,7 +287,7 @@ mod invitation_repository_integration_tests {
         }
 
         
-        cleanup_group(group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
         cleanup_user(from_user.email).await;
         cleanup_user(to_user.email).await;
     }

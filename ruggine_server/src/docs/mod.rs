@@ -10,7 +10,6 @@ use crate::{dto::{
             InvitationUpdateStatusDto
         },
         ApiSuccessResponseInvitationReadDto,
-        ApiSuccessResponseInvitationCreateDto,
         ApiSuccessResponseInvitationUpdateDto
     },
     entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}}
@@ -18,7 +17,8 @@ use crate::{dto::{
 use crate::handler::{
     auth_handler,
     user_handler,
-    group_chat_handler
+    group_chat_handler,
+    invitation_handler
 };
 
 #[derive(OpenApi)]
@@ -30,6 +30,8 @@ use crate::handler::{
         user_handler::register_handler::register,
         group_chat_handler::create::create,
         group_chat_handler::find_by_id::find_by_id,
+        invitation_handler::send::send,
+        invitation_handler::find_by_id::find_by_id,
     ),
     components(
         schemas(
@@ -47,7 +49,6 @@ use crate::handler::{
             ApiSuccessResponseInvitationReadDto,
             InvitationCreateDto,
             InvitationUpdateStatusDto,
-            ApiSuccessResponseInvitationCreateDto,
             ApiSuccessResponseInvitationUpdateDto,
             InvitationStatus
         )

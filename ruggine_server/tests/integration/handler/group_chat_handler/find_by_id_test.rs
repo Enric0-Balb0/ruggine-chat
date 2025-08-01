@@ -7,7 +7,7 @@ use ruggine_server::repository::user_repository::{UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::state::group_chat_state::GroupChatState;
 use axum::{Extension, extract::{Path, State}};
-use crate::common::{cleanup_user, cleanup_group, create_test_group_chat, create_test_user};
+use crate::common::{cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_user};
 use crate::get_database;
 use std::sync::Arc;
 
@@ -49,7 +49,7 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(data.created_by, group.created_by);
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -123,8 +123,8 @@ mod find_by_id_handler_integration_tests {
         assert_ne!(response1.data().name, response2.data().name);
 
         // Cleanup
-        cleanup_group(group1.id).await;
-        cleanup_group(group2.id).await;
+        cleanup_group_chat(group1.id).await;
+        cleanup_group_chat(group2.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -168,7 +168,7 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(response1.data().name, response2.data().name);
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
     }
@@ -239,7 +239,7 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(data.created_by, created_group.created_by);
 
         // Cleanup
-        cleanup_group(created_group.id).await;
+        cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -290,7 +290,7 @@ mod find_by_id_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 }

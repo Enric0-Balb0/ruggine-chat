@@ -4,7 +4,7 @@ use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::request_error::ValidatedRequest;
 use axum::{extract::State, Extension};
-use crate::common::{create_test_user, cleanup_group, cleanup_user, create_group_chat_state};
+use crate::common::{create_test_user, cleanup_group_chat, cleanup_user, create_group_chat_state};
 
 #[cfg(test)]
 mod group_chat_create_handler_integration_tests {
@@ -42,7 +42,7 @@ mod group_chat_create_handler_integration_tests {
         assert!(group_dto.updated_at <= chrono::Utc::now());
 
         // Cleanup: Delete the test group and user
-        cleanup_group(group_dto.id).await;
+        cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -74,7 +74,7 @@ mod group_chat_create_handler_integration_tests {
         assert_eq!(group_dto.created_by, user.id);
 
         // Cleanup: Delete the test group and user
-        cleanup_group(group_dto.id).await;
+        cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -187,9 +187,9 @@ mod group_chat_create_handler_integration_tests {
         assert_ne!(group2.name, group3.name);
 
         // Cleanup: Delete all test groups and user
-        cleanup_group(group1.id).await;
-        cleanup_group(group2.id).await;
-        cleanup_group(group3.id).await;
+        cleanup_group_chat(group1.id).await;
+        cleanup_group_chat(group2.id).await;
+        cleanup_group_chat(group3.id).await;
         cleanup_user(user.email).await;
     }
 }

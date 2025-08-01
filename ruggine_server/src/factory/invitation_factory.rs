@@ -2,7 +2,7 @@ use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::Utc;
 
 use crate::{
-    dto::invitation_dto::{InvitationCreateDto, InvitationReadDto, InvitationUpdateStatusDto, InvitationCreateResponseDto, InvitationUpdateResponseDto},
+    dto::invitation_dto::{InvitationCreateDto, InvitationReadDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto},
     entity::invitation::{NewInvitation, Invitation, UpdateInvitationStatus, InvitationStatus}
 };
 
@@ -63,6 +63,13 @@ impl InvitationFactory {
         }
     }
 
+    pub fn fake_invitation_create_dto_with_ids(to_user_id: i32, group_chat_id: i32) -> InvitationCreateDto {
+        InvitationCreateDto {
+            to_user_id,
+            group_chat_id,
+        }
+    }
+
     pub fn fake_invitation_read_dto() -> InvitationReadDto {
         use chrono::{NaiveDate, DateTime, Utc};
 
@@ -114,23 +121,6 @@ impl InvitationFactory {
     pub fn fake_invitation_update_status_dto_rejected() -> InvitationUpdateStatusDto {
         InvitationUpdateStatusDto {
             status: InvitationStatus::Rejected,
-        }
-    }
-
-    pub fn fake_invitation_create_response_dto() -> InvitationCreateResponseDto {
-        use chrono::{NaiveDate, DateTime, Utc};
-
-        let naive_dt = NaiveDate::from_ymd_opt(2025, 1, 28)
-            .unwrap()
-            .and_hms_opt(10, 0, 0)
-            .unwrap();
-
-        InvitationCreateResponseDto {
-            from_user_id: 1,
-            to_user_id: 2,
-            group_chat_id: 1,
-            status: InvitationStatus::Pending,
-            sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
         }
     }
 

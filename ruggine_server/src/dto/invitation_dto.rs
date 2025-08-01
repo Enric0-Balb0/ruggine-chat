@@ -59,39 +59,6 @@ pub struct InvitationUpdateStatusDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[schema(example = json!({
-    "from_user_id": 1,
-    "to_user_id": 2,
-    "group_chat_id": 1,
-    "status": "pending",
-    "sent_at": "2025-01-28T10:00:00Z"
-}))]
-pub struct InvitationCreateResponseDto {
-    #[schema(example = 1)]
-    pub from_user_id: i32,
-    #[schema(example = 2)]
-    pub to_user_id: i32,
-    #[schema(example = 1)]
-    pub group_chat_id: i32,
-    #[schema(example = "pending")]
-    pub status: InvitationStatus,
-    #[schema(example = "2025-01-28T10:00:00Z")]
-    pub sent_at: DateTime<Utc>,
-}
-
-impl From<Invitation> for InvitationCreateResponseDto {
-    fn from(invitation: Invitation) -> Self {
-        InvitationCreateResponseDto {
-            from_user_id: invitation.from_user_id,
-            to_user_id: invitation.to_user_id,
-            group_chat_id: invitation.group_chat_id,
-            status: invitation.status,
-            sent_at: invitation.sent_at,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
-#[schema(example = json!({
     "id": 1,
     "status": "accepted",
     "responded_at": "2025-01-28T11:00:00Z"
@@ -427,56 +394,6 @@ mod tests {
         // Test deserialization from JSON
         let deserialized: InvitationUpdateStatusDto = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.status, update_dto.status);
-    }
-
-    #[test]
-    fn test_invitation_create_response_dto_creation() {
-        let naive_dt = NaiveDate::from_ymd_opt(2025, 1, 28)
-            .unwrap()
-            .and_hms_opt(10, 0, 0)
-            .unwrap();
-
-        let response_dto = InvitationCreateResponseDto {
-            from_user_id: 1,
-            to_user_id: 2,
-            group_chat_id: 1,
-            status: InvitationStatus::Pending,
-            sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
-        };
-
-        assert_eq!(response_dto.from_user_id, 1);
-        assert_eq!(response_dto.to_user_id, 2);
-        assert_eq!(response_dto.group_chat_id, 1);
-        assert_eq!(response_dto.status, InvitationStatus::Pending);
-        assert_eq!(
-            response_dto.sent_at.date_naive(),
-            NaiveDate::from_ymd_opt(2025, 1, 28).unwrap()
-        );
-    }
-
-    #[test]
-    fn test_invitation_create_response_dto_from_invitation() {
-        let naive_dt = NaiveDate::from_ymd_opt(2025, 1, 28)
-            .unwrap()
-            .and_hms_opt(10, 0, 0)
-            .unwrap();
-
-        let invitation = Invitation {
-            id: 1,
-            from_user_id: 1,
-            to_user_id: 2,
-            group_chat_id: 1,
-            status: InvitationStatus::Pending,
-            sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
-            responded_at: None,
-        };
-
-        let response_dto: InvitationCreateResponseDto = invitation.clone().into();
-        assert_eq!(response_dto.from_user_id, invitation.from_user_id);
-        assert_eq!(response_dto.to_user_id, invitation.to_user_id);
-        assert_eq!(response_dto.group_chat_id, invitation.group_chat_id);
-        assert_eq!(response_dto.status, invitation.status);
-        assert_eq!(response_dto.sent_at, invitation.sent_at);
     }
 
     #[test]

@@ -2,7 +2,7 @@ use ruggine_server::service::group_chat_service::{GroupChatService, GroupChatSer
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::error::api_error::ApiError;
-use crate::common::{get_database, create_test_user, cleanup_group};
+use crate::common::{get_database, create_test_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_create_service_integration_tests {
@@ -45,7 +45,7 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group.created_by, user.id); */
 
         // Cleanup: Delete the test group and user
-        cleanup_group(group_dto.id).await;
+        cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email.clone()).await;
     }
 
@@ -105,10 +105,10 @@ mod group_chat_create_service_integration_tests {
         assert_ne!(group1.id, group2.id, "Groups should have different IDs");
 
         // Cleanup both groups
-        cleanup_group(group2.id).await;
+        cleanup_group_chat(group2.id).await;
 
         // Cleanup: Delete the test group and user
-        cleanup_group(group1.id).await;
+        cleanup_group_chat(group1.id).await;
         cleanup_user(user.email.clone()).await;
     }
 
@@ -155,9 +155,9 @@ mod group_chat_create_service_integration_tests {
         assert_ne!(group2.name, group3.name);
 
         // Cleanup: Delete all test groups and user
-        cleanup_group(group1.id).await;
-        cleanup_group(group2.id).await;
-        cleanup_group(group3.id).await;
+        cleanup_group_chat(group1.id).await;
+        cleanup_group_chat(group2.id).await;
+        cleanup_group_chat(group3.id).await;
         cleanup_user(user.email.clone()).await;
     }
 }

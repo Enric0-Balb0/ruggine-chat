@@ -4,7 +4,7 @@ use axum::{
 };
 use tower::ServiceExt;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group, create_group_chat_router, create_login_and_get_token, create_test_group_chat};
+use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, create_login_and_get_token, create_test_group_chat};
 
 #[cfg(test)]
 mod find_by_id_group_chat_e2e_tests {
@@ -46,7 +46,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert!(data["updated_at"].as_str().is_some(), "Should have updated_at timestamp");
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -70,7 +70,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -95,7 +95,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -184,9 +184,9 @@ mod find_by_id_group_chat_e2e_tests {
         }
 
         // Cleanup
-        cleanup_group(group1.id).await;
-        cleanup_group(group2.id).await;
-        cleanup_group(group3.id).await;
+        cleanup_group_chat(group1.id).await;
+        cleanup_group_chat(group2.id).await;
+        cleanup_group_chat(group3.id).await;
         cleanup_user(user.email).await;
     }
 
@@ -235,7 +235,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(data1["created_by"].as_i64().unwrap(), user1.id as i64);
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
     }
@@ -291,7 +291,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(data["created_by"].as_i64().unwrap(), user.id as i64);
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -350,7 +350,7 @@ mod find_by_id_group_chat_e2e_tests {
         }
 
         // Cleanup
-        cleanup_group(group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user(user.email).await;
     }
 

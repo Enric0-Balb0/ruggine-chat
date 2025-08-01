@@ -133,6 +133,8 @@ ruggine_developer -u-> UC1
 | FR8.3   | Only the creator of the group can send invitations |
 | FR8.4   | A creator cannot send more than one invitation to a specific user when there is a pending invitation or he is already in the group or send to himself the invitation |
 | FR8.5   | Display pending invitations to the user |
+| FR8.6   | Display a specific invitation to user (it must be the sender or the receiver) |
+| FR8.5   | Display pending invitations to the user |
 | **FR9** | Messages Management |
 | FR9.1   | Send and receive messages within a group only if you are a participant |
 | FR9.2   | Display messages in the group chat history only if you are a participant |
@@ -169,11 +171,11 @@ rectangle "Ruggine Chat System" {
   usecase "Register User\n(FR1.1, FR7.1)" as UC_Register
   usecase "Authenticate User\n(FR7.2, FR7.3)" as UC_Auth
   usecase "Retrieve User Info\n(FR1.2)" as UC_RetrieveUser
-  
-  usecase "Create Group Chat\n(FR3.1)" as UC_CreateGroup
+
+  usecase "Create Group Chat\n(FR3.1, FR8.3)" as UC_CreateGroup
   usecase "Retrieve Group Info\n(FR3.3)" as UC_RetrieveGroup
   usecase "Invite to Group\n(FR8.1, FR8.3, FR8.4)" as UC_InviteGroup
-  usecase "Accept/Decline Invite\n(FR8.2, FR7.4, FR8.5)" as UC_InviteResponse
+  usecase "Accept/Decline Invite\n(FR8.2, FR7.4, FR8.5, 8.6)" as UC_InviteResponse
   
   usecase "Send Message to Group\n(FR2.1, FR3.2)" as UC_SendMsg
   usecase "Receive Message from Group\n(FR2.2, FR3.2)" as UC_ReceiveMsg

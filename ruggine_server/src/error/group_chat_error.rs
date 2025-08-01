@@ -11,6 +11,8 @@ pub enum GroupChatError {
     GroupChatNotFound,
     #[error("No fields to update")]
     GroupChatNoFieldsToUpdate,
+    #[error("User not authorized for this operation")]
+    UserNotAuthorized,
 }
 
 impl IntoResponse for GroupChatError {
@@ -18,6 +20,7 @@ impl IntoResponse for GroupChatError {
         let status_code = match self {
             GroupChatError::GroupChatNotFound => StatusCode::NOT_FOUND,
             GroupChatError::GroupChatNoFieldsToUpdate => StatusCode::BAD_REQUEST,
+            GroupChatError::UserNotAuthorized => StatusCode::FORBIDDEN,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

@@ -6,7 +6,7 @@ use serde_json::json;
 use tower::ServiceExt;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group, create_group_chat_router, create_login_and_get_token};
+use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, create_login_and_get_token};
 
 #[cfg(test)]
 mod create_group_chat_e2e_tests {
@@ -57,7 +57,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         let group_id = data["id"].as_i64().unwrap() as i32;
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -257,7 +257,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            cleanup_group(group_id).await;
+            cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;
     }
@@ -323,7 +323,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            cleanup_group(group_id).await;
+            cleanup_group_chat(group_id).await;
         }
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
@@ -391,7 +391,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            cleanup_group(group_id).await;
+            cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;
     }

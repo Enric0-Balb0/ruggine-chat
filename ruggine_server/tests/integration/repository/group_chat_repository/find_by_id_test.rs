@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group};
+use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_repository_find_by_id_integration_tests {
@@ -31,7 +31,7 @@ mod group_chat_repository_find_by_id_integration_tests {
         assert!(found_group.created_at <= found_group.updated_at);
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -101,8 +101,8 @@ mod group_chat_repository_find_by_id_integration_tests {
         assert_ne!(found_group1.id, found_group2.id);
 
         // Cleanup
-        cleanup_group(group_id1).await;
-        cleanup_group(group_id2).await;
+        cleanup_group_chat(group_id1).await;
+        cleanup_group_chat(group_id2).await;
         cleanup_user(user.email).await;
     }
 
@@ -139,7 +139,7 @@ mod group_chat_repository_find_by_id_integration_tests {
         assert_eq!(found_group.created_by, user.id);
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -181,7 +181,7 @@ mod group_chat_repository_find_by_id_integration_tests {
         }
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 
@@ -208,7 +208,7 @@ mod group_chat_repository_find_by_id_integration_tests {
         assert!(found_group.updated_at <= chrono::Utc::now());
 
         // Cleanup
-        cleanup_group(group_id).await;
+        cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
 }
