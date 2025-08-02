@@ -5,3 +5,4 @@ pub mod token_error;
 pub mod user_error;
 pub mod group_chat_error;
 pub mod invitation_error;
+pub mod group_membership_error;

@@ -15,6 +15,7 @@ use ruggine_server::entity::invitation::{Invitation, NewInvitation};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
+use ruggine_server::repository::group_membership_repository::GroupMembershipRepositoryTrait;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route};
@@ -222,6 +223,49 @@ pub async fn cleanup_invitation(invitation_id: i32) {
         panic!("Cleanup failed for invitation with id {}: {:?}", invitation_id, e);
     }
     
+}
+
+pub async fn create_test_group_membership(
+    user_id: i32,
+    group_chat_id: i32,
+) -> ruggine_server::entity::group_membership::GroupMembership {
+    let db = get_database().await;
+    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+
+    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_group_membership_with_ids(user_id, group_chat_id);
+    let inserted_id = repository.insert(new_membership.clone()).await
+        .expect("Failed to insert test group membership");
+
+    // Get the created membership from database
+    let membership_result = repository.find_by_id(inserted_id).await;
+    assert!(membership_result.is_ok(), "Group membership not found in database");
+    membership_result.unwrap()
+}
+
+pub async fn create_test_admin_group_membership(
+    user_id: i32,
+    group_chat_id: i32
+) -> ruggine_server::entity::group_membership::GroupMembership {
+    let db = get_database().await;
+    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+
+    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_admin_group_membership_with_ids(user_id, group_chat_id);
+    let inserted_id = repository.insert(new_membership.clone()).await
+        .expect("Failed to insert test group membership");
+
+    // Get the created membership from database
+    let membership_result = repository.find_by_id(inserted_id).await;
+    assert!(membership_result.is_ok(), "Group membership not found in database");
+    membership_result.unwrap()
+}
+
+pub async fn cleanup_group_membership(membership_id: i32) {
+    let db = get_database().await;
+    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+
+    if let Err(e) = repository.delete_by_id(membership_id).await {
+        panic!("Cleanup failed for group membership with id {}: {:?}", membership_id, e);
+    }
 }
 
 fn init_test_logging() {

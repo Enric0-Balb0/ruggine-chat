@@ -23,6 +23,9 @@ impl InvitationService {
             Err(e) => return Err(e),
         };
 
+        // TODO: Check if user is already in the group chat
+
+        // TODO: Check from membership if you are admin
         // Verify that the from_user is the admin (created_by) of the group
         if group_chat.created_by != from_user_id {
             return Err(ApiError::GroupChatError(GroupChatError::UserNotAuthorized));

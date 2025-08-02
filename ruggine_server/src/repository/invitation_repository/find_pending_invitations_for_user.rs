@@ -41,7 +41,7 @@ mod invitation_repository_find_pending_for_user_tests {
             .expect_find_pending_invitations_for_user()
             .with(eq(user_id))
             .times(1)
-            .returning(move |user_id| {
+            .returning(move |_user_id| {
                 let value = expected_invitations_clone.clone();
                 Box::pin(async move {
                     Ok(value)

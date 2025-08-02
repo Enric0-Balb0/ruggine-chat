@@ -1,3 +1,5 @@
+use sqlx::Error;
+
 // Helper struct to mock database errors
 #[derive(Debug)]
 pub struct MockDatabaseError {
@@ -11,6 +13,14 @@ impl MockDatabaseError {
             code: code.clone(),
             message: format!("Mock database error with code: {}", code),
         }
+    }
+
+    // PostgreSQL foreign key violation code
+    pub fn foreign_key_violation() -> Error {
+        Error::Database(Box::new(Self {
+            code: "23503".to_string(),
+            message: "Foreign key violation".to_string(),
+        }))
     }
 }
 

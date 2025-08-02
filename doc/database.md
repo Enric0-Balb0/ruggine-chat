@@ -46,6 +46,7 @@ erDiagram
         int user_id FK "NOT NULL"
         int group_chat_id FK "NOT NULL"
         member_role role "DEFAULT 'member'"
+        membership_status membership_status "NOT NULL, DEFAULT 'active'"
         timestamptz joined_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
         timestamptz left_at "NULLABLE"
     }
@@ -93,4 +94,7 @@ CREATE TYPE gender AS ENUM ('male', 'female', 'other');
 -- Message and group management enums
 CREATE TYPE member_role AS ENUM ('admin', 'member');
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'declined');
+
+-- Group membership status
+CREATE TYPE membership_status AS ENUM ('active', 'left', 'banned');
 ```

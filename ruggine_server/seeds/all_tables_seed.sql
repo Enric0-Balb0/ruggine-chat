@@ -1,4 +1,5 @@
 -- Drop della tabella se esiste già
+DROP TABLE IF EXISTS "group_membership";
 DROP TABLE IF EXISTS "invitation";
 DROP TABLE IF EXISTS "group_chat";
 DROP TABLE IF EXISTS "user";
@@ -130,3 +131,39 @@ INSERT INTO invitation (
     DEFAULT,      -- sent_at
     NULL          -- responded_at
 );
+
+-- Crea ENUM member_role solo se non esiste
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'member_role') THEN
+        CREATE TYPE member_role AS ENUM ('member', 'admin');
+    END IF;
+END$$;
+
+-- Crea ENUM per membership_status solo se non esiste
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membership_status') THEN
+        CREATE TYPE membership_status AS ENUM ('active', 'left', 'banned');
+    END IF;
+END$$;
+
+-- Creazione della tabella group_membership
+CREATE TABLE group_membership (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES "user"(id),
+    group_chat_id INT NOT NULL REFERENCES group_chat(id),
+    role member_role DEFAULT 'member',
+    membership_status membership_status NOT NULL DEFAULT 'active',
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    left_at TIMESTAMPTZ
+);
+
+-- Inserimento di un record di esempio
+INSERT INTO group_membership (user_id, group_chat_id, role)
+VALUES (1, 1, 'admin');
+
+-- Crea nuovo vincolo basato su status
+CREATE UNIQUE INDEX unique_active_membership
+ON group_membership (user_id, group_chat_id)
+WHERE membership_status = 'active';

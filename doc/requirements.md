@@ -141,7 +141,8 @@ ruggine_developer -u-> UC1
 | **FR10** | Group Chat Memebership Management |
 | FR10.1   | Add a user to a group |
 | FR10.2   | Remove a user from a group |
-
+| FR10.3   | List all users in a group |
+| FR10.4   | List all groups a user is part of |
 
 ## Non Functional Requirements
 
@@ -188,6 +189,8 @@ rectangle "Ruggine Chat System" {
   usecase "Run on Multiple Platforms\n(FR4.1)" as UC_CrossPlatform
 
   usecase "Take part/leave Group Membership\n(FR10.1, FR10.2)" as UC_ManageGroup
+
+  usecase "Know which groups you are part of\n(FR10.3, FR10.4)" as UC_PartOfGroup
 }
 
 User --> UC_Register
@@ -201,6 +204,7 @@ User --> UC_ReceiveMsg
 User --> UC_DisplayHistory
 User --> UC_RetrieveGroup
 User --> UC_ManageGroup
+User --> UC_PartOfGroup
 
 AdminDev --> UC_AccessLogs
 AdminDev --> UC_NotifyCPU
@@ -556,6 +560,33 @@ AdminDev --> UC_CrossPlatform
 | 1             | Developer builds system for target platform                           |
 | 2             | System is installed on platform                                       |
 | 3             | System runs and performs all functions                               |
+
+
+### Use case 15, UC_PartOfGroup: User joins a group
+
+| Actors Involved  |            Admin / Developer                                             |
+|:----------------:|:-------------------------------------------------------------------------:|
+|   Precondition   | User is authenticated                                                  |
+|  Post condition  |  User is added to the group                                            |
+| Nominal Scenario |         User requests to join a group                                   |
+|     Variants     | None                                                                   |
+|    Exceptions    | Group not found, User already in group, Pending invitation not found            |
+
+##### Scenario 15.1: User Joins Group
+
+|  Scenario 15.1 |         User Joins Group                                              |
+|:--------------:|:------------------------------------------------------------------------:|
+|  Precondition  | User is authenticated and group exists                                |
+| Post condition | User is added to the group                                             |
+|     Step#      |                                Description                              |
+| 1             | User sends join request to group                                      |
+| 2             | System verifies user and group                                         |
+| 3             | System adds user to group                                             |
+| Nominal Scenario |         System logs CPU usage periodically                             |
+|     Variants     | None                                                                   |
+|    Exceptions    | Group not found, User already in the group, Pending invitation not found            |
+
+---
 
 # Glossary
 

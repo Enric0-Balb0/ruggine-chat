@@ -63,7 +63,6 @@ mod group_chat_repository_insert_tests {
         // Arrange
         let mut mock_group_chat_repo = MockGroupChatRepositoryTrait::new();
         let new_group_chat = GroupChatFactory::unique_fake_new_group_chat("test_error", 1);
-        let expected_error = sqlx::Error::PoolClosed;
 
         mock_group_chat_repo
             .expect_insert()
