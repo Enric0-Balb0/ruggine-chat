@@ -1,1 +1,1 @@
-// Components placeholder - implementeremo nel prossimo step
+// UI Components - placeholder for future components

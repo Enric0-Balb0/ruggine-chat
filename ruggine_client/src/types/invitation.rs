@@ -65,7 +65,7 @@ pub struct Invitation {
 // =============================================================================
 
 impl From<ApiSuccessResponseInvitationReadDto> for Invitation {
-    fn from(response: ApiSuccessResponseInvitationReadDto) -> Self {
+    fn from(_response: ApiSuccessResponseInvitationReadDto) -> Self {
         // TODO: Implement conversion when exact server structure is available
         todo!("Implement conversion from ApiSuccessResponseInvitationReadDto")
     }
