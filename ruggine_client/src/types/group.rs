@@ -1,18 +1,27 @@
 use serde::{Deserialize, Serialize};
 
-/// Group chat creation request - exact server DTO
+/// Group chat creation request - exact server DTO (GroupChatCreateDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GroupChatCreateRequest {
-    pub description: String,
     pub name: String,
+    pub description: String,
 }
 
 /// Group chat response wrapper from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseGroupChatReadDto {
-    pub data: serde_json::Value,
+    pub data: GroupChatReadDto,
+}
+
+/// Group chat data from server - exact structure from OpenAPI
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupChatReadDto {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    pub created_by: i32,
+    pub created_at: String, // date-time format from OpenAPI
+    pub updated_at: String, // date-time format from OpenAPI
 }
 
 // =============================================================================
@@ -38,8 +47,18 @@ pub struct GroupChat {
 
 impl From<ApiSuccessResponseGroupChatReadDto> for GroupChat {
     fn from(response: ApiSuccessResponseGroupChatReadDto) -> Self {
-        // TODO: Implement conversion when exact server structure is available
-        todo!("Implement conversion from ApiSuccessResponseGroupChatReadDto")
+        let group_data = response.data;
+        
+        Self {
+            id: group_data.id,
+            name: group_data.name,
+            description: group_data.description,
+            created_by: group_data.created_by,
+            created_at: group_data.created_at.parse().unwrap_or_default(), // Convert from string
+            updated_at: group_data.updated_at.parse().unwrap_or_default(), // Convert from string
+            member_count: None, // Not provided by server, client-side enhancement
+            is_active: true, // Default to true, client-side enhancement
+        }
     }
 }
 

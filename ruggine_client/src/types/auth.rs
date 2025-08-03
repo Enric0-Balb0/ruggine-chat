@@ -1,18 +1,24 @@
 use serde::{Deserialize, Serialize};
 
-/// Login request - exact server DTO
+/// Login request - exact server DTO (UserLoginDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
 
-/// Token response wrapper from server
+/// Server response wrapper for token data
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseTokenReadDto {
-    pub data: serde_json::Value,
+    pub data: TokenReadDto,
+}
+
+/// Token data from server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenReadDto {
+    pub token: String,
+    pub iat: i64,
+    pub exp: i64,
 }
 
 // =============================================================================
@@ -42,8 +48,11 @@ pub struct TokenClaims {
 
 impl From<ApiSuccessResponseTokenReadDto> for TokenResponse {
     fn from(response: ApiSuccessResponseTokenReadDto) -> Self {
-        // TODO: Implement conversion when exact server structure is available
-        todo!("Implement conversion from ApiSuccessResponseTokenReadDto")
+        Self {
+            token: response.data.token,
+            iat: response.data.iat,
+            exp: response.data.exp,
+        }
     }
 }
 

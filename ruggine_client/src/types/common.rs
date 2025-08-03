@@ -1,16 +1,15 @@
 use serde::{Deserialize, Serialize};
+use super::invitation::{InvitationReadDto, InvitationUpdateDto};
 
 /// Additional wrapper responses from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseInvitationCreateDto {
-    pub data: serde_json::Value,
+    pub data: InvitationReadDto, // Uses same structure as read response
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseInvitationUpdateDto {
-    pub data: serde_json::Value,
+    pub data: InvitationUpdateDto,
 }
 
 // =============================================================================
@@ -23,6 +22,12 @@ pub struct ApiResponse<T> {
     pub data: T,
     pub success: bool,
     pub message: Option<String>,
+}
+
+/// Server's API success response format (simpler structure)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponse<T> {
+    pub data: T,
 }
 
 /// Standardized API error response

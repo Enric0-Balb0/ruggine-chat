@@ -4,9 +4,9 @@ use crate::error::AuthError;
 use crate::dto::{UserProfile, TokenResponse};
 use crate::config::{constants::{AuthConstants, AppConstants}, endpoints::ApiEndpoints};
 
-// Direct type imports (organizzati per modulo)
-use crate::types::auth::{LoginRequest, TokenResponse as TypesTokenResponse};
-use crate::types::user::{UserRegisterRequest, ChangePasswordRequest, UserProfile as TypesUserProfile, Gender};
+// Direct type imports
+use crate::types::auth::{LoginRequest, TokenResponse as TypesTokenResponse, ApiSuccessResponseTokenReadDto};
+use crate::types::user::{UserRegisterRequest, ChangePasswordRequest, ApiSuccessResponseUserReadDto, Gender};
 use chrono::NaiveDate;
 
 /// Authentication service managing user sessions and tokens
@@ -38,40 +38,43 @@ impl AuthService {
     /// Login user with email and password
     pub async fn login(&self, email: String, password: String) -> Result<UserProfile, AuthError> {
         self.validate_login_input(&email, &password)?;
+        self.http_client.set_auth_token(None);
 
-        // Direct API call without wrapper
         let request = LoginRequest {
             email: email.trim().to_lowercase(),
             password: password.trim().to_string(),
         };
 
-        let token_response: TypesTokenResponse = self.http_client
+        let token_response: ApiSuccessResponseTokenReadDto = self.http_client
             .post(ApiEndpoints::AUTH_LOGIN, &request)
             .await
             .map_err(AuthError::from)?;
 
         // Convert and store token
         let dto_token = TokenResponse {
-            token: token_response.token,
-            expires_in: Some(token_response.exp as u64),
+            token: token_response.data.token.clone(),
+            expires_in: Some(token_response.data.exp as u64),
         };
         
         self.storage_service.store_token(&dto_token)
             .map_err(AuthError::from)?;
 
-        // Get user profile
-        let profile_response: TypesUserProfile = self.http_client
+        // Update the HTTP client with the new token for subsequent requests
+        self.http_client.set_auth_token(Some(token_response.data.token));
+
+        // Get user profile using the authenticated client
+        let profile_response: ApiSuccessResponseUserReadDto = self.http_client
             .get(ApiEndpoints::USER_PROFILE)
             .await
             .map_err(AuthError::from)?;
 
         // Convert and store profile
         let user_profile = UserProfile {
-            id: profile_response.id.to_string(),
-            email: profile_response.email,
-            full_name: profile_response.username,
-            created_at: Some(profile_response.created_at.to_rfc3339()),
-            updated_at: Some(profile_response.updated_at.to_rfc3339()),
+            id: profile_response.data.id.to_string(),
+            email: profile_response.data.email,
+            full_name: format!("{} {}", profile_response.data.first_name, profile_response.data.last_name),
+            created_at: Some(profile_response.data.created_at),
+            updated_at: Some(profile_response.data.updated_at),
         };
 
         self.storage_service.store_user_profile(&user_profile)
@@ -104,14 +107,14 @@ impl AuthService {
         let _current_token = self.storage_service.get_token()
             .ok_or(AuthError::NotAuthenticated)?;
 
-        let token_response: TypesTokenResponse = self.http_client
+        let token_response: ApiSuccessResponseTokenReadDto = self.http_client
             .post(ApiEndpoints::AUTH_REFRESH, &())
             .await
             .map_err(AuthError::from)?;
 
         let dto_token = TokenResponse {
-            token: token_response.token,
-            expires_in: Some(token_response.exp as u64),
+            token: token_response.data.token,
+            expires_in: Some(token_response.data.exp as u64),
         };
 
         self.storage_service.store_token(&dto_token)
@@ -146,22 +149,22 @@ impl AuthService {
             username: full_name.clone(),
             first_name: full_name.split_whitespace().next().unwrap_or("").to_string(),
             last_name: full_name.split_whitespace().skip(1).collect::<Vec<_>>().join(" "),
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            birthday: "1990-01-01".to_string(), // Fixed: use string format as per OpenAPI
             address: "".to_string(),
-            gender: serde_json::to_value(Gender::Other).unwrap(),  // Converto enum in JSON
+            gender: Gender::Other, // Fixed: use enum directly
         };
 
-        let profile_response: TypesUserProfile = self.http_client
+        let profile_response: ApiSuccessResponseUserReadDto = self.http_client
             .post(ApiEndpoints::USER_REGISTER, &request)
             .await
             .map_err(AuthError::from)?;
 
         let user_profile = UserProfile {
-            id: profile_response.id.to_string(),
-            email: profile_response.email,
-            full_name: profile_response.username,
-            created_at: Some(profile_response.created_at.to_rfc3339()),
-            updated_at: Some(profile_response.updated_at.to_rfc3339()),
+            id: profile_response.data.id.to_string(),
+            email: profile_response.data.email,
+            full_name: format!("{} {}", profile_response.data.first_name, profile_response.data.last_name),
+            created_at: Some(profile_response.data.created_at),
+            updated_at: Some(profile_response.data.updated_at),
         };
 
         self.storage_service.store_user_profile(&user_profile)
@@ -245,6 +248,14 @@ impl Default for AuthService {
     fn default() -> Self {
         let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
         let storage_service = StorageService::new();
-        Self::new(http_client, storage_service)
+        
+        let service = Self::new(http_client, storage_service);
+        
+        // If there's a stored token, load it into the HTTP client
+        if let Some(stored_token) = service.storage_service.get_token() {
+            service.http_client.set_auth_token(Some(stored_token.token));
+        }
+        
+        service
     }
 }

@@ -55,36 +55,51 @@ pub enum CurrentAction {
 // DTOs - Server synchronized
 // =============================================================================
 
-/// User registration request - exact server DTO
+/// User registration request - exact server DTO (UserRegisterDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UserRegisterRequest {
-    pub address: String,
-    pub birthday: NaiveDate,
     pub email: String,
-    pub first_name: String,
-    pub gender: serde_json::Value,  // Server uses serde_json::Value for enums
-    pub last_name: String,
     pub password: String,
+    pub first_name: String,
+    pub last_name: String,
     pub username: String,
+    pub birthday: String, // date format as per OpenAPI
+    pub address: String,
+    pub gender: Gender,
 }
 
-/// Profile update request - exact server DTO
+/// Profile update request - exact server DTO (ProfileUpdateDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UserUpdateRequest {
-    pub address: Option<String>,
-    pub birthday: Option<NaiveDate>,
     pub first_name: Option<String>,
-    pub gender: Option<serde_json::Value>,  // Server uses serde_json::Value for enums
     pub last_name: Option<String>,
+    pub birthday: Option<String>, // date format as per OpenAPI
+    pub address: Option<String>,
+    pub gender: Option<Gender>,
 }
 
 /// User response wrapper from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseUserReadDto {
-    pub data: serde_json::Value,
+    pub data: UserReadDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserReadDto {
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+    pub email: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub user_status: UserStatus,
+    pub user_type: UserType,
+    pub birthday: String,
+    pub is_online: bool,
+    pub address: String,
+    pub current_action: CurrentAction,
+    pub gender: Gender,
 }
 
 /// Complete user profile with utility methods
@@ -119,8 +134,24 @@ pub struct ChangePasswordRequest {
 
 impl From<ApiSuccessResponseUserReadDto> for UserProfile {
     fn from(response: ApiSuccessResponseUserReadDto) -> Self {
-        // TODO: Implement conversion when exact server structure is available
-        todo!("Implement conversion from ApiSuccessResponseUserReadDto")
+        let user_data = response.data;
+        
+        Self {
+            id: user_data.id,
+            email: user_data.email,
+            first_name: user_data.first_name,
+            last_name: user_data.last_name,
+            username: user_data.username,
+            birthday: user_data.birthday.parse().unwrap_or_default(), // Convert from string
+            address: user_data.address,
+            gender: user_data.gender,
+            user_type: user_data.user_type,
+            user_status: user_data.user_status,
+            current_action: user_data.current_action,
+            created_at: user_data.created_at.parse().unwrap_or_default(), // Convert from string
+            updated_at: user_data.updated_at.parse().unwrap_or_default(), // Convert from string
+            last_login: None, // Not provided by server
+        }
     }
 }
 
@@ -139,8 +170,10 @@ impl UserProfile {
         self.user_status == UserStatus::Active
     }
 
-    /// Check if user is online
+    /// Check if user is online (based on server data)
     pub fn is_online(&self) -> bool {
+        // For UserProfile, we need to track this separately since server provides is_online in UserReadDto
+        // This is a client-side approximation
         matches!(self.current_action, CurrentAction::Writing | CurrentAction::Waiting)
     }
     

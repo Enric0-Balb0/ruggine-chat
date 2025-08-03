@@ -2,7 +2,7 @@ use crate::http::{client::ApiClient, error::HttpError};
 use crate::services::storage_service::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
-use crate::types::user::UserProfile as TypesUserProfile;
+use crate::types::user::{ApiSuccessResponseUserReadDto, UserReadDto};
 use crate::dto::UserProfile;
 use serde::{Deserialize, Serialize};
 
@@ -23,8 +23,8 @@ pub struct UserSearchResult {
     pub last_name: String,
 }
 
-impl From<TypesUserProfile> for UserSearchResult {
-    fn from(profile: TypesUserProfile) -> Self {
+impl From<UserReadDto> for UserSearchResult {
+    fn from(profile: UserReadDto) -> Self {
         Self {
             id: profile.id.to_string(),
             email: profile.email,
@@ -46,28 +46,28 @@ impl UserService {
 
     /// Get user profile by ID
     pub async fn get_user_by_id(&self, user_id: &str) -> Result<UserSearchResult, AuthError> {
-        let profile_response: TypesUserProfile = self.http_client
+        let profile_response: ApiSuccessResponseUserReadDto = self.http_client
             .get(&ApiEndpoints::user_by_id(user_id))
             .await
             .map_err(AuthError::from)?;
 
-        Ok(UserSearchResult::from(profile_response))
+        Ok(UserSearchResult::from(profile_response.data))
     }
 
     /// Update current user profile
     pub async fn update_profile(&self, profile_update: UserProfileUpdate) -> Result<UserProfile, AuthError> {
-        let response: TypesUserProfile = self.http_client
+        let response: ApiSuccessResponseUserReadDto = self.http_client
             .patch(ApiEndpoints::USER_UPDATE_PROFILE, &profile_update)
             .await
             .map_err(AuthError::from)?;
 
         // Convert and store updated profile
         let user_profile = UserProfile {
-            id: response.id.to_string(),
-            email: response.email,
-            full_name: response.username,
-            created_at: Some(response.created_at.to_rfc3339()),
-            updated_at: Some(response.updated_at.to_rfc3339()),
+            id: response.data.id.to_string(),
+            email: response.data.email,
+            full_name: format!("{} {}", response.data.first_name, response.data.last_name),
+            created_at: Some(response.data.created_at),
+            updated_at: Some(response.data.updated_at),
         };
 
         self.storage_service.store_user_profile(&user_profile)
@@ -90,7 +90,6 @@ pub struct UserProfileUpdate {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub address: Option<String>,
-    // Note: Some fields like email might not be updateable for security reasons
 }
 
 impl Default for UserService {

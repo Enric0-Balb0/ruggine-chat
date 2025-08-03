@@ -27,11 +27,12 @@ impl ApiEndpoints {
     pub const GROUP_MESSAGES: &'static str = "/group_chat"; // + /{id}/messages
     pub const GROUP_MARK_READ: &'static str = "/group_chat"; // + /{id}/mark_read
     
-    // Invitation endpoints (future)
-    pub const INVITATION_SEND: &'static str = "/invitations";
-    pub const INVITATION_PENDING: &'static str = "/invitations/pending";
-    pub const INVITATION_RESPOND: &'static str = "/invitations"; // + /{id}
-    pub const INVITATION_HISTORY: &'static str = "/invitations/history";
+    // Invitation endpoints
+    pub const INVITATION_SEND: &'static str = "/invitation/send";
+    pub const INVITATION_BY_ID: &'static str = "/invitation"; // + /{id}
+    pub const INVITATION_PENDING: &'static str = "/invitations/pending"; // Future endpoint
+    pub const INVITATION_RESPOND: &'static str = "/invitations"; // + /{id} - Future endpoint  
+    pub const INVITATION_HISTORY: &'static str = "/invitations/history"; // Future endpoint
     
     // Message endpoints (future)
     pub const MESSAGE_SEND: &'static str = "/messages";
@@ -55,8 +56,12 @@ impl ApiEndpoints {
         format!("{}/{}/mark_read", Self::GROUP_BY_ID, group_id)
     }
     
+    pub fn invitation_by_id(invitation_id: &str) -> String {
+        format!("{}/{}", Self::INVITATION_BY_ID, invitation_id)
+    }
+    
     pub fn invitation_respond(invitation_id: &str) -> String {
-        format!("{}/{}", Self::INVITATION_SEND, invitation_id)
+        format!("{}/{}", Self::INVITATION_RESPOND, invitation_id)
     }
     
     pub fn user_by_id(user_id: &str) -> String {

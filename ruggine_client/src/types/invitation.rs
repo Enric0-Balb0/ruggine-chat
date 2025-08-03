@@ -16,26 +16,43 @@ pub enum InvitationStatus {
 // DTOs - Server synchronized
 // =============================================================================
 
-/// Invitation creation request - exact server DTO
+/// Invitation creation request - exact server DTO (InvitationCreateDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct InvitationCreateRequest {
-    pub group_chat_id: i32,
     pub to_user_id: i32,
+    pub group_chat_id: i32,
 }
 
-/// Invitation status update request - exact server DTO
+/// Invitation status update request - exact server DTO (InvitationUpdateStatusDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct InvitationUpdateRequest {
-    pub status: serde_json::Value,  // Server uses serde_json::Value for enums
+    pub status: InvitationStatus,
 }
 
 /// Invitation response wrapper from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiSuccessResponseInvitationReadDto {
-    pub data: serde_json::Value,
+    pub data: InvitationReadDto,
+}
+
+/// Invitation data from server - exact structure from OpenAPI
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvitationReadDto {
+    pub id: i32,
+    pub from_user_id: i32,
+    pub to_user_id: i32,
+    pub group_chat_id: i32,
+    pub status: InvitationStatus,
+    pub sent_at: String, // date-time format from OpenAPI
+    pub responded_at: Option<String>, // date-time format, nullable
+}
+
+/// Invitation update response data from server - from ApiSuccessResponseInvitationUpdateDto
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvitationUpdateDto {
+    pub id: i32,
+    pub status: InvitationStatus,
+    pub responded_at: String, // date-time format from OpenAPI
 }
 
 // =============================================================================
@@ -65,9 +82,27 @@ pub struct Invitation {
 // =============================================================================
 
 impl From<ApiSuccessResponseInvitationReadDto> for Invitation {
-    fn from(_response: ApiSuccessResponseInvitationReadDto) -> Self {
-        // TODO: Implement conversion when exact server structure is available
-        todo!("Implement conversion from ApiSuccessResponseInvitationReadDto")
+    fn from(response: ApiSuccessResponseInvitationReadDto) -> Self {
+        let invitation_data = response.data;
+        
+        Self {
+            id: invitation_data.id,
+            group_chat_id: invitation_data.group_chat_id,
+            from_user_id: invitation_data.from_user_id,
+            to_user_id: invitation_data.to_user_id,
+            status: invitation_data.status,
+            created_at: invitation_data.sent_at.parse().unwrap_or_default(), // sent_at maps to created_at
+            updated_at: invitation_data.responded_at
+                .as_ref()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()), // responded_at or fallback to sent_at
+            expires_at: None, // Not provided by server, client-side enhancement
+            
+            // Denormalized data for UI - not provided by server
+            group_name: None,
+            from_user_name: None,
+            to_user_name: None,
+        }
     }
 }
 

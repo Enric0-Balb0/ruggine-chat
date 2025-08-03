@@ -1,15 +1,16 @@
 use crate::http::error::HttpError;
-use crate::types::common::{ApiErrorResponse, ApiResponse};
+use crate::types::common::{ApiErrorResponse, ApiResponse, ApiSuccessResponse};
 use crate::config::constants::AppConstants;
 use reqwest::{Client, RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Serialize};
+use std::sync::{Arc, Mutex};
 
 /// Client HTTP centralizzato per tutte le chiamate API
 #[derive(Clone)]
 pub struct ApiClient {
     client: Client,
     base_url: String,
-    auth_token: Option<String>,
+    auth_token: Arc<Mutex<Option<String>>>,
 }
 
 impl ApiClient {
@@ -22,24 +23,28 @@ impl ApiClient {
         Self {
             client,
             base_url: base_url.into(),
-            auth_token: None,
+            auth_token: Arc::new(Mutex::new(None)),
         }
     }
 
     /// Imposta il token di autenticazione
-    pub fn with_auth_token(mut self, token: Option<String>) -> Self {
-        self.auth_token = token;
+    pub fn with_auth_token(self, token: Option<String>) -> Self {
+        if let Ok(mut auth_token) = self.auth_token.lock() {
+            *auth_token = token;
+        }
         self
     }
 
     /// Aggiorna il token di autenticazione
-    pub fn set_auth_token(&mut self, token: Option<String>) {
-        self.auth_token = token;
+    pub fn set_auth_token(&self, token: Option<String>) {
+        if let Ok(mut auth_token) = self.auth_token.lock() {
+            *auth_token = token;
+        }
     }
 
     /// Ottiene il token di autenticazione corrente
-    pub fn auth_token(&self) -> Option<&String> {
-        self.auth_token.as_ref()
+    pub fn auth_token(&self) -> Option<String> {
+        self.auth_token.lock().ok().and_then(|guard| guard.clone())
     }
 
     /// Costruisce l'URL completo per un endpoint
@@ -53,8 +58,10 @@ impl ApiClient {
             .header("Content-Type", "application/json")
             .header("Accept", "application/json");
 
-        if let Some(token) = &self.auth_token {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
+        if let Ok(auth_token) = self.auth_token.lock() {
+            if let Some(token) = auth_token.as_ref() {
+                builder = builder.header("Authorization", format!("Bearer {}", token));
+            }
         }
 
         builder
@@ -66,11 +73,16 @@ impl ApiClient {
         let text = response.text().await?;
 
         if status.is_success() {
-            // Prova prima a deserializzare come ApiResponse<T>
+            // Prova prima a deserializzare come ApiResponse<T> (formato client)
             if let Ok(api_response) = serde_json::from_str::<ApiResponse<T>>(&text) {
                 Ok(api_response.data)
-            } else {
-                // Fallback: deserializza direttamente come T
+            }
+            // Poi prova come ApiSuccessResponse<T> (formato server)
+            else if let Ok(server_response) = serde_json::from_str::<ApiSuccessResponse<T>>(&text) {
+                Ok(server_response.data)
+            }
+            // Fallback: deserializza direttamente come T
+            else {
                 serde_json::from_str(&text).map_err(|e| {
                     HttpError::Deserialization(format!("Failed to parse response: {}", e))
                 })

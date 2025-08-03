@@ -22,22 +22,22 @@ pub mod invitation;
 // =============================================================================
 
 // Auth types
-pub use auth::{LoginRequest, TokenResponse, TokenClaims, ApiSuccessResponseTokenReadDto};
+pub use auth::{LoginRequest, TokenResponse, TokenClaims, ApiSuccessResponseTokenReadDto, TokenReadDto};
 
 // User types  
 pub use user::{
     UserProfile, UserRegisterRequest, UserUpdateRequest, 
     ChangePasswordRequest, UserStatus, UserType, Gender, CurrentAction,
-    ApiSuccessResponseUserReadDto
+    ApiSuccessResponseUserReadDto, UserReadDto
 };
 
 // Group types
-pub use group::{GroupChat, GroupChatCreateRequest, ApiSuccessResponseGroupChatReadDto};
+pub use group::{GroupChat, GroupChatCreateRequest, ApiSuccessResponseGroupChatReadDto, GroupChatReadDto};
 
 // Invitation types
 pub use invitation::{
     Invitation, InvitationCreateRequest, InvitationUpdateRequest, 
-    InvitationStatus, ApiSuccessResponseInvitationReadDto
+    InvitationStatus, ApiSuccessResponseInvitationReadDto, InvitationReadDto, InvitationUpdateDto
 };
 
 // Common types
