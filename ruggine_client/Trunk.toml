@@ -7,9 +7,3 @@ ignore = ["./src-tauri"]
 [serve]
 port = 1420
 open = false
-
-# Temporarily disabled npm hook for Tauri builds
-# [[hooks]]
-# stage = "pre_build"
-# command = "npm"
-# command_arguments = ["run", "build-css"]

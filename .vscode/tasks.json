@@ -202,6 +202,73 @@
         "clear": false
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Tailwind: Watch CSS",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "watch-css"],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_client"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tailwind: Build CSS",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "./build-css.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/ruggine_client"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Start All Frontend",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Trunk: Serve Frontend",
+        "Tailwind: Watch CSS"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
     }
   ],
   "inputs": [

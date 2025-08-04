@@ -51,8 +51,8 @@ pub fn LoginPage() -> impl IntoView {
     view! {
         <div class="min-h-screen flex items-center justify-center bg-bg-main py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8">
-                <div class="text-center">
-                    <h1 class="text-3xl font-bold text-brand-primary mb-2">"Ruggine Chat"</h1>
+                <div class="text-center mb-8">
+                    <h1 class="text-5xl font-bold text-brand-primary mb-2">"Ruggine Chat"</h1>
                     <h2 class="text-lg text-brand-secondary-light">"Sign in to your account"</h2>
                 </div>
                 
@@ -94,7 +94,7 @@ pub fn LoginPage() -> impl IntoView {
                         on:click=handle_login
                         prop:disabled=loading
                         class={move || if loading.get() { 
-                            "w-full bg-blue-400 text-white font-medium py-2 px-4 rounded-lg cursor-not-allowed" 
+                            "w-full bg-brand-primary opacity-50 text-white font-medium py-2 px-4 rounded cursor-not-allowed transition-all duration-200" 
                         } else { 
                             "btn-primary w-full" 
                         }}
@@ -106,8 +106,8 @@ pub fn LoginPage() -> impl IntoView {
                     {move || {
                         error_message.get().map(|msg| {
                             view! {
-                                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                    <p class="text-sm text-red-700">{msg}</p>
+                                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                                    <p class="text-sm text-status-danger">{msg}</p>
                                 </div>
                             }
                         })
@@ -117,8 +117,8 @@ pub fn LoginPage() -> impl IntoView {
                     {move || {
                         success_message.get().map(|msg| {
                             view! {
-                                <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                    <p class="text-sm text-green-700">{msg}</p>
+                                <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                                    <p class="text-sm text-status-success">{msg}</p>
                                 </div>
                             }
                         })
@@ -151,7 +151,7 @@ pub fn LoginPage() -> impl IntoView {
                 </div>
 
                 // Test credentials info
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="card border-l-4 border-l-blue-500 bg-blue-50">
                     <h3 class="text-sm font-semibold text-blue-900 mb-2">"Test Credentials"</h3>
                     <div class="space-y-1 text-sm text-blue-700">
                         <p><span class="font-medium">"Email:"</span> " test@example.com"</p>

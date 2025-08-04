@@ -10,6 +10,7 @@ Enterprise-grade frontend client for the Ruggine chat system, built with modern 
 
 ### Technology Stack
 - **Frontend Framework**: [Leptos 0.6](https://leptos.dev) - Type-safe reactive web framework
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com) - Utility-first CSS framework
 - **HTTP Client**: [Reqwest 0.12](https://github.com/seanmonstar/reqwest) - Async HTTP client with WASM support
 - **Serialization**: [Serde](https://serde.rs) - High-performance serialization framework with JSON support
 - **Date/Time**: [Chrono 0.4](https://github.com/chronotope/chrono) - Date and time library with WASM support
@@ -17,6 +18,46 @@ Enterprise-grade frontend client for the Ruggine chat system, built with modern 
 - **Error Handling**: [ThisError](https://github.com/dtolnay/thiserror) - Derive macro for error types
 - **Build Tool**: [Trunk](https://trunkrs.dev) - WASM web application bundler
 - **Desktop Runtime**: [Tauri](https://tauri.app) - Cross-platform desktop application framework
+
+## 🎨 Styling with Tailwind CSS
+
+### 🚀 Recommended Development Workflow
+**One-command development setup:**
+```bash
+# VS Code Command Palette (Ctrl+Shift+P)
+Tasks: Run Task → Dev: Start All Frontend
+```
+This automatically starts both:
+- **Trunk**: Frontend compilation and hot reload
+- **Tailwind CSS Watcher**: Automatic CSS compilation
+
+### Alternative Development Workflows
+For manual control or advanced workflows:
+```bash
+# Start the Tailwind CSS watcher (runs in background)
+npm run watch-css
+
+# Or using PowerShell script
+.\build-css.ps1 -Watch
+```
+
+### Manual CSS Build
+For one-time CSS compilation:
+```bash
+# Build CSS once
+npm run build-css
+
+# Or using PowerShell script
+.\build-css.ps1
+```
+
+### Available VS Code Tasks
+Use the VS Code Command Palette (`Ctrl+Shift+P`):
+- **🚀 Ruggine: Start Development** - **RECOMMENDED**: Start complete development environment
+- `Tasks: Run Task` → `Trunk: Serve Frontend` - Frontend only
+- `Tasks: Run Task` → `Tailwind: Watch CSS` - CSS watcher only  
+- `Tasks: Run Task` → `Tailwind: Build CSS` - Build CSS once
+- `Tasks: Run Task` → `Tauri: Dev Client` - Desktop app development
 
 ### Architectural Layers
 
@@ -78,13 +119,23 @@ cargo install tauri-cli
 
 ### Development Server
 
+**🚀 RECOMMENDED - One-Command Setup:**
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd ruggine_client
 
+# Start complete development environment (VS Code)
+# Ctrl+Shift+P → Tasks: Run Task → 🚀 Ruggine: Start Development
+```
+
+**Alternative - Manual Setup:**
+```bash
 # Install dependencies and start development server
 trunk serve --open
+
+# In another terminal: start CSS watcher
+npm run watch-css
 ```
 
 The application will be available at `http://localhost:1420`
@@ -195,6 +246,12 @@ cargo test types::auth::tests
 - **Type Safety Validation**: Tests ensure proper serialization/deserialization and business logic methods
 
 ## 🔧 Development Guidelines
+
+### Quick Start Development
+1. **One Command**: `Ctrl+Shift+P` → `Tasks: Run Task` → **Dev: Start All Frontend**
+2. **Code**: Modify Rust files and Tailwind classes
+3. **Automatic**: Browser updates automatically with changes
+4. **Optional**: Add `Tauri: Dev Client` for desktop app
 
 ### Code Organization
 
