@@ -115,12 +115,14 @@ impl InvitationFactory {
     pub fn fake_invitation_update_status_dto() -> InvitationUpdateStatusDto {
         InvitationUpdateStatusDto {
             status: InvitationStatus::Accepted,
+            invitation_id: 1
         }
     }
 
     pub fn fake_invitation_update_status_dto_rejected() -> InvitationUpdateStatusDto {
         InvitationUpdateStatusDto {
             status: InvitationStatus::Rejected,
+            invitation_id: 1
         }
     }
 
@@ -143,6 +145,7 @@ impl InvitationFactory {
         UpdateInvitationStatus {
             status: InvitationStatus::Accepted,
             responded_at: Utc::now(),
+            invitation_id: 1
         }
     }
 
@@ -150,6 +153,7 @@ impl InvitationFactory {
         UpdateInvitationStatus {
             status: InvitationStatus::Rejected,
             responded_at: Utc::now(),
+            invitation_id: 1
         }
     }
 

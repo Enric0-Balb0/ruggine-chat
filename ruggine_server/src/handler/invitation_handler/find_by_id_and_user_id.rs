@@ -14,7 +14,7 @@ use axum::{extract::{Path, State}, Extension, Json};
     responses(
         (status = 200, description = "Invitation retrieved successfully", body = ApiSuccessResponseInvitationReadDto),
         (status = 401, description = "Unauthorized - Invalid or missing token"),
-        (status = 404, description = "Invitation not found"),
+        (status = 404, description = "Invitation not found or invitation not belonging to the authenticated user"),
         (status = 500, description = "Internal server error")
     ),
     tag = "Invitation",
@@ -22,11 +22,11 @@ use axum::{extract::{Path, State}, Extension, Json};
         ("bearer_auth" = [])
     )
 )]
-pub async fn find_by_id(
+pub async fn find_by_id_and_user_id(
     Extension(current_user): Extension<User>,
     State(state): State<InvitationState>,
     Path(id): Path<i32>,
 ) -> Result<Json<ApiSuccessResponse<InvitationReadDto>>, ApiError> {
-    let invitation = state.invitation_service.find_by_id(id, current_user.id).await?;
+    let invitation = state.invitation_service.find_by_id_and_user_id(id, current_user.id).await?;
     Ok(Json(ApiSuccessResponse::send(invitation)))
 }

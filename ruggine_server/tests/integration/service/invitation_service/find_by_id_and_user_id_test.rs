@@ -5,27 +5,27 @@ use ruggine_server::entity::invitation::InvitationStatus;
 use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_invitation, cleanup_invitation};
 
 #[cfg(test)]
-mod invitation_service_find_by_id_integration_tests {
+mod invitation_service_find_by_id_and_user_id_integration_tests {
     use ruggine_server::config::database::DatabaseTrait;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_success() {
+    async fn test_find_by_id_and_user_id_success() {
         // Arrange: Create real invitation in database
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
         
         // Create users and group
-        let (from_user, _) = create_test_user("find_by_id_from").await;
-        let (to_user, _) = create_test_user("find_by_id_to").await;
-        let group_chat = create_test_group_chat("find_by_id_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_group", from_user.id).await;
         
         // Create invitation using common helper
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
 
         // Act: Find the invitation by ID
-        let result1 = invitation_service.find_by_id(invitation.id, to_user.id).await;
-        let result2 = invitation_service.find_by_id(invitation.id, from_user.id).await;
+        let result1 = invitation_service.find_by_id_and_user_id(invitation.id, to_user.id).await;
+        let result2 = invitation_service.find_by_id_and_user_id(invitation.id, from_user.id).await;
 
         // Assert: Verify invitation was found successfully
         assert!(result1.is_ok(), "Failed to find invitation: {:?}", result1);
@@ -58,7 +58,7 @@ mod invitation_service_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_not_found() {
+    async fn test_find_by_id_and_user_id_not_found() {
         // Arrange: Use nonexistent invitation ID
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
@@ -66,7 +66,7 @@ mod invitation_service_find_by_id_integration_tests {
         let nonexistent_id = -1;
 
         // Act: Try to find nonexistent invitation
-        let result = invitation_service.find_by_id(nonexistent_id, nonexistent_id).await;
+        let result = invitation_service.find_by_id_and_user_id(nonexistent_id, nonexistent_id).await;
 
         // Assert: Should fail with InvitationNotFound
         assert!(result.is_err(), "Should fail when invitation doesn't exist");
@@ -79,28 +79,28 @@ mod invitation_service_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_different_invitations() {
+    async fn test_find_by_id_and_user_id_different_invitations() {
         // Arrange: Create multiple invitations
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
         
         // Create users and groups
-        let (from_user1, _) = create_test_user("find_by_id_from1").await;
-        let (from_user2, _) = create_test_user("find_by_id_from2").await;
-        let (to_user1, _) = create_test_user("find_by_id_to1").await;
-        let (to_user2, _) = create_test_user("find_by_id_to2").await;
-        let group_chat1 = create_test_group_chat("find_by_id_group1", from_user1.id).await;
-        let group_chat2 = create_test_group_chat("find_by_id_group2", from_user2.id).await;
+        let (from_user1, _) = create_test_user("find_by_id_and_user_id_from1").await;
+        let (from_user2, _) = create_test_user("find_by_id_and_user_id_from2").await;
+        let (to_user1, _) = create_test_user("find_by_id_and_user_id_to1").await;
+        let (to_user2, _) = create_test_user("find_by_id_and_user_id_to2").await;
+        let group_chat1 = create_test_group_chat("find_by_id_and_user_id_group1", from_user1.id).await;
+        let group_chat2 = create_test_group_chat("find_by_id_and_user_id_group2", from_user2.id).await;
         
         // Create different invitations
         let invitation1 = create_test_invitation(from_user1.id, to_user1.id, group_chat1.id).await;
         let invitation2 = create_test_invitation(from_user2.id, to_user2.id, group_chat2.id).await;
 
         // Act: Find both invitations
-        let result1 = invitation_service.find_by_id(invitation1.id, from_user1.id).await;
-        let result2 = invitation_service.find_by_id(invitation2.id, from_user2.id).await;
-        let result3 = invitation_service.find_by_id(invitation1.id, to_user1.id).await;
-        let result4 = invitation_service.find_by_id(invitation2.id, to_user2.id).await;
+        let result1 = invitation_service.find_by_id_and_user_id(invitation1.id, from_user1.id).await;
+        let result2 = invitation_service.find_by_id_and_user_id(invitation2.id, from_user2.id).await;
+        let result3 = invitation_service.find_by_id_and_user_id(invitation1.id, to_user1.id).await;
+        let result4 = invitation_service.find_by_id_and_user_id(invitation2.id, to_user2.id).await;
 
         // Assert: Both should be found with correct data
         assert!(result1.is_ok(), "Failed to find first invitation");
@@ -144,14 +144,14 @@ mod invitation_service_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_with_responded_invitation() {
+    async fn test_find_by_id_and_user_id_with_responded_invitation() {
         // Arrange: Create invitation and manually update its status
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
         
-        let (from_user, _) = create_test_user("find_by_id_responded_from").await;
-        let (to_user, _) = create_test_user("find_by_id_responded_to").await;
-        let group_chat = create_test_group_chat("find_by_id_responded_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_responded_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_responded_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_responded_group", from_user.id).await;
         
         // Create invitation
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
@@ -166,7 +166,7 @@ mod invitation_service_find_by_id_integration_tests {
         .expect("Failed to update invitation status");
 
         // Act: Find the responded invitation
-        let result = invitation_service.find_by_id(invitation.id, to_user.id).await;
+        let result = invitation_service.find_by_id_and_user_id(invitation.id, to_user.id).await;
 
         // Assert: Should find invitation with updated status
         assert!(result.is_ok(), "Failed to find responded invitation");
@@ -184,14 +184,14 @@ mod invitation_service_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_after_deletion() {
+    async fn test_find_by_id_and_user_id_after_deletion() {
         // Arrange: Create invitation then delete it
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
         
-        let (from_user, _) = create_test_user("find_by_id_deleted_from").await;
-        let (to_user, _) = create_test_user("find_by_id_deleted_to").await;
-        let group_chat = create_test_group_chat("find_by_id_deleted_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_deleted_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_deleted_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_deleted_group", from_user.id).await;
         
         // Create invitation
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
@@ -201,7 +201,7 @@ mod invitation_service_find_by_id_integration_tests {
         cleanup_invitation(invitation_id).await;
 
         // Act: Try to find deleted invitation
-        let result = invitation_service.find_by_id(invitation_id, to_user.id).await;
+        let result = invitation_service.find_by_id_and_user_id(invitation_id, to_user.id).await;
 
         // Assert: Should fail with InvitationNotFound
         assert!(result.is_err(), "Should fail when invitation is deleted");
@@ -219,21 +219,21 @@ mod invitation_service_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_multiple_sequential_calls() {
+    async fn test_find_by_id_and_user_id_multiple_sequential_calls() {
         // Arrange: Create invitation
         let db = get_database().await;
         let invitation_service = InvitationService::new(&db);
         
-        let (from_user, _) = create_test_user("find_by_id_sequential_from").await;
-        let (to_user, _) = create_test_user("find_by_id_sequential_to").await;
-        let group_chat = create_test_group_chat("find_by_id_sequential_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_sequential_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_sequential_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_sequential_group", from_user.id).await;
         
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
 
         // Act: Call find_by_id multiple times
-        let result1 = invitation_service.find_by_id(invitation.id, from_user.id).await;
-        let result2 = invitation_service.find_by_id(invitation.id, to_user.id).await;
-        let result3 = invitation_service.find_by_id(invitation.id, from_user.id).await;
+        let result1 = invitation_service.find_by_id_and_user_id(invitation.id, from_user.id).await;
+        let result2 = invitation_service.find_by_id_and_user_id(invitation.id, to_user.id).await;
+        let result3 = invitation_service.find_by_id_and_user_id(invitation.id, from_user.id).await;
 
         // Assert: All calls should succeed and return same data
         assert!(result1.is_ok(), "First call should succeed");

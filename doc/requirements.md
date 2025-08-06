@@ -112,7 +112,7 @@ ruggine_developer -u-> UC1
 | FR2.3   | Display group chat history between users |
 | **FR3** | Group chat management |
 | FR3.1   | Create a new group chat |
-| FR3.3   | Retrieve group chat participants and informations |
+| FR3.3   | Retrieve group chat generic informations |
 | **FR4** | Cross-platform compatibility |
 | FR4.1   | Run the app on at least two platforms (e.g., Android and Windows) |
 | **FR5** | Performance and resource monitoring |
@@ -143,6 +143,7 @@ ruggine_developer -u-> UC1
 | FR10.2   | Remove a user from a group |
 | FR10.3   | List all users in a group |
 | FR10.4   | List all groups a user is part of |
+| FR10.5   | Handle admin leaving group |
 
 ## Non Functional Requirements
 
@@ -188,7 +189,7 @@ rectangle "Ruggine Chat System" {
   usecase "Log CPU Usage\n(FR5.1, FR5.2)" as UC_LogCPU
   usecase "Run on Multiple Platforms\n(FR4.1)" as UC_CrossPlatform
 
-  usecase "Take part/leave Group Membership\n(FR10.1, FR10.2)" as UC_ManageGroup
+  usecase "Take part/leave Group Membership\n(FR10.1, FR10.2, 10.5)" as UC_ManageGroup
 
   usecase "Know which groups you are part of\n(FR10.3, FR10.4)" as UC_PartOfGroup
 }

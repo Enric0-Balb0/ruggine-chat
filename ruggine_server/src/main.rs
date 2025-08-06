@@ -19,7 +19,7 @@ mod service;
 mod middleware;
 mod handler;
 mod factory;
-
+mod model;
 mod utils;
 
 #[tokio::main]

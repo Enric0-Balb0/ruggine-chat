@@ -5,8 +5,8 @@ use crate::error::invitation_error::InvitationError;
 use crate::service::invitation_service::InvitationService;
 
 impl InvitationService {
-    pub async fn find_by_id_internal(&self, id: i32, user_id: i32) -> Result<InvitationReadDto, ApiError> {
-        match self.invitation_repo.find_by_id(id, user_id).await {
+    pub async fn find_by_id_and_user_id_internal(&self, id: i32, user_id: i32) -> Result<InvitationReadDto, ApiError> {
+        match self.invitation_repo.find_by_id_and_user_id(id, user_id).await {
             Ok(invitation) => Ok(InvitationReadDto::from(invitation)),
             Err(sqlx::Error::RowNotFound) => {
                 Err(ApiError::InvitationError(InvitationError::InvitationNotFound))
@@ -19,7 +19,7 @@ impl InvitationService {
 }
 
 #[cfg(test)]
-mod invitation_service_find_by_id_tests {
+mod invitation_service_find_by_id_and_user_id_tests {
     use super::*;
     use mockall::predicate::*;
     use crate::factory::invitation_factory::InvitationFactory;
@@ -27,13 +27,15 @@ mod invitation_service_find_by_id_tests {
     use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use std::sync::Arc;
+    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_internal_success() {
+    async fn test_find_by_id_and_user_id_internal_success() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let invitation_id = 1;
         let user_id = 1;
@@ -41,7 +43,7 @@ mod invitation_service_find_by_id_tests {
         let expected_invitation_clone = expected_invitation.clone();
 
         mock_invitation_repo
-            .expect_find_by_id()
+            .expect_find_by_id_and_user_id()
             .with(eq(invitation_id), eq(user_id))
             .times(1)
             .returning(move |_, _| {
@@ -53,10 +55,11 @@ mod invitation_service_find_by_id_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
-        let result = service.find_by_id_internal(invitation_id, user_id).await;
+        let result = service.find_by_id_and_user_id_internal(invitation_id, user_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -65,17 +68,18 @@ mod invitation_service_find_by_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_internal_invitation_not_found() {
+    async fn test_find_by_id_and_user_id_internal_invitation_not_found() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let invitation_id = -1;
         let user_id = -1;
 
         mock_invitation_repo
-            .expect_find_by_id()
+            .expect_find_by_id_and_user_id()
             .with(eq(invitation_id), eq(user_id))
             .times(1)
             .returning(move |_, _| {
@@ -86,10 +90,11 @@ mod invitation_service_find_by_id_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
-        let result = service.find_by_id_internal(invitation_id, user_id).await;
+        let result = service.find_by_id_and_user_id_internal(invitation_id, user_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -102,17 +107,18 @@ mod invitation_service_find_by_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_internal_database_error() {
+    async fn test_find_by_id_and_user_id_internal_database_error() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let invitation_id = 1;
         let user_id = 1;
 
         mock_invitation_repo
-            .expect_find_by_id()
+            .expect_find_by_id_and_user_id()
             .with(eq(invitation_id), eq(user_id))
             .times(1)
             .returning(move |_, _| {
@@ -123,10 +129,11 @@ mod invitation_service_find_by_id_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
-        let result = service.find_by_id_internal(invitation_id, user_id).await;
+        let result = service.find_by_id_and_user_id_internal(invitation_id, user_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -139,11 +146,12 @@ mod invitation_service_find_by_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_internal_different_invitation() {
+    async fn test_find_by_id_and_user_id_internal_different_invitation() {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let invitation_id = 5;
         let user_id = 4;
@@ -151,7 +159,7 @@ mod invitation_service_find_by_id_tests {
         let expected_invitation_clone = expected_invitation.clone();
 
         mock_invitation_repo
-            .expect_find_by_id()
+            .expect_find_by_id_and_user_id()
             .with(eq(invitation_id), eq(user_id))
             .times(1)
             .returning(move |_, _| {
@@ -163,10 +171,11 @@ mod invitation_service_find_by_id_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
-        let result = service.find_by_id_internal(invitation_id, user_id).await;
+        let result = service.find_by_id_and_user_id_internal(invitation_id, user_id).await;
 
         // Assert
         assert!(result.is_ok());

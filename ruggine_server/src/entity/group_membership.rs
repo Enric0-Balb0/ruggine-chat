@@ -6,25 +6,22 @@ use utoipa::ToSchema;
 #[derive(Clone, Debug, Deserialize, Serialize, sqlx::FromRow, Default, PartialEq, Eq)]
 pub struct GroupMembership {
     pub id: i32,
-    pub user_id: i32,
-    pub group_chat_id: i32,
     pub role: MemberRole,
     pub joined_at: DateTime<Utc>,
     pub left_at: Option<DateTime<Utc>>,
     pub membership_status: MembershipStatus,
+    pub invitation_id: i32, // Foreign key to Invitation
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct NewGroupMembership {
-    pub user_id: i32,
-    pub group_chat_id: i32,
     pub role: MemberRole,
+    pub invitation_id: i32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct UpdateGroupMembership {
-    pub user_id: i32,
-    pub group_chat_id: i32,
+    pub id: i32,
     pub role: Option<MemberRole>,
     pub membership_status: Option<MembershipStatus>,
     pub left_at: Option<DateTime<Utc>>,
@@ -103,8 +100,7 @@ mod tests {
     #[test]
     fn test_update_group_membership_has_updates() {
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: Some(MemberRole::Admin),
             left_at: None,
             membership_status: None,
@@ -112,8 +108,7 @@ mod tests {
         assert!(update.has_updates());
 
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: Some(Utc::now()),
             membership_status: None,
@@ -121,8 +116,7 @@ mod tests {
         assert!(update.has_updates());
 
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: None,
             membership_status: None,
@@ -130,8 +124,7 @@ mod tests {
         assert!(!update.has_updates());
 
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Active),
@@ -143,8 +136,7 @@ mod tests {
     fn test_group_membership_default() {
         let membership = GroupMembership::default();
         assert_eq!(membership.id, 0);
-        assert_eq!(membership.user_id, 0);
-        assert_eq!(membership.group_chat_id, 0);
+        assert_eq!(membership.invitation_id, 0);
         assert_eq!(membership.role, MemberRole::Member);
         assert!(membership.left_at.is_none());
     }
@@ -152,27 +144,23 @@ mod tests {
     #[test]
     fn test_new_group_membership() {
         let new_membership = NewGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            invitation_id: 1,
             role: MemberRole::Admin,
         };
-        assert_eq!(new_membership.user_id, 1);
-        assert_eq!(new_membership.group_chat_id, 1);
+        assert_eq!(new_membership.invitation_id, 1);
         assert_eq!(new_membership.role, MemberRole::Admin);
     }
 
     #[test]
     fn test_update_group_membership() {
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: Some(MemberRole::Admin),
             left_at: Some(Utc::now()),
             membership_status: Some(MembershipStatus::Left),
         };
-        
-        assert_eq!(update.user_id, 1);
-        assert_eq!(update.group_chat_id, 1);
+
+        assert_eq!(update.id, 1);
         assert_eq!(update.role, Some(MemberRole::Admin));
         assert!(update.left_at.is_some());
         assert_eq!(update.membership_status, Some(MembershipStatus::Left));
@@ -220,8 +208,7 @@ mod tests {
     fn test_update_group_membership_is_valid() {
         // membership_status is Left, left_at is Some => valid
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: Some(Utc::now()),
             membership_status: Some(MembershipStatus::Left),
@@ -230,8 +217,7 @@ mod tests {
 
         // membership_status is Left, left_at is None => not valid
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Left),
@@ -240,8 +226,7 @@ mod tests {
 
         // membership_status is Active, left_at is None => valid
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Active),
@@ -250,8 +235,7 @@ mod tests {
 
         // membership_status is None, left_at is None => valid
         let update = UpdateGroupMembership {
-            user_id: 1,
-            group_chat_id: 1,
+            id: 1,
             role: None,
             left_at: None,
             membership_status: None,

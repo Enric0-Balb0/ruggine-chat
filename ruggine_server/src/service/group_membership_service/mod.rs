@@ -1,0 +1,28 @@
+mod create_checked;
+pub mod group_membership_service;
+pub mod group_membership_service_trait;
+mod find_by_id_and_user_id;
+
+use std::sync::Arc;
+use async_trait::async_trait;
+use crate::dto::group_membership_dto::{GroupMembershipCreateDto, GroupMembershipReadDto};
+use crate::error::api_error::ApiError;
+pub use crate::service::group_membership_service::group_membership_service::GroupMembershipService;
+pub use crate::service::group_membership_service::group_membership_service_trait::GroupMembershipServiceTrait;
+use crate::service::invitation_service::InvitationServiceTrait;
+
+#[async_trait]
+impl GroupMembershipServiceTrait for GroupMembershipService {
+    fn set_invitation_service(&self, invitation_service: Arc<dyn InvitationServiceTrait>) {
+        let mut writable = self.invitation_service.write().unwrap();
+        *writable = Some(invitation_service);
+    }
+    async fn create_checked(&self, payload: GroupMembershipCreateDto, auth_user_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
+        self.create_checked_internal(payload, auth_user_id).await
+    }
+
+    async fn find_by_id_and_user_id(&self, id: i32, user_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
+        self.find_by_id_and_user_id_internal(id, user_id).await
+    }
+
+}

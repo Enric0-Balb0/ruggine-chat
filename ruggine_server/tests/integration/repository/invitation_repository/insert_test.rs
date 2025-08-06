@@ -7,7 +7,6 @@ use crate::common::{cleanup_user, create_test_user, cleanup_group_chat, create_t
 
 #[cfg(test)]
 mod invitation_repository_integration_tests {
-    use ruggine_server::config::database::DatabaseTrait;
     use ruggine_server::entity::invitation::NewInvitation;
     use crate::get_database;
     use super::*;
@@ -32,7 +31,7 @@ mod invitation_repository_integration_tests {
         assert!(invitation_id > 0, "Invitation ID should be positive");
 
         // Verify invitation was created correctly
-        let retrieved_invitation = repository.find_by_id(invitation_id, to_user.id).await;
+        let retrieved_invitation = repository.find_by_id_and_user_id(invitation_id, to_user.id).await;
         assert!(retrieved_invitation.is_ok(), "Should be able to retrieve created invitation");
         let invitation = retrieved_invitation.unwrap();
         assert_eq!(invitation.from_user_id, from_user.id);
@@ -194,7 +193,7 @@ mod invitation_repository_integration_tests {
         assert!(invitation_id > 0, "Invitation ID should be positive");
 
         // Verify the invitation
-        let retrieved_invitation = repository.find_by_id(invitation_id, to_user.id).await;
+        let retrieved_invitation = repository.find_by_id_and_user_id(invitation_id, to_user.id).await;
         assert!(retrieved_invitation.is_ok());
         let invitation = retrieved_invitation.unwrap();
         assert_eq!(invitation.from_user_id, from_user.id);

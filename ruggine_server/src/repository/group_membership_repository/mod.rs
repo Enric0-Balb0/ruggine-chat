@@ -1,7 +1,7 @@
 pub mod group_membership_repository_trait;
 pub mod group_membership_repository;
 mod insert;
-mod find_by_id;
+mod find_by_id_and_user_id;
 
 pub use group_membership_repository_trait::GroupMembershipRepositoryTrait;
 pub use group_membership_repository::GroupMembershipRepository;

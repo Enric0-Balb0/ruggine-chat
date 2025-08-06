@@ -1,18 +1,19 @@
 use std::sync::Arc;
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
+use ruggine_server::factory::invitation_factory::InvitationFactory;
 use ruggine_server::entity::invitation::{InvitationStatus, NewInvitation};
 use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_invitation, cleanup_invitation};
 
 #[cfg(test)]
-mod invitation_repository_find_by_id_integration_tests {
+mod invitation_repository_find_by_id_and_user_id_integration_tests {
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_success() {
+    async fn test_find_by_id_and_user_id_success() {
         // Arrange
-        let (from_user, _) = create_test_user("find_invitation_from").await;
-        let (to_user, _) = create_test_user("find_invitation_to").await;
-        let group_chat = create_test_group_chat("find_invitation_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_and_user_id_invitation_from").await;
+        let (to_user, _) = create_test_user("find_and_user_id_invitation_to").await;
+        let group_chat = create_test_group_chat("find_and_user_id_invitation_group", from_user.id).await;
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
@@ -25,11 +26,26 @@ mod invitation_repository_find_by_id_integration_tests {
         }).await.unwrap();
 
         // Act
-        let mut result = repository.find_by_id(invitation_id).await;
+        let mut result = repository.find_by_id_and_user_id(invitation_id, to_user.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should find the invitation successfully");
         let mut found_invitation = result.unwrap();
+        assert_eq!(found_invitation.id, invitation_id);
+        assert_eq!(found_invitation.from_user_id, from_user.id);
+        assert_eq!(found_invitation.to_user_id, to_user.id);
+        assert_eq!(found_invitation.group_chat_id, group_chat.id);
+        assert_eq!(found_invitation.status, InvitationStatus::Pending);
+        assert!(found_invitation.responded_at.is_none());
+        assert!(found_invitation.sent_at <= chrono::Utc::now());
+
+        // Now try with to_user_id
+        // Act
+        result = repository.find_by_id_and_user_id(invitation_id, from_user.id).await;
+
+        // Assert
+        assert!(result.is_ok(), "Should find the invitation successfully");
+        found_invitation = result.unwrap();
         assert_eq!(found_invitation.id, invitation_id);
         assert_eq!(found_invitation.from_user_id, from_user.id);
         assert_eq!(found_invitation.to_user_id, to_user.id);
@@ -46,14 +62,15 @@ mod invitation_repository_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_not_found() {
+    async fn test_find_by_id_and_user_id_not_found() {
         // Arrange
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
         let non_existent_id = -1;
+        let user_id = -1;
 
         // Act
-        let result = repository.find_by_id(non_existent_id).await;
+        let result = repository.find_by_id_and_user_id(non_existent_id, user_id).await;
 
         // Assert
         assert!(result.is_err(), "Should not find non-existent invitation");
@@ -64,26 +81,26 @@ mod invitation_repository_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_zero_id() {
+    async fn test_find_by_id_and_user_id_zero_id() {
         // Arrange
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
         let zero_id = 0;
 
         // Act
-        let result = repository.find_by_id(zero_id).await;
+        let result = repository.find_by_id_and_user_id(zero_id, zero_id).await;
 
         // Assert
         assert!(result.is_err(), "Should not find invitation with zero ID");
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_multiple_invitations() {
+    async fn test_find_by_id_and_user_id_multiple_invitations() {
         // Arrange
-        let (from_user, _) = create_test_user("multi_find_by_id_from").await;
-        let (to_user1, _) = create_test_user("multi_find_by_id_to1").await;
-        let (to_user2, _) = create_test_user("multi_find_by_id_to2").await;
-        let group_chat = create_test_group_chat("multi_find_by_id_group", from_user.id).await;
+        let (from_user, _) = create_test_user("multi_find_by_id_and_user_id_from").await;
+        let (to_user1, _) = create_test_user("multi_find_by_id_and_user_id_to1").await;
+        let (to_user2, _) = create_test_user("multi_find_by_id_and_user_id_to2").await;
+        let group_chat = create_test_group_chat("multi_find_by_id_and_user_id_group", from_user.id).await;
         
         let invitation1 = create_test_invitation(from_user.id, to_user1.id, group_chat.id).await;
         let invitation2 = create_test_invitation(from_user.id, to_user2.id, group_chat.id).await;
@@ -92,10 +109,10 @@ mod invitation_repository_find_by_id_integration_tests {
         let repository = InvitationRepository::new(&db);
 
         // Act
-        let result1 = repository.find_by_id(invitation1.id).await;
-        let result2 = repository.find_by_id(invitation2.id).await;
-        let result3 = repository.find_by_id(invitation1.id).await;
-        let result4 = repository.find_by_id(invitation2.id).await;
+        let result1 = repository.find_by_id_and_user_id(invitation1.id, from_user.id).await;
+        let result2 = repository.find_by_id_and_user_id(invitation2.id, from_user.id).await;
+        let result3 = repository.find_by_id_and_user_id(invitation1.id, to_user1.id).await;
+        let result4 = repository.find_by_id_and_user_id(invitation2.id, to_user2.id).await;
 
         // Assert
         assert!(result1.is_ok(), "Should find first invitation");
@@ -135,11 +152,11 @@ mod invitation_repository_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_concurrent_access() {
+    async fn test_find_by_id_and_user_id_concurrent_access() {
         // Arrange
-        let (from_user, _) = create_test_user("concurrent_find_by_id_from").await;
-        let (to_user1, _) = create_test_user("concurrent_find_by_id_to1").await;
-        let (to_user2, _) = create_test_user("concurrent_find_by_id_to2").await;
+        let (from_user, _) = create_test_user("concurrent_find_by_id_and_user_id_from").await;
+        let (to_user1, _) = create_test_user("concurrent_find_by_id_and_user_id_to1").await;
+        let (to_user2, _) = create_test_user("concurrent_find_by_id_and_user_id_to2").await;
         let group_chat = create_test_group_chat("concurrent_find_group", from_user.id).await;
         
         let invitation1 = create_test_invitation(from_user.id, to_user1.id, group_chat.id).await;
@@ -152,8 +169,8 @@ mod invitation_repository_find_by_id_integration_tests {
 
         // Act - Concurrent find operations
         let (result1, result2) = tokio::join!(
-            repo1.find_by_id(invitation1.id),
-            repo2.find_by_id(invitation2.id)
+            repo1.find_by_id_and_user_id(invitation1.id, to_user1.id),
+            repo2.find_by_id_and_user_id(invitation2.id, to_user2.id)
         );
 
         // Assert
@@ -177,11 +194,11 @@ mod invitation_repository_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_timestamp_validation() {
+    async fn test_find_by_id_and_user_id_timestamp_validation() {
         // Arrange
-        let (from_user, _) = create_test_user("find_by_id_timestamp_find_from").await;
-        let (to_user, _) = create_test_user("find_by_id_timestamp_find_to").await;
-        let group_chat = create_test_group_chat("find_by_id_timestamp_find_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_timestamp_find_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_timestamp_find_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_timestamp_find_group", from_user.id).await;
         
         let before_creation = chrono::Utc::now();
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
@@ -191,7 +208,7 @@ mod invitation_repository_find_by_id_integration_tests {
         let repository = InvitationRepository::new(&db);
 
         // Act
-        let result = repository.find_by_id(invitation.id).await;
+        let result = repository.find_by_id_and_user_id(invitation.id, from_user.id).await;
 
         // Assert
         assert!(result.is_ok(), "Should find invitation");
@@ -210,11 +227,11 @@ mod invitation_repository_find_by_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_id_database_consistency() {
+    async fn test_find_by_id_and_user_id_database_consistency() {
         // Arrange
-        let (from_user, _) = create_test_user("find_by_id_consistency_find_from").await;
-        let (to_user, _) = create_test_user("find_by_id_consistency_find_to").await;
-        let group_chat = create_test_group_chat("find_by_id_consistency_find_group", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_id_and_user_id_consistency_find_from").await;
+        let (to_user, _) = create_test_user("find_by_id_and_user_id_consistency_find_to").await;
+        let group_chat = create_test_group_chat("find_by_id_and_user_id_consistency_find_group", from_user.id).await;
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
@@ -228,9 +245,9 @@ mod invitation_repository_find_by_id_integration_tests {
         let invitation_id = repository.insert(new_invitation.clone()).await.unwrap();
 
         // Act - Find the invitation multiple times
-        let result1 = repository.find_by_id(invitation_id).await;
-        let result2 = repository.find_by_id(invitation_id).await;
-        let result3 = repository.find_by_id(invitation_id).await;
+        let result1 = repository.find_by_id_and_user_id(invitation_id, from_user.id).await;
+        let result2 = repository.find_by_id_and_user_id(invitation_id, to_user.id).await;
+        let result3 = repository.find_by_id_and_user_id(invitation_id, from_user.id).await;
 
         // Assert
         assert!(result1.is_ok(), "First find should succeed");

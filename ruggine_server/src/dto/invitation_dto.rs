@@ -55,6 +55,8 @@ impl From<Invitation> for InvitationReadDto {
 pub struct InvitationUpdateStatusDto {
     #[schema(example = "accepted")]
     pub status: InvitationStatus,
+    #[schema(example = "1")]
+    pub invitation_id: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
@@ -350,6 +352,7 @@ mod tests {
     fn test_invitation_update_status_dto_valid_accepted() {
         let update_dto = InvitationUpdateStatusDto {
             status: InvitationStatus::Accepted,
+            invitation_id: 1,
         };
 
         assert!(update_dto.validate().is_ok());
@@ -361,6 +364,7 @@ mod tests {
     fn test_invitation_update_status_dto_valid_rejected() {
         let update_dto = InvitationUpdateStatusDto {
             status: InvitationStatus::Rejected,
+            invitation_id: 1,
         };
 
         assert!(update_dto.validate().is_ok());
@@ -372,6 +376,7 @@ mod tests {
     fn test_invitation_update_status_dto_invalid_pending() {
         let update_dto = InvitationUpdateStatusDto {
             status: InvitationStatus::Pending,
+            invitation_id: 1,
         };
 
         assert!(update_dto.validate().is_ok()); // Basic validation passes
@@ -385,6 +390,7 @@ mod tests {
     fn test_invitation_update_status_dto_serialization() {
         let update_dto = InvitationUpdateStatusDto {
             status: InvitationStatus::Accepted,
+            invitation_id: 1,
         };
 
         // Test serialization to JSON
@@ -394,6 +400,7 @@ mod tests {
         // Test deserialization from JSON
         let deserialized: InvitationUpdateStatusDto = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.status, update_dto.status);
+        assert_eq!(deserialized.invitation_id, update_dto.invitation_id);
     }
 
     #[test]
@@ -505,9 +512,11 @@ mod tests {
 
         let update_dto1 = InvitationUpdateStatusDto {
             status: InvitationStatus::Accepted,
+            invitation_id: 1,
         };
         let update_dto2 = InvitationUpdateStatusDto {
             status: InvitationStatus::Accepted,
+            invitation_id: 1,
         };
         assert_eq!(update_dto1, update_dto2);
     }

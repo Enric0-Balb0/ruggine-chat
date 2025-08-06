@@ -55,7 +55,7 @@ impl InvitationService {
         match self.invitation_repo.insert(new_invitation).await {
             Ok(invitation_id) => {
                 // Retrieve the created invitation to return it
-                match self.invitation_repo.find_by_id(invitation_id, from_user_id).await {
+                match self.invitation_repo.find_by_id_and_user_id(invitation_id, from_user_id).await {
                     Ok(created_invitation) => Ok(InvitationReadDto::from(created_invitation)),
                     Err(e) => Err(ApiError::DbError(DbError::SomethingWentWrong(format!("Failed to retrieve created invitation: {}", e)))),
                 }
@@ -90,6 +90,7 @@ mod invitation_service_send_tests {
     use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use std::sync::Arc;
+    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_send_internal_success() {
@@ -97,6 +98,7 @@ mod invitation_service_send_tests {
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mut mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let from_user_id = 1;
         let to_user_id = 2;
@@ -161,7 +163,7 @@ mod invitation_service_send_tests {
 
         // Mock successful retrieval of created invitation
         mock_invitation_repo
-            .expect_find_by_id()
+            .expect_find_by_id_and_user_id()
             .with(eq(expected_invitation.id), eq(from_user_id))
             .times(1)
             .returning(move |_, _| {
@@ -173,6 +175,7 @@ mod invitation_service_send_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
@@ -192,6 +195,7 @@ mod invitation_service_send_tests {
         let mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mut mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let from_user_id = 1;
         let to_user_id = 999;
@@ -215,6 +219,7 @@ mod invitation_service_send_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
@@ -236,6 +241,7 @@ mod invitation_service_send_tests {
         let mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mut mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let from_user_id = 1;
         let to_user_id = 2;
@@ -283,6 +289,7 @@ mod invitation_service_send_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act
@@ -304,6 +311,7 @@ mod invitation_service_send_tests {
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
         let mut mock_user_service = MockUserServiceTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
 
         let from_user_id = 1;
         let to_user_id = 2;
@@ -363,6 +371,7 @@ mod invitation_service_send_tests {
             Arc::new(mock_invitation_repo),
             Arc::new(mock_group_chat_service),
             Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
         );
 
         // Act

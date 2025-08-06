@@ -22,6 +22,14 @@ impl MockDatabaseError {
             message: "Foreign key violation".to_string(),
         }))
     }
+
+    // PostgreSQL constraint violation code
+    pub fn constraint_violation() -> Error {
+        Error::Database(Box::new(Self {
+            code: "23505".to_string(),
+            message: "Constraint violation".to_string(),
+        }))
+    }
 }
 
 impl std::fmt::Display for MockDatabaseError {

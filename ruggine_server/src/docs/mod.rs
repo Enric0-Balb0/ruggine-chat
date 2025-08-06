@@ -31,7 +31,7 @@ use crate::handler::{
         group_chat_handler::create::create,
         group_chat_handler::find_by_id::find_by_id,
         invitation_handler::send::send,
-        invitation_handler::find_by_id::find_by_id,
+        invitation_handler::find_by_id_and_user_id::find_by_id_and_user_id,
     ),
     components(
         schemas(

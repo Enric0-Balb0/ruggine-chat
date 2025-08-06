@@ -17,6 +17,10 @@ pub enum InvitationError {
     AlreadyInvitationPending,
     #[error("User already in the group")]
     UserAlreadyInGroup,
+    #[error("User not authorized")]
+    UserNotAuthorized,
+    #[error("Invalid status: {0}")]
+    InvalidStatus(String),
 }
 
 impl IntoResponse for InvitationError {
@@ -27,6 +31,8 @@ impl IntoResponse for InvitationError {
             InvitationError::InvitationAlreadyResponded => StatusCode::CONFLICT,
             InvitationError::AlreadyInvitationPending => StatusCode::CONFLICT,
             InvitationError::UserAlreadyInGroup => StatusCode::CONFLICT,
+            InvitationError::UserNotAuthorized => StatusCode::FORBIDDEN,
+            InvitationError::InvalidStatus(_) => StatusCode::BAD_REQUEST,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

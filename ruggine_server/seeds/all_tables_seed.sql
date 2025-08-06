@@ -105,7 +105,7 @@ CREATE TABLE invitation (
     from_user_id INTEGER NOT NULL REFERENCES "user"(id),
     to_user_id INTEGER NOT NULL REFERENCES "user"(id),
     group_chat_id INTEGER NOT NULL REFERENCES group_chat(id),
-    status invitation_status DEFAULT 'pending',
+    status invitation_status NOT NULL DEFAULT 'pending',
     sent_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     responded_at TIMESTAMPTZ
 );
@@ -115,7 +115,23 @@ CREATE UNIQUE INDEX unique_pending_invitation
 ON invitation (from_user_id, to_user_id, group_chat_id)
 WHERE status = 'pending';
 
--- Inserimento record di esempio
+-- Inserimento records di esempio
+INSERT INTO invitation (
+    from_user_id,
+    to_user_id,
+    group_chat_id,
+    status,
+    sent_at,
+    responded_at
+) VALUES (
+    1,            -- from_user_id
+    1,            -- to_user_id
+    1,            -- group_chat_id
+    'accepted',    -- status
+    DEFAULT,      -- sent_at
+    DEFAULT       -- responded_at
+);
+
 INSERT INTO invitation (
     from_user_id,
     to_user_id,
@@ -151,19 +167,44 @@ END$$;
 -- Creazione della tabella group_membership
 CREATE TABLE group_membership (
     id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES "user"(id),
-    group_chat_id INT NOT NULL REFERENCES group_chat(id),
-    role member_role DEFAULT 'member',
+    role member_role NOT NULL DEFAULT 'member',
     membership_status membership_status NOT NULL DEFAULT 'active',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    invitation_id INT NOT NULL UNIQUE REFERENCES invitation(id),
     left_at TIMESTAMPTZ
 );
 
--- Inserimento di un record di esempio
-INSERT INTO group_membership (user_id, group_chat_id, role)
-VALUES (1, 1, 'admin');
+-- Crea trigger per evitare più group membership attivi dello stesso user allo stesso gruppo
+CREATE OR REPLACE FUNCTION prevent_duplicate_active_memberships()
+RETURNS trigger AS $$
+BEGIN
+    IF NEW.membership_status = 'active' THEN
+        IF EXISTS (
+            SELECT 1
+            FROM group_membership gm
+            JOIN invitation i ON gm.invitation_id = i.id
+            WHERE i.to_user_id = (
+                SELECT i2.to_user_id FROM invitation i2 WHERE i2.id = NEW.invitation_id
+            )
+            AND i.group_chat_id = (
+                SELECT i2.group_chat_id FROM invitation i2 WHERE i2.id = NEW.invitation_id
+            )
+            AND gm.membership_status = 'active'
+            AND gm.id != NEW.id
+        ) THEN
+            RAISE EXCEPTION 'Only one active membership allowed per user per group_chat';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- Crea nuovo vincolo basato su status
-CREATE UNIQUE INDEX unique_active_membership
-ON group_membership (user_id, group_chat_id)
-WHERE membership_status = 'active';
+CREATE TRIGGER check_unique_active_membership
+BEFORE INSERT OR UPDATE ON group_membership
+FOR EACH ROW
+EXECUTE FUNCTION prevent_duplicate_active_memberships();
+
+-- Inserimento di un record di esempio
+INSERT INTO group_membership (role, invitation_id)
+VALUES ('admin', 1);
+

@@ -15,3 +15,4 @@ pub mod service;
 pub mod state;
 pub mod factory;
 pub mod utils;
+pub mod model;

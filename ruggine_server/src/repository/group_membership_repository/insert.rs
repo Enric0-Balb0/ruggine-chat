@@ -9,16 +9,15 @@ impl GroupMembershipRepository {
 
         let query = sqlx::query_scalar(
             r#"
-        INSERT INTO "group_membership" (user_id, group_chat_id, role, joined_at, membership_status)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO "group_membership" (role, joined_at, membership_status, invitation_id)
+        VALUES ($1, $2, $3, $4)
         RETURNING id
         "#
         )
-            .bind(new_membership.user_id)
-            .bind(new_membership.group_chat_id)
             .bind(new_membership.role)
             .bind(now)
-            .bind(MembershipStatus::Active);
+            .bind(MembershipStatus::Active)
+            .bind(new_membership.invitation_id);
 
         match query.fetch_one(self.db_conn.get_pool()).await {
             Ok(id) => Ok(id),
@@ -145,8 +144,8 @@ mod group_membership_repository_insert_tests {
         // Arrange
         let mut mock_group_membership_repo = MockGroupMembershipRepositoryTrait::new();
         
-        let membership1 = GroupMembershipFactory::fake_new_group_membership_with_ids(0, 0);
-        let membership2 = GroupMembershipFactory::fake_new_group_membership_with_ids(0, 1);
+        let membership1 = GroupMembershipFactory::fake_new_group_membership_with_id(0);
+        let membership2 = GroupMembershipFactory::fake_new_group_membership_with_id(1);
 
         let expected_id1 = 100;
         let expected_id2 = 200;

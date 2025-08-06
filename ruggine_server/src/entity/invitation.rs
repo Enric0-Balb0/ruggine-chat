@@ -23,6 +23,7 @@ pub struct NewInvitation {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct UpdateInvitationStatus {
+    pub invitation_id: i32,
     pub status: InvitationStatus,
     pub responded_at: DateTime<Utc>,
 }
@@ -51,14 +52,6 @@ impl Invitation {
             from_user_id,
             to_user_id,
             group_chat_id,
-        }
-    }
-
-    /// Updates the invitation status and sets responded_at timestamp
-    pub fn update_status(status: InvitationStatus) -> UpdateInvitationStatus {
-        UpdateInvitationStatus {
-            status,
-            responded_at: Utc::now(),
         }
     }
 

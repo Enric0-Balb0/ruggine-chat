@@ -14,6 +14,7 @@ use ruggine_server::entity::user::User;
 use ruggine_server::entity::invitation::{Invitation, NewInvitation};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
+use ruggine_server::model::group_membership_model::GroupMembershipWithInvitationRow;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::group_membership_repository::GroupMembershipRepositoryTrait;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
@@ -209,7 +210,7 @@ pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_ch
         .expect("Failed to insert test invitation");
 
     // Get the created invitation from database
-    let invitation_result = repository.find_by_id(inserted_id, to_user_id).await;
+    let invitation_result = repository.find_by_id_and_user_id(inserted_id, to_user_id).await;
     assert!(invitation_result.is_ok(), "Invitation not found in database");
     invitation_result.unwrap()
 }
@@ -226,35 +227,35 @@ pub async fn cleanup_invitation(invitation_id: i32) {
 }
 
 pub async fn create_test_group_membership(
+    invitation_id: i32,
     user_id: i32,
-    group_chat_id: i32,
-) -> ruggine_server::entity::group_membership::GroupMembership {
+) -> GroupMembershipWithInvitationRow {
     let db = get_database().await;
     let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
 
-    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_group_membership_with_ids(user_id, group_chat_id);
+    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_group_membership_with_id(invitation_id);
     let inserted_id = repository.insert(new_membership.clone()).await
         .expect("Failed to insert test group membership");
 
     // Get the created membership from database
-    let membership_result = repository.find_by_id(inserted_id).await;
+    let membership_result = repository.find_by_id_and_user_id(inserted_id, user_id).await;
     assert!(membership_result.is_ok(), "Group membership not found in database");
     membership_result.unwrap()
 }
 
 pub async fn create_test_admin_group_membership(
+    invitation_id: i32,
     user_id: i32,
-    group_chat_id: i32
-) -> ruggine_server::entity::group_membership::GroupMembership {
+) -> GroupMembershipWithInvitationRow {
     let db = get_database().await;
     let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
 
-    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_admin_group_membership_with_ids(user_id, group_chat_id);
+    let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_admin_group_membership_with_id(invitation_id);
     let inserted_id = repository.insert(new_membership.clone()).await
         .expect("Failed to insert test group membership");
 
     // Get the created membership from database
-    let membership_result = repository.find_by_id(inserted_id).await;
+    let membership_result = repository.find_by_id_and_user_id(inserted_id, user_id).await;
     assert!(membership_result.is_ok(), "Group membership not found in database");
     membership_result.unwrap()
 }

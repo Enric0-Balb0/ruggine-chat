@@ -43,11 +43,10 @@ erDiagram
     %% GroupMembership Entity
     GROUP_MEMBERSHIP {
         int id PK "SERIAL"
-        int user_id FK "NOT NULL"
-        int group_chat_id FK "NOT NULL"
         member_role role "DEFAULT 'member'"
         membership_status membership_status "NOT NULL, DEFAULT 'active'"
         timestamptz joined_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
+        int invitation_id FK "UNIQUE, NOT NULL"
         timestamptz left_at "NULLABLE"
     }
 
@@ -77,6 +76,7 @@ erDiagram
     TEXT_MESSAGE }o--|| GROUP_CHAT : "group_chat_id"
     GROUP_MEMBERSHIP }o--|| USER : "user_id"
     GROUP_MEMBERSHIP }o--|| GROUP_CHAT : "group_chat_id"
+    GROUP_MEMBERSHIP o|--|| INVITATION : "invitation_id"
     INVITATION }o--|| USER : "from_user_id"
     INVITATION }o--|| USER : "to_user_id"
     INVITATION }o--|| GROUP_CHAT : "group_chat_id"

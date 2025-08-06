@@ -2,7 +2,7 @@ use crate::{api_success_response_alias, dto::user_dto::{UserReadDto, ProfileUpda
 use crate::dto::token_dto::TokenReadDto;
 use crate::dto::group_chat_dto::{GroupChatReadDto, GroupChatCreateDto, GroupChatUpdateDto};
 use crate::dto::invitation_dto::{InvitationReadDto, InvitationCreateDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto};
-use crate::dto::group_membership_dto::{GroupMembershipReadDto, CreateGroupMembershipDto, CreateAdminGroupMembershipDto};
+use crate::dto::group_membership_dto::{GroupMembershipReadDto, GroupMembershipCreateDto, CreateAdminGroupMembershipDto};
 
 pub mod token_dto;
 pub mod user_dto;
