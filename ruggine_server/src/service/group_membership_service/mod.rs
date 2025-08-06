@@ -3,6 +3,7 @@ pub mod group_membership_service;
 pub mod group_membership_service_trait;
 mod find_by_id_and_user_id;
 mod find_by_user_id;
+mod find_by_user_id_and_group_id;
 
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -28,6 +29,10 @@ impl GroupMembershipServiceTrait for GroupMembershipService {
 
     async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError> {
         self.find_by_user_id_internal(user_id).await
+    }
+
+    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
+        self.find_by_user_id_and_group_id_internal(user_id, group_id).await
     }
 
 }

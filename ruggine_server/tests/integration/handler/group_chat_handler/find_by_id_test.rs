@@ -14,6 +14,8 @@ use std::sync::Arc;
 #[cfg(test)]
 mod find_by_id_handler_integration_tests {
     use ruggine_server::service::user_service::UserService;
+    use ruggine_server::utils::service_initializer::ServiceInitializer;
+    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, create_group_chat_state};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -208,12 +210,13 @@ mod find_by_id_handler_integration_tests {
         let (user, _) = create_test_user("find_handler_after_create").await;
         
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
-        let user_service = UserService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+        let user_service = service_init.user_service();
         
         let state = GroupChatState {
-            group_chat_service: Arc::new(group_chat_service),
-            user_service: Arc::new(user_service),
+            group_chat_service,
+            user_service,
         };
 
         // Create group chat using service
@@ -239,6 +242,7 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(data.created_by, created_group.created_by);
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, created_group.id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
@@ -248,19 +252,12 @@ mod find_by_id_handler_integration_tests {
         // Arrange: Create user and group chat
         let (user, _) = create_test_user("find_handler_concurrent").await;
         let group = create_test_group_chat("find_handler_concurrent", user.id).await;
-        
-        let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
-        let user_service = UserService::new(&db);
 
-        let state = GroupChatState {
-            group_chat_service: Arc::new(group_chat_service),
-            user_service: Arc::new(user_service),
-        };
+        let state = create_group_chat_state().await;
 
         // Act: Multiple concurrent find operations
         let mut handles = vec![];
-        for i in 0..5 {
+        for _i in 0..5 {
             let user_clone = user.clone();
             let state_clone = state.clone();
             let group_id = group.id;

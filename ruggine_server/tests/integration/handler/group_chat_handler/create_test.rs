@@ -1,7 +1,5 @@
 use ruggine_server::handler::group_chat_handler::create::create;
-use ruggine_server::dto::group_chat_dto::GroupChatCreateDto;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
-use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::request_error::ValidatedRequest;
 use axum::{extract::State, Extension};
 use crate::common::{create_test_user, cleanup_group_chat, cleanup_user, create_group_chat_state};
@@ -10,14 +8,14 @@ use crate::common::{create_test_user, cleanup_group_chat, cleanup_user, create_g
 mod group_chat_create_handler_integration_tests {
     use ruggine_server::error::api_error::ApiError::DbError;
     use ruggine_server::factory::user_factory::UserFactory;
-    use crate::create_login_and_get_token;
+    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, create_login_and_get_token};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_handler_success() {
         // Arrange: Create a real user and group chat state
         let group_chat_state = create_group_chat_state().await;
-        let (user, password, token) = create_login_and_get_token("handler_create_success".to_string()).await;
+        let (user, _password, _token) = create_login_and_get_token("handler_create_success".to_string()).await;
         
         // Create unique group chat data using factory
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("handler_integration_success");
@@ -42,6 +40,7 @@ mod group_chat_create_handler_integration_tests {
         assert!(group_dto.updated_at <= chrono::Utc::now());
 
         // Cleanup: Delete the test group and user
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_dto.id).await;
         cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email).await;
     }
@@ -74,6 +73,7 @@ mod group_chat_create_handler_integration_tests {
         assert_eq!(group_dto.created_by, user.id);
 
         // Cleanup: Delete the test group and user
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_dto.id).await;
         cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email).await;
     }
@@ -187,6 +187,9 @@ mod group_chat_create_handler_integration_tests {
         assert_ne!(group2.name, group3.name);
 
         // Cleanup: Delete all test groups and user
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group1.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group2.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group3.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group3.id).await;

@@ -33,7 +33,6 @@ mod tests {
     use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
     use crate::service::user_service::user_service_trait::MockUserServiceTrait;
     use crate::entity::group_membership::{MemberRole, MembershipStatus};
-    use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
     use chrono::Utc;
 
     fn setup_service_with_mock_repo(mock_repo: MockGroupMembershipRepositoryTrait) -> GroupMembershipService {

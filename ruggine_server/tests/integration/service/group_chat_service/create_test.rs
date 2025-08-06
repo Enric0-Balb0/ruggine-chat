@@ -10,17 +10,17 @@ use crate::common::{get_database, create_test_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_create_service_integration_tests {
-    use crate::cleanup_user;
+    use ruggine_server::utils::service_initializer::ServiceInitializer;
+    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, cleanup_group_membership, cleanup_invitation, cleanup_user};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_create_group_chat_with_real_user() {
         // Arrange: Create a real user in the database
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
-        let group_repo = GroupChatRepository::new(&db);
-        let invitation_repo = InvitationRepository::new(&db);
-        let membership_repo = GroupMembershipRepository::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
         
         // Create a unique user using common helper
         let (user, _password) = create_test_user("group_create").await;
@@ -41,25 +41,10 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group_dto.created_by, user.id);
         assert!(group_dto.created_at <= chrono::Utc::now());
         assert!(group_dto.updated_at <= chrono::Utc::now());
-
-        // Verify the group exists in the database
-        /* let group_in_db = group_repo.find_by_id(group_dto.id).await;
-        assert!(group_in_db.is_ok(), "Group should exist in database");
-        let group = group_in_db.unwrap();
-        assert_eq!(group.name, create_dto.name);
-        assert_eq!(group.description, create_dto.description);
-        assert_eq!(group.created_by, user.id); */
-
-        // Verify that a group membership was created for the creator
-        let memberships_result = membership_repo.find_by_user_id(user.id).await;
-        assert!(memberships_result.is_ok(), "Should find memberships for user");
-        let memberships = memberships_result.unwrap();
         
-        // Find the membership for our group
-        let our_membership = memberships.iter()
-            .find(|membership| membership.group_chat_id == group_dto.id)
-            .expect("Should find membership for the created group");
-        
+        // Find the membership with associated invitation for our group
+        let our_membership = group_membership_service.find_by_user_id_and_group_id(user.id, group_dto.id).await.unwrap();
+
         assert_eq!(our_membership.role, MemberRole::Admin, "Creator should be admin");
         assert_eq!(our_membership.membership_status, MembershipStatus::Active, "Membership should be active");
         assert_eq!(our_membership.user_id, user.id, "Membership should belong to the creator");
@@ -68,6 +53,8 @@ mod group_chat_create_service_integration_tests {
         assert!(our_membership.left_at.is_none(), "Creator should not have left the group");
 
         // Cleanup: Delete the test group and user
+        cleanup_group_membership(our_membership.id).await;
+        cleanup_invitation(our_membership.invitation_id).await;
         cleanup_group_chat(group_dto.id).await;
         cleanup_user(user.email.clone()).await;
     }
@@ -99,7 +86,9 @@ mod group_chat_create_service_integration_tests {
     async fn test_create_group_chat_with_duplicate_name() {
         // Arrange: Create a real user and first group chat
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
         
         let (user, _password) = create_test_user("duplicate_group").await;
         
@@ -127,10 +116,10 @@ mod group_chat_create_service_integration_tests {
         // Both groups created successfully (no unique constraint)
         assert_ne!(group1.id, group2.id, "Groups should have different IDs");
 
-        // Cleanup both groups
+        // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group1.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group2.id).await;
         cleanup_group_chat(group2.id).await;
-
-        // Cleanup: Delete the test group and user
         cleanup_group_chat(group1.id).await;
         cleanup_user(user.email.clone()).await;
     }
@@ -139,8 +128,9 @@ mod group_chat_create_service_integration_tests {
     async fn test_create_multiple_groups_for_same_user() {
         // Arrange: Create a real user
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
-        let membership_repo = GroupMembershipRepository::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
         
         let (user, _password) = create_test_user("multiple_groups").await;
         
@@ -179,7 +169,7 @@ mod group_chat_create_service_integration_tests {
         assert_ne!(group2.name, group3.name);
 
         // Verify that the user has memberships in all three groups
-        let memberships_result = membership_repo.find_by_user_id(user.id).await;
+        let memberships_result = group_membership_service.find_by_user_id(user.id).await;
         assert!(memberships_result.is_ok(), "Should find memberships for user");
         let memberships = memberships_result.unwrap();
         
@@ -200,6 +190,9 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group3_membership.membership_status, MembershipStatus::Active);
 
         // Cleanup: Delete all test groups and user
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group1.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group2.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group3.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group3.id).await;

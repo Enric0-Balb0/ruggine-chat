@@ -12,4 +12,5 @@ pub trait GroupMembershipServiceTrait: Send + Sync {
     async fn create_checked(&self, payload: GroupMembershipCreateDto, auth_user_id: i32) -> Result<GroupMembershipReadDto, ApiError>;
     async fn find_by_id_and_user_id(&self, id: i32, user_id: i32) -> Result<GroupMembershipReadDto, ApiError>;
     async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
+    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError>;
 }

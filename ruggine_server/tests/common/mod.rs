@@ -26,6 +26,7 @@ use ruggine_server::state::group_chat_state::GroupChatState;
 use ruggine_server::state::invitation_state::InvitationState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
+use ruggine_server::utils::service_initializer::ServiceInitializer;
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -57,7 +58,14 @@ pub async fn cleanup_user(email: String) {
     if let Err(e) = repository.delete_by_email(email.clone()).await {
         panic!("Cleanup failed for {}: {:?}", email, e);
     }
-    
+}
+
+pub async fn cleanup_user_by_id(id: i32) {
+    let db = get_database().await;
+    let repository = UserRepository::new(&db);
+    if let Err(e) = repository.delete_by_id(id).await {
+        panic!("Cleanup failed for {}: {:?}", id, e);
+    }
 }
 
 pub async fn create_user_router() -> Router {
@@ -192,7 +200,11 @@ pub async fn cleanup_group_chat(group_id: i32) {
 /// Helper function to create a real group chat state with database connections
 pub async fn create_group_chat_state() -> GroupChatState {
     let db = get_database().await;
-    GroupChatState::new(&db)
+    let service_init = ServiceInitializer::new(&db);
+    GroupChatState {
+        group_chat_service: service_init.group_chat_service(),
+        user_service: service_init.user_service(),
+    }
 }
 
 /// Helper function to create a test invitation in the database
@@ -289,6 +301,15 @@ pub async fn cleanup_group_membership(membership_id: i32) {
     if let Err(e) = repository.delete_by_id(membership_id).await {
         panic!("Cleanup failed for group membership with id {}: {:?}", membership_id, e);
     }
+}
+
+pub async fn clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user_id: i32, group_chat_id: i32) {
+    let db = get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let group_membership_service = service_init.group_membership_service();
+    let group_membership = group_membership_service.find_by_user_id_and_group_id(user_id, group_chat_id).await.unwrap();
+    cleanup_group_membership(group_membership.id).await;
+    cleanup_invitation(group_membership.invitation_id).await;
 }
 
 pub async fn cleanup_group_membership_by_invitation_id(invitation_id: i32) {

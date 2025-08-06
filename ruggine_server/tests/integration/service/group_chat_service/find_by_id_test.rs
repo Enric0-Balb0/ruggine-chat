@@ -10,6 +10,7 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_
 mod group_chat_service_find_by_id_integration_tests {
     use ruggine_server::error::group_chat_error::GroupChatError;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
+    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, cleanup_group_membership, cleanup_invitation};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -20,6 +21,7 @@ mod group_chat_service_find_by_id_integration_tests {
 
         let service_init = ServiceInitializer::new(&db);
         let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
 
         // First create a group to find
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("service_find_test");
@@ -39,6 +41,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.created_at <= found_group.updated_at);
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, found_group.id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
@@ -86,6 +89,7 @@ mod group_chat_service_find_by_id_integration_tests {
         let db = get_database().await;
         let service_init = ServiceInitializer::new(&db);
         let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
 
         // Create multiple groups
         let create_dto1 = GroupChatFactory::unique_fake_group_chat_create_dto("multi_service_1");
@@ -112,6 +116,8 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_ne!(found_group1.id, found_group2.id);
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, found_group1.id).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, found_group2.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_user(user.email).await;
@@ -124,6 +130,7 @@ mod group_chat_service_find_by_id_integration_tests {
         let db = get_database().await;
         let service_init = ServiceInitializer::new(&db);
         let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
 
         // Use factory with specific data
         let create_dto = GroupChatFactory::with_name_dto(
@@ -148,6 +155,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_eq!(found_group.created_by, user.id);
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, found_group.id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
@@ -157,7 +165,9 @@ mod group_chat_service_find_by_id_integration_tests {
         // Arrange
         let (user, _) = create_test_user("concurrent_service_find_creator").await;
         let db = get_database().await;
-        let group_chat_service = Arc::new(GroupChatService::new(&db));
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
 
         // Create a group first
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("concurrent_service_find");
@@ -190,6 +200,7 @@ mod group_chat_service_find_by_id_integration_tests {
         }
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, created_group.id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
@@ -201,6 +212,7 @@ mod group_chat_service_find_by_id_integration_tests {
         let db = get_database().await;
         let service_init = ServiceInitializer::new(&db);
         let group_chat_service = service_init.group_chat_service();
+        let group_membership_service = service_init.group_membership_service();
 
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("timestamp_service_test");
 
@@ -218,6 +230,9 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.updated_at <= chrono::Utc::now());
 
         // Cleanup
+        let group_membership = group_membership_service.find_by_user_id_and_group_id(user.id, found_group.id).await.unwrap();
+        cleanup_group_membership(group_membership.id).await;
+        cleanup_invitation(group_membership.invitation_id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }

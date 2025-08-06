@@ -24,4 +24,15 @@ impl UserRepository {
 
         Ok(result.rows_affected() as i32)
     }
+
+    pub async fn delete_by_id(&self, id: i32) -> Result<i32, SqlxError> {
+        let result = sqlx::query!(
+            "DELETE FROM \"user\" WHERE id = $1",
+            id
+        )
+            .execute(self.db_conn.get_pool())
+            .await?;
+
+        Ok(result.rows_affected() as i32)
+    }
 }

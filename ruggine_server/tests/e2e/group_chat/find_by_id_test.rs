@@ -8,6 +8,7 @@ use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, 
 
 #[cfg(test)]
 mod find_by_id_group_chat_e2e_tests {
+    use crate::clean_up_group_membership_invitation_by_user_id_and_group_chat_id;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -291,6 +292,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(data["created_by"].as_i64().unwrap(), user.id as i64);
 
         // Cleanup
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
         cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }

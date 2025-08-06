@@ -10,6 +10,7 @@ use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, 
 
 #[cfg(test)]
 mod create_group_chat_e2e_tests {
+    use crate::clean_up_group_membership_invitation_by_user_id_and_group_chat_id;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -57,6 +58,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         let group_id = data["id"].as_i64().unwrap() as i32;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
         cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
@@ -257,6 +259,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
+            clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;
@@ -278,8 +281,6 @@ mod create_group_chat_e2e_tests {
             "description": group_description
         });
 
-        let mut group_ids = Vec::new();
-
         // Act: Create group with user1
         let request1 = Request::builder()
             .method("POST")
@@ -296,7 +297,6 @@ mod create_group_chat_e2e_tests {
         let response_text1 = String::from_utf8(body1.to_vec()).unwrap();
         let response_json1: serde_json::Value = serde_json::from_str(&response_text1).unwrap();
         let group_id1 = response_json1["data"]["id"].as_i64().unwrap() as i32;
-        group_ids.push(group_id1);
 
         // Act: Create group with same name but user2
         let request2 = Request::builder()
@@ -314,7 +314,6 @@ mod create_group_chat_e2e_tests {
         let response_text2 = String::from_utf8(body2.to_vec()).unwrap();
         let response_json2: serde_json::Value = serde_json::from_str(&response_text2).unwrap();
         let group_id2 = response_json2["data"]["id"].as_i64().unwrap() as i32;
-        group_ids.push(group_id2);
 
         // Assert: Both groups should be created successfully with different IDs
         assert_ne!(group_id1, group_id2, "Groups should have different IDs");
@@ -322,9 +321,10 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response_json2["data"]["created_by"].as_i64().unwrap(), user2.id as i64);
 
         // Cleanup
-        for group_id in group_ids {
-            cleanup_group_chat(group_id).await;
-        }
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user1.id, group_id1).await;
+        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user2.id, group_id2).await;
+        cleanup_group_chat(group_id1).await;
+        cleanup_group_chat(group_id2).await;
         cleanup_user(user1.email).await;
         cleanup_user(user2.email).await;
     }
@@ -391,6 +391,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
+            clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;
