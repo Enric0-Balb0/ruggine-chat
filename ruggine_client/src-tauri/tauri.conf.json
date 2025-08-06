@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.enric.ruggine_client",
   "build": {
-    "beforeDevCommand": "trunk serve",
+    "beforeDevCommand": "",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "trunk build",
     "frontendDist": "../dist"

@@ -1,0 +1,63 @@
+/* Global Base Styles and Design Tokens */
+@layer base {
+  :root {
+    /* Brand Colors from UI Mock */
+    --color-primary: #464775;        /* Header background */
+    --color-primary-light: #6264a7;  /* User avatar, links */
+    --color-secondary: #323130;      /* Main text */
+    --color-secondary-light: #605e5c; /* Secondary text */
+    
+    /* Background Colors */
+    --color-bg-main: #f3f2f1;        /* Main background */
+    --color-bg-sidebar: #f8f8f8;     /* Sidebar background */
+    --color-bg-white: #ffffff;       /* Cards, buttons */
+    
+    /* Border Colors */
+    --color-border: #e1dfdd;         /* Main borders */
+    --color-border-light: #c8c6c4;   /* Hover borders */
+    
+    /* Status Colors */
+    --color-success: #107c10;        /* Online status, success */
+    --color-danger: #c4314b;         /* Error, danger actions */
+    --color-warning: #f7630c;        /* Warning states */
+    
+    /* Typography */
+    --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-base: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-full: 50%;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  html {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+    background-color: var(--color-bg-main);
+    color: var(--color-secondary);
+  }
+}

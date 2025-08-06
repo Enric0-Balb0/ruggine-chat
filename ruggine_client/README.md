@@ -1,116 +1,408 @@
 # Ruggine Client
 
-Client application for the Ruggine chat system built with Leptos + Tauri.
+[![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
+[![Leptos](https://img.shields.io/badge/leptos-0.6-blue.svg)](https://leptos.dev)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## Architecture
+Enterprise-grade frontend client for the Ruggine chat system, built with modern Rust web technologies.
 
-This client is built using:
-- **Leptos**: Modern Rust web framework for the UI
-- **Tauri**: Cross-platform desktop app framework
-- **WebAssembly (WASM)**: For high-performance frontend code
+## 🏗️ Architecture Overview
 
-## Development
+### Technology Stack
+- **Frontend Framework**: [Leptos 0.6](https://leptos.dev) - Type-safe reactive web framework
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com) - Utility-first CSS framework
+- **HTTP Client**: [Reqwest 0.12](https://github.com/seanmonstar/reqwest) - Async HTTP client with WASM support
+- **Serialization**: [Serde](https://serde.rs) - High-performance serialization framework with JSON support
+- **Date/Time**: [Chrono 0.4](https://github.com/chronotope/chrono) - Date and time library with WASM support
+- **Storage**: [Gloo Storage](https://github.com/rustwasm/gloo) - Browser storage abstraction
+- **Error Handling**: [ThisError](https://github.com/dtolnay/thiserror) - Derive macro for error types
+- **Build Tool**: [Trunk](https://trunkrs.dev) - WASM web application bundler
+- **Desktop Runtime**: [Tauri](https://tauri.app) - Cross-platform desktop application framework
+
+## 🎨 Styling with Tailwind CSS
+
+### 🚀 Recommended Development Workflow
+**One-command development setup:**
+```bash
+# VS Code Command Palette (Ctrl+Shift+P)
+Tasks: Run Task → Dev: Start All Frontend
+```
+This automatically starts both:
+- **Trunk**: Frontend compilation and hot reload
+- **Tailwind CSS Watcher**: Automatic CSS compilation
+
+### Alternative Development Workflows
+For manual control or advanced workflows:
+```bash
+# Start the Tailwind CSS watcher (runs in background)
+npm run watch-css
+
+# Or using PowerShell script
+.\build-css.ps1 -Watch
+```
+
+### Manual CSS Build
+For one-time CSS compilation:
+```bash
+# Build CSS once
+npm run build-css
+
+# Or using PowerShell script
+.\build-css.ps1
+```
+
+### Available VS Code Tasks
+Use the VS Code Command Palette (`Ctrl+Shift+P`):
+- **🚀 Ruggine: Start Development** - **RECOMMENDED**: Start complete development environment
+- `Tasks: Run Task` → `Trunk: Serve Frontend` - Frontend only
+- `Tasks: Run Task` → `Tailwind: Watch CSS` - CSS watcher only  
+- `Tasks: Run Task` → `Tailwind: Build CSS` - Build CSS once
+- `Tasks: Run Task` → `Tauri: Dev Client` - Desktop app development
+
+### Architectural Layers
+
+```
+┌─────────────────────────────────────────┐
+│                UI Layer                 │
+│  ┌─────────────┐  ┌─────────────────┐   │
+│  │  Components │  │     Pages       │   │
+│  └─────────────┘  └─────────────────┘   │
+├─────────────────────────────────────────┤
+│              Service Layer              │
+│  ┌─────────────┐  ┌─────────────────┐   │
+│  │ Auth Service│  │ Storage Service │   │
+│  └─────────────┘  └─────────────────┘   │
+├─────────────────────────────────────────┤
+│               API Layer                 │
+│  ┌─────────────┐  ┌─────────────────┐   │
+│  │  Auth API   │  │    User API     │   │
+│  └─────────────┘  └─────────────────┘   │
+├─────────────────────────────────────────┤
+│              HTTP Layer                 │
+│  ┌─────────────────────────────────────┐ │
+│  │         ApiClient                   │ │
+│  └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│              Type Layer                 │
+│  ┌─────────────┐  ┌─────────────────┐   │
+│  │    DTOs     │  │  Common Types   │   │
+│  └─────────────┘  └─────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+### Design Principles
+
+- **Type Safety**: Leveraging Rust's type system for compile-time guarantees
+- **Reactive Architecture**: Leptos signals for efficient UI updates
+- **Separation of Concerns**: Clear boundaries between layers
+- **Testability**: Comprehensive unit and integration testing
+- **Performance**: WASM compilation for near-native performance
+- **Scalability**: Modular architecture supporting large-scale development
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-Make sure you have the following installed:
-- Rust (latest stable)
-- `trunk` CLI tool: `cargo install trunk`
-- `tauri-cli`: `cargo install tauri-cli`
-
-### Running in Development Mode
+Ensure you have the following tools installed:
 
 ```bash
-# Run the application in development mode
-cargo tauri dev
+# Rust toolchain (latest stable)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Or use the VS Code task: "Tauri: Dev Client"
+# WASM target
+rustup target add wasm32-unknown-unknown
+
+# Development tools
+cargo install trunk
+cargo install tauri-cli
 ```
 
-### Building for Production
+### Development Server
 
+**🚀 RECOMMENDED - One-Command Setup:**
 ```bash
-# Build the application for production
-cargo tauri build
+# Clone the repository
+git clone <repository-url>
+cd ruggine_client
 
-# Or use the VS Code task: "Tauri: Build Client"
+# Start complete development environment (VS Code)
+# Ctrl+Shift+P → Tasks: Run Task → 🚀 Ruggine: Start Development
 ```
 
-### Frontend Only Development
-
-If you want to develop only the frontend (Leptos) part:
-
+**Alternative - Manual Setup:**
 ```bash
-# Serve the frontend with hot reload
+# Install dependencies and start development server
 trunk serve --open
 
-# Or use the VS Code task: "Trunk: Serve Frontend"
+# In another terminal: start CSS watcher
+npm run watch-css
 ```
 
-## Project Structure
+The application will be available at `http://localhost:1420`
 
-```
-ruggine_client/
-├── src/                    # Frontend Rust code (Leptos)
-│   ├── main.rs            # Entry point
-│   └── app.rs             # Main app component
-├── src-tauri/             # Tauri backend
-│   ├── src/
-│   │   ├── main.rs        # Tauri main process
-│   │   └── lib.rs         # Tauri commands
-│   ├── Cargo.toml         # Tauri dependencies
-│   └── tauri.conf.json    # Tauri configuration
-├── public/                # Static assets
-├── styles.css            # Global styles
-├── index.html            # HTML template
-├── Trunk.toml            # Trunk configuration
-└── Cargo.toml            # Frontend dependencies
+### Desktop Application
+
+```bash
+# Build and run desktop version
+cargo tauri dev
 ```
 
-## Features to Implement
+## 📁 Project Structure
 
-Based on the requirements document, this client will implement:
+```
+src/
+├── api/                    # API client layer
+│   ├── client_facade.rs   # Main API facade with unified access
+│   └── mod.rs
+├── components/            # Reusable UI components
+│   └── mod.rs
+├── config/                # Configuration and constants
+│   ├── constants.rs       # Application constants (Auth, UI, Chat, etc.)
+│   ├── endpoints.rs       # API endpoint definitions
+│   ├── storage.rs         # Storage configuration and keys
+│   └── mod.rs
+├── dto.rs                 # Legacy DTO definitions (being phased out)
+├── error.rs               # Error type definitions
+├── hooks/                 # Leptos custom hooks
+│   └── mod.rs
+├── http/                  # HTTP client infrastructure
+│   ├── client.rs          # Base HTTP client with auth
+│   ├── error.rs           # HTTP error handling
+│   └── mod.rs
+├── pages/                 # Application pages/views
+│   ├── login.rs           # Login page
+│   └── mod.rs
+├── services/              # Business logic layer
+│   ├── auth_service.rs    # Authentication business logic
+│   ├── storage_service.rs # Client-side data persistence
+│   ├── user_service.rs    # User management business logic
+│   └── mod.rs
+├── types/                 # Modern type definitions (server-synchronized)
+│   ├── auth.rs            # Authentication types (LoginRequest, TokenResponse)
+│   ├── common.rs          # Common utility types (ApiResponse, LoadingState)
+│   ├── group.rs           # Group chat types (GroupChat, GroupChatCreateRequest)
+│   ├── invitation.rs      # Invitation types (Invitation, InvitationStatus)
+│   ├── user.rs            # User-related types (UserProfile, UserRegisterRequest)
+│   └── mod.rs
+├── utils/                 # Utility functions
+│   └── mod.rs
+├── app.rs                 # Root application component
+├── lib.rs                 # Library entry point
+└── main.rs                # Application entry point
 
-### User Management (FR1, FR7)
-- [ ] User registration on first launch
-- [ ] User authentication with unique ID
-- [ ] User profile retrieval
+tests/
+├── common/                # Test utilities and factories
+│   ├── factory.rs         # Test data factories
+│   └── mod.rs
+├── integration/           # Integration tests
+│   └── api/               # API client tests
+├── unit/                  # Unit tests organized by module
+│   └── types_test/        # Type-specific unit tests
+├── e2e/                   # End-to-end tests (browser automation)
+└── lib.rs                 # Test entry point
 
-### Group Chat Management (FR3)
-- [ ] Create new group chats
-- [ ] Send and accept group invitations
-- [ ] View group participants and information
+src-tauri/                 # Tauri desktop application backend
+├── src/
+│   ├── main.rs            # Tauri main process
+│   └── lib.rs             # Tauri commands
+├── Cargo.toml             # Tauri dependencies
+└── tauri.conf.json        # Tauri configuration
+```
 
-### Messaging (FR2)
-- [ ] Send text messages to groups
-- [ ] Receive real-time messages
-- [ ] Display chat history
+## 🧪 Testing Strategy
 
-### Cross-Platform Support (FR4)
-- [ ] Windows desktop support
-- [ ] Linux desktop support  
-- [ ] macOS desktop support
-- [ ] Android mobile support (future)
-- [ ] iOS mobile support (future)
+### Test Types
 
-### Performance Monitoring (FR5)
-- [ ] CPU usage monitoring and logging
-- [ ] Performance metrics display
+1. **Unit Tests**: Individual component and service testing
+2. **Integration Tests**: API client and service interaction testing
+3. **E2E Tests**: Full user flow testing with browser automation
 
-## API Integration
+### Running Tests
 
-The client will communicate with the Ruggine server (located in `../ruggine_server`) via:
-- REST API for user management and group operations
-- WebSocket for real-time messaging
+```bash
+# Run all tests (library + binary + integration)
+cargo test
 
-## Configuration
+# Run unit tests only (embedded in type modules)
+cargo test --lib
 
-- Development server runs on `http://localhost:1420`
-- Tauri app configuration in `src-tauri/tauri.conf.json`
-- Frontend build configuration in `Trunk.toml` + Leptos
+# Run integration tests only
+cargo test --test lib
 
-This template should help get you started developing with Tauri and Leptos.
+# Run with output for debugging
+cargo test -- --nocapture
 
-## Recommended IDE Setup
+# Run specific test module
+cargo test types::auth::tests
+```
 
-[VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+### Test Philosophy
+
+- **Client-Focused Testing**: Tests focus on client-specific concerns, not server logic duplication
+- **Embedded Unit Tests**: Type tests are embedded within type modules using `#[cfg(test)]`
+- **Server-Synchronized Types**: All types in `src/types/` are synchronized with server OpenAPI definitions
+- **Business Logic Testing**: Service layer business rules and data transformations
+- **Comprehensive Coverage**: 15+ tests covering authentication, user management, and common utilities
+- **Type Safety Validation**: Tests ensure proper serialization/deserialization and business logic methods
+
+## 🔧 Development Guidelines
+
+### Quick Start Development
+1. **One Command**: `Ctrl+Shift+P` → `Tasks: Run Task` → **Dev: Start All Frontend**
+2. **Code**: Modify Rust files and Tailwind classes
+3. **Automatic**: Browser updates automatically with changes
+4. **Optional**: Add `Tauri: Dev Client` for desktop app
+
+### Code Organization
+
+- **Layered Architecture**: Strict separation between UI, Services, API, HTTP, and Types
+- **Server-Synchronized Types**: Modern type system in `src/types/` with server OpenAPI synchronization
+- **Configuration Management**: Centralized constants and endpoints in `src/config/`
+- **Embedded Testing**: Unit tests embedded within type modules for better maintainability
+- **Business Logic Services**: Rich service layer with authentication, storage, and user management
+- **Error Handling**: Comprehensive error handling with typed errors across all layers
+
+### Coding Standards
+
+```rust
+// Example: Service method with proper error handling
+impl AuthService {
+    /// Login user with email and password
+    /// 
+    /// # Arguments
+    /// * `email` - User email address (will be normalized)
+    /// * `password` - User password (will be validated)
+    /// 
+    /// # Returns
+    /// * `Ok(UserProfile)` - Successfully authenticated user
+    /// * `Err(AuthError)` - Authentication failure details
+    /// 
+    /// # Example
+    /// ```rust
+    /// let auth_service = AuthService::new(api_client);
+    /// let user = auth_service.login("test@example.com", "password").await?;
+    /// ```
+    pub async fn login(&self, email: String, password: String) -> Result<UserProfile, AuthError> {
+        // Implementation...
+    }
+}
+```
+
+## 🔐 Security Considerations
+
+- **Token Management**: Secure JWT token storage and automatic refresh
+- **Input Validation**: Client-side validation with server-side verification
+- **XSS Prevention**: Leptos provides built-in XSS protection
+- **CSRF Protection**: Token-based authentication prevents CSRF attacks
+
+## 📊 Performance Optimization
+
+- **WASM Compilation**: Near-native performance in the browser
+- **Code Splitting**: Lazy loading of components and routes
+- **Reactive Updates**: Efficient DOM updates through Leptos signals
+- **HTTP Caching**: Intelligent caching of API responses
+
+## 🚀 Deployment
+
+### Web Application
+```bash
+# Build for production
+trunk build --release
+
+# Serve static files from dist/
+```
+
+### Desktop Application
+```bash
+# Build desktop application
+cargo tauri build
+```
+
+## 🔗 Integration with Ruggine Server
+
+This client is designed to work with the [ruggine_server](../ruggine_server/README.md) backend:
+
+- **API Compatibility**: Shared DTO definitions ensure type safety
+- **Authentication**: JWT-based authentication with automatic token refresh
+- **Error Handling**: Consistent error responses between client and server
+- **Testing**: Coordinated testing strategies avoiding redundant endpoint testing
+
+### Server Dependencies
+
+- Server must be running on `http://localhost:8002` (configurable in `src/config/constants.rs`)
+- Compatible with ruggine_server v1.0+
+- Requires PostgreSQL database for user management
+- 17 synchronized types maintained from server OpenAPI specifications
+
+## 📚 API Documentation
+
+### Authentication Flow
+
+```rust
+// Login example
+let auth_service = AuthService::new(api_client);
+let user_profile = auth_service.login("user@example.com", "password").await?;
+
+// Check authentication status
+if auth_service.is_authenticated() {
+    let current_user = auth_service.current_user().unwrap();
+}
+
+// Logout
+auth_service.logout().await?;
+```
+
+### Type Safety Example
+
+```rust
+// All API types are server-synchronized and type-safe
+use crate::types::auth::{LoginRequest, TokenResponse};
+use crate::types::user::{UserProfile, UserRegisterRequest, Gender, UserType};
+
+let login_request = LoginRequest {
+    email: "test@example.com".to_string(),
+    password: "secure_password".to_string(),
+};
+
+// Type-safe business logic methods
+let user = UserProfile { /* ... */ };
+assert_eq!(user.full_name(), "John Doe");
+assert!(user.is_active());
+assert!(!user.is_admin());
+
+// Server-synchronized enum variants
+let gender = Gender::Male; // Serializes to "male"
+let user_type = UserType::EndUser; // Serializes to "end_user"
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **WASM compilation errors**: Ensure `wasm32-unknown-unknown` target is installed
+2. **Server connection issues**: Verify ruggine_server is running on port 8002 (configurable)
+3. **Authentication failures**: Check server database and user credentials
+4. **Type synchronization**: Ensure types match server OpenAPI definitions
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+RUST_LOG=debug trunk serve
+```
+
+## 🤝 Contributing
+
+1. Follow Rust coding conventions
+2. Maintain 100% type safety
+3. Add tests for new functionality
+4. Update documentation for API changes
+5. Follow the established architectural patterns
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ in Rust**
