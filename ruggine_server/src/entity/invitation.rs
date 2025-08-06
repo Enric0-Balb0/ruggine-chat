@@ -2,10 +2,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 use utoipa::ToSchema;
+use crate::entity::group_membership::MemberRole;
 
 #[derive(Clone, Debug, Deserialize, Serialize, sqlx::FromRow, Default, PartialEq, Eq)]
 pub struct Invitation {
     pub id: i32,
+    pub role_at_join: MemberRole,
     pub from_user_id: i32,
     pub to_user_id: i32,
     pub group_chat_id: i32,
@@ -19,6 +21,7 @@ pub struct NewInvitation {
     pub from_user_id: i32,
     pub to_user_id: i32,
     pub group_chat_id: i32,
+    pub role_at_join: MemberRole,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -47,11 +50,12 @@ impl Default for InvitationStatus {
 
 impl Invitation {
     /// Creates a new invitation with pending status
-    pub fn create(from_user_id: i32, to_user_id: i32, group_chat_id: i32) -> NewInvitation {
+    pub fn create(from_user_id: i32, to_user_id: i32, group_chat_id: i32, role_at_join: Option<MemberRole>) -> NewInvitation {
         NewInvitation {
             from_user_id,
             to_user_id,
             group_chat_id,
+            role_at_join: role_at_join.unwrap_or_default(),
         }
     }
 

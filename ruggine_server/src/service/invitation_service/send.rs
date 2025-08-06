@@ -49,6 +49,7 @@ impl InvitationService {
             from_user_id,
             to_user_id: invitation.to_user_id,
             group_chat_id: invitation.group_chat_id,
+            role_at_join: invitation.role_at_join,
         };
 
         // Insert the invitation
@@ -83,6 +84,7 @@ impl InvitationService {
 mod invitation_service_send_tests {
     use super::*;
     use mockall::predicate::*;
+    use crate::entity::group_membership::MemberRole;
     use crate::factory::invitation_factory::InvitationFactory;
     use crate::factory::user_factory::UserFactory;
     use crate::dto::group_chat_dto::GroupChatReadDto;
@@ -107,6 +109,7 @@ mod invitation_service_send_tests {
         let invitation_dto = InvitationCreateDto {
             to_user_id,
             group_chat_id,
+            role_at_join: MemberRole::Member,
         };
 
         let group_chat_dto = GroupChatReadDto {
@@ -204,6 +207,7 @@ mod invitation_service_send_tests {
         let invitation_dto = InvitationCreateDto {
             to_user_id,
             group_chat_id,
+            role_at_join: MemberRole::Member,
         };
 
         // Mock user service to return user not found
@@ -251,6 +255,7 @@ mod invitation_service_send_tests {
         let invitation_dto = InvitationCreateDto {
             to_user_id,
             group_chat_id,
+            role_at_join: MemberRole::Admin,
         };
 
         let group_chat_dto = GroupChatReadDto {
@@ -320,6 +325,7 @@ mod invitation_service_send_tests {
         let invitation_dto = InvitationCreateDto {
             to_user_id,
             group_chat_id,
+            role_at_join: MemberRole::Admin,
         };
 
         let group_chat_dto = GroupChatReadDto {

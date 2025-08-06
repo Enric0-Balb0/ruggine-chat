@@ -13,14 +13,11 @@ impl GroupMembershipService {
             .await
         {
             Ok(invitation) => {
-                if invitation.status != InvitationStatus::Pending {
-                    return Err(ApiError::GroupMembershipError(GroupMembershipError::PendingInvitationNotFound))
-                }
-                invitation
+
             },
             Err(ApiError::InvitationError(InvitationError::InvitationNotFound)) => {
                 return Err(ApiError::GroupMembershipError(
-                    GroupMembershipError::PendingInvitationNotFound,
+                    GroupMembershipError::InvitationNotFound,
                 ))
             },
             Err(e) => {

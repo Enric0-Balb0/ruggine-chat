@@ -1,4 +1,5 @@
 use crate::entity::invitation::{Invitation, UpdateInvitationStatus, InvitationStatus};
+use crate::entity::group_membership::{MemberRole};
 use crate::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use crate::config::database::DatabaseTrait;
 use sqlx::Error as SqlxError;
@@ -21,7 +22,8 @@ impl InvitationRepository {
                 group_chat_id,
                 status as "status: InvitationStatus",
                 sent_at,
-                responded_at
+                responded_at,
+                role_at_join as "role_at_join: MemberRole";
             "#,
             update_status as _,
             responded_at,

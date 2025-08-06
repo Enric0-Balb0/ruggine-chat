@@ -2,7 +2,7 @@ use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::Utc;
 
 use crate::{
-    dto::group_membership_dto::{CreateAdminGroupMembershipDto, GroupMembershipCreateDto, GroupMembershipReadDto, LeaveGroupMembershipDto},
+    dto::group_membership_dto::{GroupMembershipCreateDto, GroupMembershipReadDto, LeaveGroupMembershipDto},
     entity::group_membership::{GroupMembership, MemberRole, MembershipStatus, NewGroupMembership, UpdateGroupMembership}
 };
 use crate::entity::invitation::Invitation;
@@ -120,12 +120,14 @@ impl GroupMembershipFactory {
     pub fn fake_create_group_membership_dto() -> GroupMembershipCreateDto {
         GroupMembershipCreateDto {
             invitation_id: 1,
+            role: MemberRole::Member,
         }
     }
 
-    pub fn fake_create_admin_group_membership_dto() -> CreateAdminGroupMembershipDto {
-        CreateAdminGroupMembershipDto {
+    pub fn fake_create_admin_group_membership_dto() -> GroupMembershipCreateDto {
+        GroupMembershipCreateDto {
             invitation_id: 1,
+            role: MemberRole::Admin,
         }
     }
 

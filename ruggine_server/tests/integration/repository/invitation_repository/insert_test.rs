@@ -7,6 +7,7 @@ use crate::common::{cleanup_user, create_test_user, cleanup_group_chat, create_t
 
 #[cfg(test)]
 mod invitation_repository_integration_tests {
+    use ruggine_server::entity::group_membership::MemberRole;
     use ruggine_server::entity::invitation::NewInvitation;
     use crate::get_database;
     use super::*;
@@ -20,7 +21,7 @@ mod invitation_repository_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let new_invitation = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id };
+        let new_invitation = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         // Act
         let result = repository.insert(new_invitation.clone()).await;
@@ -56,7 +57,7 @@ mod invitation_repository_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let new_invitation = NewInvitation {from_user_id: -1, to_user_id: to_user.id, group_chat_id: group_chat.id };
+        let new_invitation = NewInvitation {from_user_id: -1, to_user_id: to_user.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         // Act
         let result = repository.insert(new_invitation).await;
@@ -78,7 +79,7 @@ mod invitation_repository_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let new_invitation = NewInvitation {from_user_id: from_user.id, to_user_id: -1, group_chat_id: group_chat.id };
+        let new_invitation = NewInvitation {from_user_id: from_user.id, to_user_id: -1, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         // Act
         let result = repository.insert(new_invitation).await;
@@ -101,7 +102,7 @@ mod invitation_repository_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let new_invitation = NewInvitation {from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: -1 };
+        let new_invitation = NewInvitation {from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: -1, role_at_join: MemberRole::Member };
 
         // Act
         let result = repository.insert(new_invitation).await;
@@ -127,11 +128,11 @@ mod invitation_repository_integration_tests {
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
         
-        let invitation1 = NewInvitation {from_user_id: from_user.id, to_user_id: to_user1.id, group_chat_id: group_chat.id };
+        let invitation1 = NewInvitation {from_user_id: from_user.id, to_user_id: to_user1.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
         
-        let invitation2 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user2.id, group_chat_id: group_chat.id };
+        let invitation2 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user2.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
         
-        let invitation3 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user3.id, group_chat_id: group_chat.id };
+        let invitation3 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user3.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         // Act
         let result1 = repository.insert(invitation1).await;
@@ -219,9 +220,9 @@ mod invitation_repository_integration_tests {
         let db = get_database().await;
         let repository = Arc::new(InvitationRepository::new(&db));
         
-        let invitation1 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user1.id, group_chat_id: group_chat.id };
+        let invitation1 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user1.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
         
-        let invitation2 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user2.id, group_chat_id: group_chat.id };
+        let invitation2 =  NewInvitation {from_user_id: from_user.id, to_user_id: to_user2.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         let repo1 = repository.clone();
         let repo2 = repository.clone();
@@ -260,8 +261,8 @@ mod invitation_repository_integration_tests {
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
 
-        let invitation1 = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id };
-        let invitation2 = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id };
+        let invitation1 = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
+        let invitation2 = NewInvitation { from_user_id: from_user.id, to_user_id: to_user.id, group_chat_id: group_chat.id, role_at_join: MemberRole::Member };
 
         // Act
         let result1 = repository.insert(invitation1).await;

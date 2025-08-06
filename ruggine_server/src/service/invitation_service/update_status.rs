@@ -46,7 +46,8 @@ impl InvitationService {
         // If the status is accepted, create a group membership
         if payload.status == InvitationStatus::Accepted {
             let membership_dto = GroupMembershipCreateDto {
-                invitation_id: invitation.to_user_id,
+                invitation_id: invitation.id,
+                role: invitation.role_at_join
             };
 
             if let Err(e) = self.group_membership_service.create_checked(membership_dto, auth_user_id).await {

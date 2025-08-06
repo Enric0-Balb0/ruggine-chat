@@ -22,7 +22,8 @@ mod send_invitation_e2e_tests {
         // Create invitation payload
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member",
         });
 
         // Act: Send POST request to /send with auth token
@@ -52,6 +53,7 @@ mod send_invitation_e2e_tests {
         assert_eq!(data["group_chat_id"].as_i64().unwrap(), group_chat.id as i64);
         assert_eq!(data["status"].as_str().unwrap(), "pending");
         assert!(data["sent_at"].as_str().is_some(), "Should have sent_at timestamp");
+        assert_eq!(data["role_at_join"].as_str().unwrap(), "member");
 
         // Cleanup
         cleanup_invitation(data["id"].as_i64().unwrap() as i32).await;
@@ -70,7 +72,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member",
         });
 
         // Act: Send POST request without auth token
@@ -102,7 +105,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member",
         });
 
         // Act: Send POST request with invalid token
@@ -136,7 +140,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member"
         });
 
         // Act: Send POST request with non-admin user token
@@ -170,7 +175,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member",
         });
 
         // Send first invitation
@@ -223,7 +229,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": 99999, // Non-existent user ID
-            "group_chat_id": group_chat.id
+            "group_chat_id": group_chat.id,
+            "role_at_join": "member",
         });
 
         // Act: Send POST request with non-existent target user
@@ -254,7 +261,8 @@ mod send_invitation_e2e_tests {
 
         let send_payload = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": 99999 // Non-existent group chat ID
+            "group_chat_id": 99999, // Non-existent group chat ID
+            "role_at_join": "member",
         });
 
         // Act: Send POST request with non-existent group chat

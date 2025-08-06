@@ -43,7 +43,7 @@ erDiagram
     %% GroupMembership Entity
     GROUP_MEMBERSHIP {
         int id PK "SERIAL"
-        member_role role "DEFAULT 'member'"
+        member_role role "NOT NULL"
         membership_status membership_status "NOT NULL, DEFAULT 'active'"
         timestamptz joined_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
         int invitation_id FK "UNIQUE, NOT NULL"
@@ -53,6 +53,7 @@ erDiagram
     %% Invitation Entity
     INVITATION {
         int id PK "SERIAL"
+        member_role role_at_join "DEFAULT 'member', NOT NULL"
         int from_user_id FK "NOT NULL"
         int to_user_id FK "NOT NULL"
         int group_chat_id FK "NOT NULL"

@@ -5,6 +5,7 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_
 #[cfg(test)]
 mod invitation_repository_find_pending_for_user_integration_tests {
     use ruggine_server::config::database::DatabaseTrait;
+    use ruggine_server::entity::group_membership::MemberRole;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -92,12 +93,14 @@ mod invitation_repository_find_pending_for_user_integration_tests {
             from_user_id: from_user.id,
             to_user_id: to_user.id,
             group_chat_id: group_chat2.id,
+            role_at_join: MemberRole::Member,
         }).await.unwrap();
         
         let rejected_id = repository.insert(NewInvitation {
             from_user_id: from_user.id,
             to_user_id: to_user.id,
             group_chat_id: group_chat3.id,
+            role_at_join: MemberRole::Member
         }).await.unwrap();
 
         // Manually update status to simulate accepted/rejected invitations

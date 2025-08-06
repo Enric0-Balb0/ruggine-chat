@@ -4,16 +4,18 @@ use validator::Validate;
 use chrono::{DateTime, Utc};
 use crate::entity::invitation::{Invitation, InvitationStatus};
 use serde_json::json;
+use crate::entity::group_membership::MemberRole;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 pub struct InvitationCreateDto {
     #[validate(range(min = 1, message = "User ID must be positive"))]
     #[schema(example = 2)]
     pub to_user_id: i32,
-    
     #[validate(range(min = 1, message = "Group chat ID must be positive"))]
     #[schema(example = 1)]
     pub group_chat_id: i32,
+    #[schema(example = "member")]
+    pub role_at_join: MemberRole
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
@@ -32,6 +34,8 @@ pub struct InvitationReadDto {
     pub sent_at: DateTime<Utc>,
     #[schema()]
     pub responded_at: Option<DateTime<Utc>>,
+    #[schema(example = "member")]
+    pub role_at_join: MemberRole
 }
 
 impl From<Invitation> for InvitationReadDto {
@@ -44,6 +48,7 @@ impl From<Invitation> for InvitationReadDto {
             status: invitation.status,
             sent_at: invitation.sent_at,
             responded_at: invitation.responded_at,
+            role_at_join: invitation.role_at_join
         }
     }
 }
@@ -105,11 +110,13 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         assert!(create_dto.validate().is_ok());
         assert_eq!(create_dto.to_user_id, 2);
         assert_eq!(create_dto.group_chat_id, 1);
+        assert_eq!(create_dto.role_at_join, MemberRole::Member);
     }
 
     #[test]
@@ -117,6 +124,7 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 0, // Invalid: must be positive
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         let validation_result = create_dto.validate();
@@ -131,6 +139,7 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: -1, // Invalid: must be positive
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         let validation_result = create_dto.validate();
@@ -145,6 +154,7 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 0, // Invalid: must be positive
+            role_at_join: MemberRole::Member,
         };
 
         let validation_result = create_dto.validate();
@@ -159,6 +169,7 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: -1, // Invalid: must be positive
+            role_at_join: MemberRole::Member,
         };
 
         let validation_result = create_dto.validate();
@@ -173,6 +184,7 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 0, // Invalid
             group_chat_id: -1, // Invalid
+            role_at_join: MemberRole::Member,
         };
 
         let validation_result = create_dto.validate();
@@ -188,11 +200,13 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         let cloned_dto = create_dto.clone();
         assert_eq!(create_dto.to_user_id, cloned_dto.to_user_id);
         assert_eq!(create_dto.group_chat_id, cloned_dto.group_chat_id);
+        assert_eq!(create_dto.role_at_join, cloned_dto.role_at_join);
     }
 
     #[test]
@@ -200,12 +214,14 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         let debug_string = format!("{:?}", create_dto);
         assert!(debug_string.contains("InvitationCreateDto"));
         assert!(debug_string.contains("2"));
         assert!(debug_string.contains("1"));
+        assert!(debug_string.contains("Member"));
     }
 
     #[test]
@@ -213,17 +229,20 @@ mod tests {
         let create_dto = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Admin,
         };
 
         // Test serialization to JSON
         let json = serde_json::to_string(&create_dto).unwrap();
         assert!(json.contains("2"));
         assert!(json.contains("1"));
+        assert!(json.contains("admin"));
 
         // Test deserialization from JSON
         let deserialized: InvitationCreateDto = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.to_user_id, create_dto.to_user_id);
         assert_eq!(deserialized.group_chat_id, create_dto.group_chat_id);
+        assert_eq!(deserialized.role_at_join, create_dto.role_at_join);
     }
 
     #[test]
@@ -241,6 +260,7 @@ mod tests {
             status: InvitationStatus::Pending,
             sent_at: DateTime::from_naive_utc_and_offset(naive_datetime, Utc),
             responded_at: None,
+            role_at_join: MemberRole::Member,
         };
 
         assert_eq!(read_dto.id, 1);
@@ -253,6 +273,7 @@ mod tests {
             NaiveDate::from_ymd_opt(2025, 1, 28).unwrap()
         );
         assert_eq!(read_dto.responded_at, None);
+        assert_eq!(read_dto.role_at_join, MemberRole::Member);
     }
 
     #[test]
@@ -274,6 +295,7 @@ mod tests {
             status: InvitationStatus::Accepted,
             sent_at: DateTime::from_naive_utc_and_offset(sent_datetime, Utc),
             responded_at: Some(DateTime::from_naive_utc_and_offset(responded_datetime, Utc)),
+            role_at_join: MemberRole::Member,
         };
 
         assert_eq!(read_dto.status, InvitationStatus::Accepted);
@@ -282,6 +304,7 @@ mod tests {
             read_dto.responded_at.unwrap().date_naive(),
             NaiveDate::from_ymd_opt(2025, 1, 28).unwrap()
         );
+        assert_eq!(read_dto.role_at_join, MemberRole::Member);
     }
 
     #[test]
@@ -299,6 +322,7 @@ mod tests {
             status: InvitationStatus::Pending,
             sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
             responded_at: None,
+            role_at_join: MemberRole::Member,
         };
 
         // Test serialization to JSON
@@ -336,6 +360,7 @@ mod tests {
             status: InvitationStatus::Pending,
             sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
             responded_at: None,
+            role_at_join: MemberRole::Member,
         };
 
         let read_dto: InvitationReadDto = invitation.clone().into();
@@ -346,6 +371,7 @@ mod tests {
         assert_eq!(read_dto.status, invitation.status);
         assert_eq!(read_dto.sent_at, invitation.sent_at);
         assert_eq!(read_dto.responded_at, invitation.responded_at);
+        assert_eq!(read_dto.role_at_join, invitation.role_at_join);
     }
 
     #[test]
@@ -443,6 +469,7 @@ mod tests {
             status: InvitationStatus::Accepted,
             sent_at: DateTime::from_naive_utc_and_offset(sent_dt, Utc),
             responded_at: Some(DateTime::from_naive_utc_and_offset(responded_dt, Utc)),
+            role_at_join: MemberRole::Admin,
         };
 
         let response_dto: InvitationUpdateResponseDto = invitation.clone().into();
@@ -466,6 +493,7 @@ mod tests {
             status: InvitationStatus::Accepted,
             sent_at: DateTime::from_naive_utc_and_offset(sent_dt, Utc),
             responded_at: None, // No response time set
+            role_at_join: MemberRole::Admin,
         };
 
         let response_dto: InvitationUpdateResponseDto = invitation.clone().into();
@@ -503,10 +531,12 @@ mod tests {
         let create_dto1 = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
         let create_dto2 = InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
         assert_eq!(create_dto1, create_dto2);
 

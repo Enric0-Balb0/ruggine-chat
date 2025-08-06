@@ -8,15 +8,15 @@ use axum::Router;
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
-use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::entity::group_chat::GroupChat;
+use ruggine_server::entity::group_membership::MemberRole;
 use ruggine_server::entity::user::User;
 use ruggine_server::entity::invitation::{Invitation, NewInvitation};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::model::group_membership_model::GroupMembershipWithInvitationRow;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
-use ruggine_server::repository::group_membership_repository::GroupMembershipRepositoryTrait;
+use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route};
@@ -204,6 +204,28 @@ pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_ch
         from_user_id,
         to_user_id,
         group_chat_id,
+        role_at_join: MemberRole::Member,
+    };
+
+    let inserted_id = repository.insert(new_invitation.clone()).await
+        .expect("Failed to insert test invitation");
+
+    // Get the created invitation from database
+    let invitation_result = repository.find_by_id_and_user_id(inserted_id, to_user_id).await;
+    assert!(invitation_result.is_ok(), "Invitation not found in database");
+    invitation_result.unwrap()
+}
+
+/// Helper function to create a test admin invitation in the database
+pub async fn create_test_admin_invitation(from_user_id: i32, to_user_id: i32, group_chat_id: i32) -> Invitation {
+    let db = get_database().await;
+    let repository = InvitationRepository::new(&db);
+
+    let new_invitation = NewInvitation {
+        from_user_id,
+        to_user_id,
+        group_chat_id,
+        role_at_join: MemberRole::Admin,
     };
 
     let inserted_id = repository.insert(new_invitation.clone()).await
@@ -231,7 +253,7 @@ pub async fn create_test_group_membership(
     user_id: i32,
 ) -> GroupMembershipWithInvitationRow {
     let db = get_database().await;
-    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+    let repository = GroupMembershipRepository::new(&db);
 
     let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_group_membership_with_id(invitation_id);
     let inserted_id = repository.insert(new_membership.clone()).await
@@ -248,7 +270,7 @@ pub async fn create_test_admin_group_membership(
     user_id: i32,
 ) -> GroupMembershipWithInvitationRow {
     let db = get_database().await;
-    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+    let repository = GroupMembershipRepository::new(&db);
 
     let new_membership = ruggine_server::factory::group_membership_factory::GroupMembershipFactory::fake_new_admin_group_membership_with_id(invitation_id);
     let inserted_id = repository.insert(new_membership.clone()).await
@@ -262,10 +284,19 @@ pub async fn create_test_admin_group_membership(
 
 pub async fn cleanup_group_membership(membership_id: i32) {
     let db = get_database().await;
-    let repository = ruggine_server::repository::group_membership_repository::GroupMembershipRepository::new(&db);
+    let repository = GroupMembershipRepository::new(&db);
 
     if let Err(e) = repository.delete_by_id(membership_id).await {
         panic!("Cleanup failed for group membership with id {}: {:?}", membership_id, e);
+    }
+}
+
+pub async fn cleanup_group_membership_by_invitation_id(invitation_id: i32) {
+    let db = get_database().await;
+    let repository = GroupMembershipRepository::new(&db);
+
+    if let Err(e) = repository.delete_by_invitation_id(invitation_id).await {
+        panic!("Cleanup failed for group membership with invitation_id {}: {:?}", invitation_id, e);
     }
 }
 

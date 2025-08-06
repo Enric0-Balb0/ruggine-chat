@@ -5,6 +5,7 @@ use crate::{
     dto::invitation_dto::{InvitationCreateDto, InvitationReadDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto},
     entity::invitation::{NewInvitation, Invitation, UpdateInvitationStatus, InvitationStatus}
 };
+use crate::entity::group_membership::MemberRole;
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -18,6 +19,16 @@ impl InvitationFactory {
             from_user_id: 1,
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
+        }
+    }
+
+    pub fn fake_new_admin_invitation() -> NewInvitation {
+        NewInvitation {
+            from_user_id: 1,
+            to_user_id: 2,
+            group_chat_id: 1,
+            role_at_join: MemberRole::Admin,
         }
     }
 
@@ -30,6 +41,20 @@ impl InvitationFactory {
             status: InvitationStatus::Pending,
             sent_at: Utc::now(),
             responded_at: None,
+            role_at_join: MemberRole::Member,
+        }
+    }
+
+    pub fn fake_admin_invitation() -> Invitation {
+        Invitation {
+            id: 1,
+            from_user_id: 1,
+            to_user_id: 2,
+            group_chat_id: 1,
+            status: InvitationStatus::Pending,
+            sent_at: Utc::now(),
+            responded_at: None,
+            role_at_join: MemberRole::Admin,
         }
     }
 
@@ -53,6 +78,22 @@ impl InvitationFactory {
             status: InvitationStatus::Pending,
             sent_at: Utc::now(),
             responded_at: None,
+            role_at_join: MemberRole::Member,
+        }
+    }
+
+    pub fn fake_admin_invitation_from_ids(from_user_id: i32, to_user_id: i32, group_chat_id: i32) -> Invitation {
+        let counter: u32 = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+
+        Invitation {
+            id: counter as i32,
+            from_user_id,
+            to_user_id,
+            group_chat_id,
+            status: InvitationStatus::Pending,
+            sent_at: Utc::now(),
+            responded_at: None,
+            role_at_join: MemberRole::Admin,
         }
     }
 
@@ -60,14 +101,28 @@ impl InvitationFactory {
         InvitationCreateDto {
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         }
+    }
+
+    pub fn fake_admin_invitation_create_dto() -> InvitationCreateDto {
+        let mut invitation = Self::fake_invitation_create_dto();
+        invitation.role_at_join = MemberRole::Admin;
+        invitation
     }
 
     pub fn fake_invitation_create_dto_with_ids(to_user_id: i32, group_chat_id: i32) -> InvitationCreateDto {
         InvitationCreateDto {
             to_user_id,
             group_chat_id,
+            role_at_join: MemberRole::Member,
         }
+    }
+
+    pub fn fake_admin_invitation_create_dto_with_ids(to_user_id: i32, group_chat_id: i32) -> InvitationCreateDto {
+        let mut invitation_create_dto = Self::fake_invitation_create_dto_with_ids(to_user_id, group_chat_id);
+        invitation_create_dto.role_at_join = MemberRole::Admin;
+        invitation_create_dto
     }
 
     pub fn fake_invitation_read_dto() -> InvitationReadDto {
@@ -86,7 +141,14 @@ impl InvitationFactory {
             status: InvitationStatus::Pending,
             sent_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
             responded_at: None,
+            role_at_join: MemberRole::Member,
         }
+    }
+
+    pub fn fake_invitation_admin_read_dto() -> InvitationReadDto {
+        let mut invitation = Self::fake_invitation_read_dto();
+        invitation.role_at_join = MemberRole::Admin;
+        invitation
     }
 
     pub fn fake_invitation_read_dto_with_response() -> InvitationReadDto {
@@ -109,7 +171,14 @@ impl InvitationFactory {
             status: InvitationStatus::Accepted,
             sent_at: DateTime::from_naive_utc_and_offset(sent_dt, Utc),
             responded_at: Some(DateTime::from_naive_utc_and_offset(responded_dt, Utc)),
+            role_at_join: MemberRole::Member,
         }
+    }
+
+    pub fn fake_admin_invitation_read_dto_with_response() -> InvitationReadDto {
+        let mut invitation = Self::fake_invitation_read_dto_with_response();
+        invitation.role_at_join = MemberRole::Admin;
+        invitation
     }
 
     pub fn fake_invitation_update_status_dto() -> InvitationUpdateStatusDto {

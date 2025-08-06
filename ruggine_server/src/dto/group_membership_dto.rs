@@ -13,15 +13,9 @@ use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 pub struct GroupMembershipCreateDto {
     #[schema(example = 1)]
     pub invitation_id: i32,
-}
+    #[schema(example = "member")]
+    pub role: MemberRole,
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
-#[schema(example = json!({
-    "invitation_id": 1,
-}))]
-pub struct CreateAdminGroupMembershipDto {
-    #[schema(example = 1)]
-    pub invitation_id: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
@@ -83,16 +77,7 @@ impl GroupMembershipCreateDto {
     pub fn to_new_group_membership(&self) -> NewGroupMembership {
         NewGroupMembership {
             invitation_id: self.invitation_id,
-            role: Default::default(), // Default role is Member
-        }
-    }
-}
-
-impl CreateAdminGroupMembershipDto {
-    pub fn to_new_group_membership(&self) -> NewGroupMembership {
-        NewGroupMembership {
-            invitation_id: self.invitation_id,
-            role: MemberRole::Admin,
+            role: self.role.clone(),
         }
     }
 }
@@ -117,17 +102,7 @@ mod tests {
     fn test_create_group_membership_dto_to_new_group_membership() {
         let dto = GroupMembershipCreateDto {
             invitation_id: 1,
-        };
-
-        let new_membership = dto.to_new_group_membership();
-        assert_eq!(new_membership.invitation_id, 1);
-        assert_eq!(new_membership.role, MemberRole::Member); // Default role
-    }
-
-    #[test]
-    fn test_create_admin_group_membership_dto_to_new_group_membership() {
-        let dto = CreateAdminGroupMembershipDto {
-            invitation_id: 1,
+            role: MemberRole::Admin,
         };
 
         let new_membership = dto.to_new_group_membership();
@@ -201,24 +176,28 @@ mod tests {
     fn test_dto_serialization() {
         let create_dto = GroupMembershipCreateDto {
             invitation_id: 1,
+            role: MemberRole::Member,
         };
 
         let json = serde_json::to_string(&create_dto).unwrap();
         let deserialized: GroupMembershipCreateDto = serde_json::from_str(&json).unwrap();
 
         assert_eq!(deserialized.invitation_id, create_dto.invitation_id);
+        assert_eq!(deserialized.role, create_dto.role);
     }
 
     #[test]
     fn test_admin_dto_serialization() {
-        let admin_dto = CreateAdminGroupMembershipDto {
+        let admin_dto = GroupMembershipCreateDto {
             invitation_id: 42,
+            role: MemberRole::Admin,
         };
 
         let json = serde_json::to_string(&admin_dto).unwrap();
-        let deserialized: CreateAdminGroupMembershipDto = serde_json::from_str(&json).unwrap();
+        let deserialized: GroupMembershipCreateDto = serde_json::from_str(&json).unwrap();
 
         assert_eq!(deserialized.invitation_id, admin_dto.invitation_id);
+        assert_eq!(deserialized.role, admin_dto.role);
     }
 
     #[test]

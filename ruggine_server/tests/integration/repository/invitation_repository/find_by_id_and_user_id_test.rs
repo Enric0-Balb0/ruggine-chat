@@ -6,6 +6,7 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_
 
 #[cfg(test)]
 mod invitation_repository_find_by_id_and_user_id_integration_tests {
+    use ruggine_server::entity::group_membership::MemberRole;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -23,6 +24,7 @@ mod invitation_repository_find_by_id_and_user_id_integration_tests {
             from_user_id: from_user.id,
             to_user_id: to_user.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Admin,
         }).await.unwrap();
 
         // Act
@@ -237,10 +239,11 @@ mod invitation_repository_find_by_id_and_user_id_integration_tests {
         let repository = InvitationRepository::new(&db);
         
         // Create invitation directly using repository
-        let new_invitation = ruggine_server::entity::invitation::NewInvitation {
+        let new_invitation = NewInvitation {
             from_user_id: from_user.id,
             to_user_id: to_user.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Member
         };
         let invitation_id = repository.insert(new_invitation.clone()).await.unwrap();
 

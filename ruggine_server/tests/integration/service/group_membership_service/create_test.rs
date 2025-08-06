@@ -8,6 +8,7 @@ mod group_membership_create_checked_tests {
     };
     use ruggine_server::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
     use ruggine_server::dto::group_membership_dto::GroupMembershipCreateDto;
+    use ruggine_server::entity::group_membership::MemberRole;
     use ruggine_server::error::api_error::ApiError;
     use ruggine_server::error::group_membership_error::GroupMembershipError;
     use ruggine_server::repository::invitation_repository::InvitationRepository;
@@ -37,6 +38,7 @@ mod group_membership_create_checked_tests {
 
         let dto = GroupMembershipCreateDto {
             invitation_id: invitation.id,
+            role: invitation.role_at_join
         };
 
         // Act: Call create_checked
@@ -56,38 +58,6 @@ mod group_membership_create_checked_tests {
         cleanup_user(to_user.email).await;
     }
 
-    // TODO
-    /*#[tokio_shared_rt::test(shared)]
-    async fn test_create_checked_fails_if_invitation_not_pending() {
-        // Arrange: create expired invitation
-        let db = get_database().await;
-        let service = GroupMembershipService::new(&db);
-        let (from_user, _) = create_test_user("expired_inv_from").await;
-        let (to_user, _) = create_test_user("expired_inv_to").await;
-        let group = create_test_group_chat("expired_inv_group", from_user.id).await;
-        let invitation = create_test_invitation(from_user.id, to_user.id, group.id).await;
-
-        expire_invitation(invitation.id).await;
-
-        let dto = GroupMembershipCreateDto {
-            invitation_id: invitation.id,
-        };
-
-        // Act
-        let result = service.create_checked(dto, to_user.id).await;
-
-        // Assert: Should return PendingInvitationNotFound error
-        assert!(matches!(
-            result,
-            Err(ApiError::GroupMembershipError(GroupMembershipError::PendingInvitationNotFound))
-        ));
-
-        // Cleanup
-        cleanup_group_chat(group.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
-    } */
-
     #[tokio_shared_rt::test(shared)]
     async fn test_create_checked_fails_if_invitation_does_not_exist() {
         // Arrange
@@ -106,6 +76,7 @@ mod group_membership_create_checked_tests {
 
         let dto = GroupMembershipCreateDto {
             invitation_id: -1, // Non-existent ID
+            role: MemberRole::Member
         };
 
         // Act
@@ -114,7 +85,7 @@ mod group_membership_create_checked_tests {
         // Assert
         assert!(matches!(
             result,
-            Err(ApiError::GroupMembershipError(GroupMembershipError::PendingInvitationNotFound))
+            Err(ApiError::GroupMembershipError(GroupMembershipError::InvitationNotFound))
         ));
 
         // Cleanup
@@ -142,6 +113,7 @@ mod group_membership_create_checked_tests {
 
         let dto = GroupMembershipCreateDto {
             invitation_id: invitation.id,
+            role: invitation.role_at_join
         };
 
         // First creation
@@ -181,6 +153,7 @@ mod group_membership_create_checked_tests {
 
         let dto = GroupMembershipCreateDto {
             invitation_id: -1, // Invalid FK reference
+            role: MemberRole::Member
         };
 
         // Act
@@ -189,7 +162,7 @@ mod group_membership_create_checked_tests {
         // Assert: Expect DbError with ForeignKeyViolation
         match result {
             Ok(val) => panic!("Expected error but got success: {:?}", val),
-            Err(ApiError::GroupMembershipError(GroupMembershipError::PendingInvitationNotFound)) => {
+            Err(ApiError::GroupMembershipError(GroupMembershipError::InvitationNotFound)) => {
                 // Success
             },
             Err(other) => panic!("Unexpected error type: {:?}", other),

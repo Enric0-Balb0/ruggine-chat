@@ -99,9 +99,18 @@ BEGIN
     END IF;
 END$$;
 
+-- Crea ENUM member_role solo se non esiste
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'member_role') THEN
+        CREATE TYPE member_role AS ENUM ('member', 'admin');
+    END IF;
+END$$;
+
 -- Creazione tabella INVITATION
 CREATE TABLE invitation (
     id SERIAL PRIMARY KEY,
+    role_at_join member_role NOT NULL DEFAULT 'member',
     from_user_id INTEGER NOT NULL REFERENCES "user"(id),
     to_user_id INTEGER NOT NULL REFERENCES "user"(id),
     group_chat_id INTEGER NOT NULL REFERENCES group_chat(id),
@@ -117,6 +126,7 @@ WHERE status = 'pending';
 
 -- Inserimento records di esempio
 INSERT INTO invitation (
+    role_at_join,
     from_user_id,
     to_user_id,
     group_chat_id,
@@ -124,6 +134,7 @@ INSERT INTO invitation (
     sent_at,
     responded_at
 ) VALUES (
+    'admin',      -- role_at_join
     1,            -- from_user_id
     1,            -- to_user_id
     1,            -- group_chat_id
@@ -148,14 +159,6 @@ INSERT INTO invitation (
     NULL          -- responded_at
 );
 
--- Crea ENUM member_role solo se non esiste
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'member_role') THEN
-        CREATE TYPE member_role AS ENUM ('member', 'admin');
-    END IF;
-END$$;
-
 -- Crea ENUM per membership_status solo se non esiste
 DO $$
 BEGIN
@@ -167,7 +170,7 @@ END$$;
 -- Creazione della tabella group_membership
 CREATE TABLE group_membership (
     id SERIAL PRIMARY KEY,
-    role member_role NOT NULL DEFAULT 'member',
+    role member_role NOT NULL,
     membership_status membership_status NOT NULL DEFAULT 'active',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     invitation_id INT NOT NULL UNIQUE REFERENCES invitation(id),

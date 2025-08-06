@@ -8,8 +8,8 @@ impl InvitationRepository {
         let now = chrono::Utc::now();
         let rec = sqlx::query_scalar(
             r#"
-            INSERT INTO "invitation" (from_user_id, to_user_id, group_chat_id, status, sent_at)
-            VALUES ($1, $2, $3, 'pending', $4)
+            INSERT INTO "invitation" (from_user_id, to_user_id, group_chat_id, status, sent_at, role_at_join)
+            VALUES ($1, $2, $3, 'pending', $4, $5)
             RETURNING id
             "#
         )
@@ -17,6 +17,7 @@ impl InvitationRepository {
             .bind(new_invitation.to_user_id)
             .bind(new_invitation.group_chat_id)
             .bind(now)
+            .bind(new_invitation.role_at_join)
             .fetch_one(self.db_conn.get_pool())
             .await?;
 
@@ -28,6 +29,7 @@ impl InvitationRepository {
 mod invitation_repository_insert_tests {
     use super::*;
     use mockall::predicate::*;
+    use crate::entity::group_membership::MemberRole;
     use crate::factory::invitation_factory::InvitationFactory;
     use crate::repository::invitation_repository::invitation_repository_trait::MockInvitationRepositoryTrait;
     use crate::repository::invitation_repository::InvitationRepositoryTrait;
@@ -38,6 +40,30 @@ mod invitation_repository_insert_tests {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         let new_invitation = InvitationFactory::fake_new_invitation();
+        let expected_id = 123;
+
+        mock_invitation_repo
+            .expect_insert()
+            .with(eq(new_invitation.clone()))
+            .times(1)
+            .returning(move |_| {
+                Box::pin(async move {
+                    Ok(expected_id)
+                })
+            });
+
+        // Act
+        let result = mock_invitation_repo.insert(new_invitation).await;
+
+        // Assert
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_id);
+    }
+
+    async fn test_insert_admin_success() {
+        // Arrange
+        let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
+        let new_invitation = InvitationFactory::fake_new_admin_invitation();
         let expected_id = 123;
 
         mock_invitation_repo
@@ -90,9 +116,9 @@ mod invitation_repository_insert_tests {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         
-        let invitation1 = NewInvitation { from_user_id: 1, to_user_id: 2, group_chat_id: 1 };
-        let invitation2 =  NewInvitation { from_user_id: 2, to_user_id: 3, group_chat_id: 1 };
-        let invitation3 =  NewInvitation { from_user_id: 3, to_user_id: 4, group_chat_id: 1 };
+        let invitation1 = NewInvitation { from_user_id: 1, to_user_id: 2, group_chat_id: 1, role_at_join: MemberRole::Member };
+        let invitation2 =  NewInvitation { from_user_id: 2, to_user_id: 3, group_chat_id: 1, role_at_join: MemberRole::Admin };
+        let invitation3 =  NewInvitation { from_user_id: 3, to_user_id: 4, group_chat_id: 1, role_at_join: MemberRole::Member };
 
         mock_invitation_repo
             .expect_insert()
@@ -199,9 +225,9 @@ mod invitation_repository_insert_tests {
         // Arrange
         let mut mock_invitation_repo = MockInvitationRepositoryTrait::new();
         
-        let invitation1 = NewInvitation { from_user_id: 1, to_user_id: 2, group_chat_id: 1 };
-        let invitation2 = NewInvitation { from_user_id: 1, to_user_id: 3, group_chat_id: 1 };
-        let invitation3 = NewInvitation { from_user_id: 1, to_user_id: 4, group_chat_id: 1 };
+        let invitation1 = NewInvitation { from_user_id: 1, to_user_id: 2, group_chat_id: 1, role_at_join: MemberRole::Member };
+        let invitation2 = NewInvitation { from_user_id: 1, to_user_id: 3, group_chat_id: 1, role_at_join: MemberRole::Member };
+        let invitation3 = NewInvitation { from_user_id: 1, to_user_id: 4, group_chat_id: 1, role_at_join: MemberRole::Member };
 
         mock_invitation_repo
             .expect_insert()
@@ -258,6 +284,7 @@ mod invitation_repository_insert_tests {
             from_user_id: 1,
             to_user_id: 2,
             group_chat_id: 1,
+            role_at_join: MemberRole::Member,
         };
 
         // Prima insert va a buon fine

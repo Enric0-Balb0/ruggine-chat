@@ -8,6 +8,7 @@ use crate::get_database;
 
 #[cfg(test)]
 mod send_handler_integration_tests {
+    use ruggine_server::entity::group_membership::MemberRole;
     use super::*;
 
     /// Helper function to create a real invitation state with database connections
@@ -27,6 +28,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto = InvitationCreateDto {
             to_user_id: target_user.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Admin,
         };
         
         // Act: Call send handler
@@ -65,6 +67,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto = InvitationCreateDto {
             to_user_id: target_user.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Admin
         };
         
         // Act: Call send handler with non-admin user
@@ -101,6 +104,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto = InvitationCreateDto {
             to_user_id: target_user.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Admin
         };
         
         // Send invitation first time
@@ -144,6 +148,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto = InvitationCreateDto {
             to_user_id: -1, // Non-existent user ID
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Admin
         };
         
         // Act: Call send handler with non-existent target user
@@ -176,7 +181,8 @@ mod send_handler_integration_tests {
         let invitation_state = create_invitation_state().await;
         let invitation_create_dto = InvitationCreateDto {
             to_user_id: target_user.id,
-            group_chat_id: 99999, // Non-existent group chat ID
+            group_chat_id: -1, // Non-existent group chat ID
+            role_at_join: MemberRole::Admin,
         };
         
         // Act: Call send handler with non-existent group chat
@@ -214,6 +220,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto1 = InvitationCreateDto {
             to_user_id: target_user1.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Member
         };
         
         let result1 = send(
@@ -226,6 +233,7 @@ mod send_handler_integration_tests {
         let invitation_create_dto2 = InvitationCreateDto {
             to_user_id: target_user2.id,
             group_chat_id: group_chat.id,
+            role_at_join: MemberRole::Member,
         };
         
         let result2 = send(

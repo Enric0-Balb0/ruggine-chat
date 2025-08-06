@@ -11,8 +11,8 @@ pub enum GroupMembershipError {
     GroupMembershipNotFound,
     #[error("Invitation not owned by user")]
     InvitationNotOwnedByUser,
-    #[error("Pending invitation not found")]
-    PendingInvitationNotFound,
+    #[error("Invitation not found")]
+    InvitationNotFound,
     #[error("Group not found")]
     GroupNotFound,
     #[error("User already in the group")]
@@ -24,7 +24,7 @@ impl IntoResponse for GroupMembershipError {
         let status_code = match self {
             GroupMembershipError::GroupMembershipNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::InvitationNotOwnedByUser => StatusCode::FORBIDDEN,
-            GroupMembershipError::PendingInvitationNotFound => StatusCode::NOT_FOUND,
+            GroupMembershipError::InvitationNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::GroupNotFound => StatusCode::UNPROCESSABLE_ENTITY,
             GroupMembershipError::UserAlreadyInGroup => StatusCode::CONFLICT,
         };
