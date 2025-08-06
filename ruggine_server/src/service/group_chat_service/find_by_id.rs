@@ -40,12 +40,14 @@ mod find_by_id_service_tests {
     use crate::service::group_chat_service::GroupChatService;
     use mockall::predicate::*;
     use std::sync::Arc;
+    use crate::service::invitation_service::invitation_service_trait::MockInvitationServiceTrait;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_invitation_service = MockInvitationServiceTrait::new();
         
         let expected_group = GroupChatFactory::fake_group_chat();
         let group_id = expected_group.id;
@@ -82,6 +84,7 @@ mod find_by_id_service_tests {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_invitation_service = MockInvitationServiceTrait::new();
         let non_existent_id = 999;
 
         mock_group_repo
@@ -111,6 +114,7 @@ mod find_by_id_service_tests {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_invitation_service = MockInvitationServiceTrait::new();
         let group_id = 1;
 
         mock_group_repo
@@ -140,6 +144,7 @@ mod find_by_id_service_tests {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_invitation_service = MockInvitationServiceTrait::new();
 
         let group1 = GroupChatFactory::fake_group_chat();
         let mut group2 = GroupChatFactory::fake_group_chat();
@@ -193,6 +198,8 @@ mod find_by_id_service_tests {
         // Arrange
         let mut mock_group_repo = MockGroupChatRepositoryTrait::new();
         let mock_user_service = MockUserServiceTrait::new();
+        let mock_invitation_service = MockInvitationServiceTrait::new();
+
         let invalid_id = -1;
 
         mock_group_repo

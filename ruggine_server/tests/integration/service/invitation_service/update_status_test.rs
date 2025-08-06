@@ -34,6 +34,7 @@ mod invitation_service_update_status_integration_tests {
         assert!(result.is_ok());
         let response = result.unwrap();
         assert_eq!(response.status, InvitationStatus::Accepted);
+        assert!(response.group_membership_id.is_some());
 
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
@@ -61,6 +62,7 @@ mod invitation_service_update_status_integration_tests {
         assert!(result.is_ok());
         let response = result.unwrap();
         assert_eq!(response.status, InvitationStatus::Rejected);
+        assert!(response.group_membership_id.is_none());
 
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;

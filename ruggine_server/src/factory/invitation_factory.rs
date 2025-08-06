@@ -207,6 +207,7 @@ impl InvitationFactory {
             id: 1,
             status: InvitationStatus::Accepted,
             responded_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
+            group_membership_id: Some(1),
         }
     }
 

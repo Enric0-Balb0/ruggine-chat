@@ -12,6 +12,7 @@ use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 }))]
 pub struct GroupMembershipCreateDto {
     #[schema(example = 1)]
+    #[validate(range(min = 1, message = "Invitation ID must be positive"))]
     pub invitation_id: i32,
     #[schema(example = "member")]
     pub role: MemberRole,
@@ -24,6 +25,7 @@ pub struct GroupMembershipCreateDto {
 }))]
 pub struct LeaveGroupMembershipDto {
     #[schema(example = "1")]
+    #[validate(range(min = 1, message = "GroupMembership ID must be positive"))]
     pub id: i32,
 }
 

@@ -130,7 +130,7 @@ ruggine_developer -u-> UC1
 | **FR8** | Invitation Management |
 | FR8.1   | Invite users to a group chat |
 | FR8.2   | Accept or decline group invitations |
-| FR8.3   | Only the creator of the group can send invitations |
+| FR8.3   | Only admins of the group can send invitations |
 | FR8.4   | A creator cannot send more than one invitation to a specific user when there is a pending invitation or he is already in the group or send to himself the invitation |
 | FR8.5   | Display pending invitations to the user |
 | FR8.6   | Display a specific invitation to user (it must be the sender or the receiver) |

@@ -6,5 +6,11 @@ macro_rules! api_success_response_alias {
             #[schema(inline)]
             pub data: $inner,
         }
+        
+        impl $alias {
+            pub fn data(&self) -> &$inner {
+                &self.data
+            }
+        }
     };
 }

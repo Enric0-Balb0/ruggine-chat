@@ -44,7 +44,7 @@ async fn main() {
         .layer(
             CorsLayer::new()
                 .allow_origin(Any) // ⚠️ per sviluppo, in produzione specifica l'origin
-                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS, Method::PATCH])
                 .allow_headers(Any)
         );
 

@@ -10,15 +10,19 @@ use crate::{dto::{
             InvitationUpdateStatusDto
         },
         ApiSuccessResponseInvitationReadDto,
-        ApiSuccessResponseInvitationUpdateDto
+        ApiSuccessResponseInvitationUpdateDto,
+        ApiSuccessResponseGroupMembershipReadDto,
+        ApiSuccessResponseVecGroupMembershipReadDto,
+        ApiSuccessResponseInvitationUpdateResponseDto,
     },
-    entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}}
+    entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole}}
 };
 use crate::handler::{
     auth_handler,
     user_handler,
     group_chat_handler,
-    invitation_handler
+    invitation_handler,
+    group_membership_handler
 };
 
 #[derive(OpenApi)]
@@ -32,6 +36,10 @@ use crate::handler::{
         group_chat_handler::find_by_id::find_by_id,
         invitation_handler::send::send,
         invitation_handler::find_by_id_and_user_id::find_by_id_and_user_id,
+        invitation_handler::update_status::update_status,
+        group_membership_handler::find_by_user_id::find_by_user_id,
+        group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id
+        
     ),
     components(
         schemas(
@@ -50,14 +58,21 @@ use crate::handler::{
             InvitationCreateDto,
             InvitationUpdateStatusDto,
             ApiSuccessResponseInvitationUpdateDto,
-            InvitationStatus
+            InvitationStatus,
+            MembershipStatus,
+            MemberRole,
+            ApiSuccessResponseGroupMembershipReadDto,
+            ApiSuccessResponseVecGroupMembershipReadDto,
+            ApiSuccessResponseInvitationUpdateResponseDto
         )
     ),
     modifiers(&SecurityAddon),
     tags(
         (name = "Authentication", description = "Authentication endpoints"),
         (name = "User", description = "User management endpoints"),
-        (name = "GroupChat", description = "Group chat management endpoints")
+        (name = "GroupChat", description = "Group chat management endpoints"),
+        (name = "Invitation", description = "Invitation management endpoints"),
+        (name = "GroupMembership", description = "Group membership management endpoints"),
     ),
     info(
         title = "Ruggine Server API",

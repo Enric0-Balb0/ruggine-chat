@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{openapi::schema, ToSchema};
 use validator::Validate;
 use chrono::{DateTime, Utc};
 use crate::entity::invitation::{Invitation, InvitationStatus};
@@ -61,6 +61,7 @@ pub struct InvitationUpdateStatusDto {
     #[schema(example = "accepted")]
     pub status: InvitationStatus,
     #[schema(example = "1")]
+    #[validate(range(min = 1, message = "Invitation ID must be positive"))]
     pub invitation_id: i32,
 }
 
@@ -68,7 +69,8 @@ pub struct InvitationUpdateStatusDto {
 #[schema(example = json!({
     "id": 1,
     "status": "accepted",
-    "responded_at": "2025-01-28T11:00:00Z"
+    "responded_at": "2025-01-28T11:00:00Z",
+    "group_membership_id": 42
 }))]
 pub struct InvitationUpdateResponseDto {
     #[schema(example = 1)]
@@ -77,6 +79,14 @@ pub struct InvitationUpdateResponseDto {
     pub status: InvitationStatus,
     #[schema(example = "2025-01-28T11:00:00Z")]
     pub responded_at: DateTime<Utc>,
+    #[schema(example = 1)]
+    pub group_membership_id: Option<i32>, // Optional field for group membership ID if created
+}
+
+impl InvitationUpdateResponseDto {
+    pub fn set_group_membership_id(&mut self, group_membership_id: i32) {
+        self.group_membership_id = Some(group_membership_id);
+    }
 }
 
 impl From<Invitation> for InvitationUpdateResponseDto {
@@ -85,6 +95,7 @@ impl From<Invitation> for InvitationUpdateResponseDto {
             id: invitation.id,
             status: invitation.status,
             responded_at: invitation.responded_at.unwrap_or_else(|| Utc::now()),
+            group_membership_id: None, // This field can be set later if needed
         }
     }
 }
@@ -440,6 +451,7 @@ mod tests {
             id: 1,
             status: InvitationStatus::Accepted,
             responded_at: DateTime::from_naive_utc_and_offset(naive_dt, Utc),
+            group_membership_id: None, // This field can be set later if needed
         };
 
         assert_eq!(response_dto.id, 1);
@@ -549,5 +561,19 @@ mod tests {
             invitation_id: 1,
         };
         assert_eq!(update_dto1, update_dto2);
+    }
+
+    #[test]
+    fn test_set_group_membership_id() {
+        let mut response_dto = InvitationUpdateResponseDto {
+            id: 1,
+            status: InvitationStatus::Accepted,
+            responded_at: Utc::now(),
+            group_membership_id: None,
+        };
+
+        assert!(response_dto.group_membership_id.is_none());
+        response_dto.set_group_membership_id(42);
+        assert_eq!(response_dto.group_membership_id, Some(42));
     }
 }

@@ -10,19 +10,6 @@ impl GroupMembershipService {
         let group_membership = self.group_membership_repo.find_by_id_and_user_id(id, user_id).await.map_err(|e| {
             let db_error = match e {
                 sqlx::Error::RowNotFound => ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound),
-
-                sqlx::Error::Database(db_err) => {
-                    if let Some(code) = db_err.code() {
-                        if code == "23505" {
-                            ApiError::DbError(DbError::UniqueConstraintViolation(db_err.to_string()))
-                        } else {
-                            ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                        }
-                    } else {
-                        ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                    }
-                }
-
                 _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
             };
             db_error

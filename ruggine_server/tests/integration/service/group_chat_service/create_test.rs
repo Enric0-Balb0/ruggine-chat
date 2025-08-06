@@ -1,7 +1,11 @@
 use ruggine_server::service::group_chat_service::{GroupChatService, GroupChatServiceTrait};
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
+use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
+use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::error::api_error::ApiError;
+use ruggine_server::entity::invitation::InvitationStatus;
+use ruggine_server::entity::group_membership::{MemberRole, MembershipStatus};
 use crate::common::{get_database, create_test_user, cleanup_group_chat};
 
 #[cfg(test)]
@@ -15,6 +19,8 @@ mod group_chat_create_service_integration_tests {
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
         let group_repo = GroupChatRepository::new(&db);
+        let invitation_repo = InvitationRepository::new(&db);
+        let membership_repo = GroupMembershipRepository::new(&db);
         
         // Create a unique user using common helper
         let (user, _password) = create_test_user("group_create").await;
@@ -43,6 +49,23 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group.name, create_dto.name);
         assert_eq!(group.description, create_dto.description);
         assert_eq!(group.created_by, user.id); */
+
+        // Verify that a group membership was created for the creator
+        let memberships_result = membership_repo.find_by_user_id(user.id).await;
+        assert!(memberships_result.is_ok(), "Should find memberships for user");
+        let memberships = memberships_result.unwrap();
+        
+        // Find the membership for our group
+        let our_membership = memberships.iter()
+            .find(|membership| membership.group_chat_id == group_dto.id)
+            .expect("Should find membership for the created group");
+        
+        assert_eq!(our_membership.role, MemberRole::Admin, "Creator should be admin");
+        assert_eq!(our_membership.membership_status, MembershipStatus::Active, "Membership should be active");
+        assert_eq!(our_membership.user_id, user.id, "Membership should belong to the creator");
+        assert_eq!(our_membership.group_chat_id, group_dto.id, "Membership should be for the created group");
+        assert!(our_membership.invitation_id > 0, "Membership should have a valid invitation ID");
+        assert!(our_membership.left_at.is_none(), "Creator should not have left the group");
 
         // Cleanup: Delete the test group and user
         cleanup_group_chat(group_dto.id).await;
@@ -117,6 +140,7 @@ mod group_chat_create_service_integration_tests {
         // Arrange: Create a real user
         let db = get_database().await;
         let group_chat_service = GroupChatService::new(&db);
+        let membership_repo = GroupMembershipRepository::new(&db);
         
         let (user, _password) = create_test_user("multiple_groups").await;
         
@@ -153,6 +177,27 @@ mod group_chat_create_service_integration_tests {
         assert_ne!(group1.name, group2.name);
         assert_ne!(group1.name, group3.name);
         assert_ne!(group2.name, group3.name);
+
+        // Verify that the user has memberships in all three groups
+        let memberships_result = membership_repo.find_by_user_id(user.id).await;
+        assert!(memberships_result.is_ok(), "Should find memberships for user");
+        let memberships = memberships_result.unwrap();
+        
+        // Should have at least 3 memberships (could have more from other tests)
+        assert!(memberships.len() >= 3, "Should have at least 3 memberships");
+        
+        // Verify membership exists for each group
+        let group1_membership = memberships.iter().find(|m| m.group_chat_id == group1.id).expect("Should have membership in group 1");
+        let group2_membership = memberships.iter().find(|m| m.group_chat_id == group2.id).expect("Should have membership in group 2");
+        let group3_membership = memberships.iter().find(|m| m.group_chat_id == group3.id).expect("Should have membership in group 3");
+        
+        // Verify all memberships are active admin memberships
+        assert_eq!(group1_membership.role, MemberRole::Admin);
+        assert_eq!(group1_membership.membership_status, MembershipStatus::Active);
+        assert_eq!(group2_membership.role, MemberRole::Admin);
+        assert_eq!(group2_membership.membership_status, MembershipStatus::Active);
+        assert_eq!(group3_membership.role, MemberRole::Admin);
+        assert_eq!(group3_membership.membership_status, MembershipStatus::Active);
 
         // Cleanup: Delete all test groups and user
         cleanup_group_chat(group1.id).await;

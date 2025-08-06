@@ -178,6 +178,7 @@ CREATE TABLE group_membership (
 );
 
 -- Crea trigger per evitare più group membership attivi dello stesso user allo stesso gruppo
+-- TODO: maybe check if role is equals to the one in invitation at insert
 CREATE OR REPLACE FUNCTION prevent_duplicate_active_memberships()
 RETURNS trigger AS $$
 BEGIN

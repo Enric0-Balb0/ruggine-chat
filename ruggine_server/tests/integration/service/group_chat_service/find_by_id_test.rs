@@ -9,6 +9,7 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_
 #[cfg(test)]
 mod group_chat_service_find_by_id_integration_tests {
     use ruggine_server::error::group_chat_error::GroupChatError;
+    use ruggine_server::utils::service_initializer::ServiceInitializer;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -16,9 +17,10 @@ mod group_chat_service_find_by_id_integration_tests {
         // Arrange
         let (user, _) = create_test_user("service_find_creator").await;
         let db = get_database().await;
-        
-        let group_chat_service = GroupChatService::new(&db);
-        
+
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
+
         // First create a group to find
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("service_find_test");
         let created_group = group_chat_service.create(create_dto.clone(), user.id).await.unwrap();
@@ -45,7 +47,8 @@ mod group_chat_service_find_by_id_integration_tests {
     async fn test_find_by_id_non_existent_group() {
         // Arrange
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
         let non_existent_id = 99999;
 
         // Act
@@ -65,7 +68,8 @@ mod group_chat_service_find_by_id_integration_tests {
     async fn test_find_by_id_invalid_id() {
         // Arrange
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
         let invalid_id = -1;
 
         // Act
@@ -80,7 +84,8 @@ mod group_chat_service_find_by_id_integration_tests {
         // Arrange
         let (user, _) = create_test_user("multi_service_find_creator").await;
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
 
         // Create multiple groups
         let create_dto1 = GroupChatFactory::unique_fake_group_chat_create_dto("multi_service_1");
@@ -117,7 +122,8 @@ mod group_chat_service_find_by_id_integration_tests {
         // Arrange
         let (user, _) = create_test_user("create_find_service_creator").await;
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
 
         // Use factory with specific data
         let create_dto = GroupChatFactory::with_name_dto(
@@ -193,7 +199,8 @@ mod group_chat_service_find_by_id_integration_tests {
         // Arrange
         let (user, _) = create_test_user("timestamp_service_find_creator").await;
         let db = get_database().await;
-        let group_chat_service = GroupChatService::new(&db);
+        let service_init = ServiceInitializer::new(&db);
+        let group_chat_service = service_init.group_chat_service();
 
         let create_dto = GroupChatFactory::unique_fake_group_chat_create_dto("timestamp_service_test");
 
