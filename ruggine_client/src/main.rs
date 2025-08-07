@@ -10,6 +10,7 @@ mod utils;
 mod error;
 mod dto;
 mod config;
+mod router;
 
 use app::*;
 use leptos::*;

@@ -1,11 +1,11 @@
 use leptos::*;
-use crate::pages::LoginPage;
+use crate::router::AppRouter;
 
 #[component]
 pub fn App() -> impl IntoView {
     view! {
         <main>
-            <LoginPage />
+            <AppRouter />
         </main>
     }
 }

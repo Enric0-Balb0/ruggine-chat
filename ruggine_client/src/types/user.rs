@@ -241,10 +241,10 @@ mod tests {
     fn test_user_register_request_creation() {
         let request = UserRegisterRequest {
             address: "123 Test St".to_string(),
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            birthday: "1990-01-01".to_string(),
             email: "test@example.com".to_string(),
             first_name: "John".to_string(),
-            gender: serde_json::json!("male"),
+            gender: Gender::Male,
             last_name: "Doe".to_string(),
             password: "securepass123".to_string(),
             username: "johndoe".to_string(),

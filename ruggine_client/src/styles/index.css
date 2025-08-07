@@ -1,4 +1,7 @@
 /* Main Tailwind CSS entry point */
-@import './tailwind.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import './base.css';
 @import './components.css';
