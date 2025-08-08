@@ -53,11 +53,18 @@
     font-family: var(--font-family-base);
     font-size: var(--font-size-base);
     line-height: 1.5;
+    height: 100%;
+    overflow: hidden; /* No scroll for desktop app */
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
-    background-color: var(--color-bg-main);
     color: var(--color-secondary);
+    font-family: var(--font-family-base);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* No scroll for desktop app */
+    /* No background - let components handle it */
   }
 }

@@ -5,6 +5,10 @@ use crate::http::error::HttpError;
 pub enum AuthError {
     /// Invalid input parameters
     InvalidInput(String),
+    /// Invalid credentials provided
+    InvalidCredentials,
+    /// Network/connection error
+    NetworkError(String),
     /// User not authenticated
     NotAuthenticated,
     /// HTTP request error
@@ -32,6 +36,8 @@ impl std::fmt::Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AuthError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            AuthError::InvalidCredentials => write!(f, "Invalid credentials provided"),
+            AuthError::NetworkError(msg) => write!(f, "Network error: {}", msg),
             AuthError::NotAuthenticated => write!(f, "User not authenticated"),
             AuthError::Http(err) => write!(f, "HTTP error: {}", err),
             AuthError::Storage(err) => write!(f, "Storage error: {}", err),

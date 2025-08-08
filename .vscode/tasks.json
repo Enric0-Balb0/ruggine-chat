@@ -206,8 +206,14 @@
     {
       "label": "Tailwind: Watch CSS",
       "type": "shell",
-      "command": "npm",
-      "args": ["run", "watch-css"],
+      "command": "npx",
+      "args": [
+        "tailwindcss",
+        "-i", "./src/styles/index.css",
+        "-o", "./src/styles/tailwind.css",
+        "--watch",
+        "--poll"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/ruggine_client"
       },
@@ -229,12 +235,12 @@
     {
       "label": "Tailwind: Build CSS",
       "type": "shell",
-      "command": "powershell",
+      "command": "npx",
       "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "./build-css.ps1"
+        "tailwindcss",
+        "-i", "./src/styles/index.css",
+        "-o", "./src/styles/tailwind.css",
+        "--minify"
       ],
       "options": {
         "cwd": "${workspaceFolder}/ruggine_client"
@@ -255,15 +261,28 @@
     },
     {
       "label": "Dev: Start All Frontend",
-      "dependsOrder": "parallel",
+      "dependsOrder": "sequence",
       "dependsOn": [
-        "Trunk: Serve Frontend",
-        "Tailwind: Watch CSS"
+        "Tailwind: Build CSS",
+        "Dev: Start Services"
       ],
       "group": {
         "kind": "build",
         "isDefault": true
       },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Start Services",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Trunk: Serve Frontend",
+        "Tailwind: Watch CSS"
+      ],
       "presentation": {
         "reveal": "always",
         "panel": "new"

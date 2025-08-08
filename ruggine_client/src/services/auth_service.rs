@@ -139,19 +139,36 @@ impl AuthService {
         }
     }
 
-    /// Register new user
-    pub async fn register(&self, email: String, password: String, full_name: String) -> Result<UserProfile, AuthError> {
-        self.validate_registration_input(&email, &password, &full_name)?;
+    /// Register new user with complete profile information
+    pub async fn register(&self, 
+        email: String, 
+        password: String, 
+        first_name: String,
+        last_name: String,
+        username: String,
+        birthday: String,
+        address: String,
+        gender: String
+    ) -> Result<UserProfile, AuthError> {
+        self.validate_registration_input(&email, &password, &first_name)?;
+
+        // Convert gender string to enum
+        let gender_enum = match gender.as_str() {
+            "male" => Gender::Male,
+            "female" => Gender::Female,
+            "other" => Gender::Other,
+            _ => return Err(AuthError::InvalidInput("Genere non valido".to_string())),
+        };
 
         let request = UserRegisterRequest {
             email: email.trim().to_lowercase(),
             password: password.trim().to_string(),
-            username: full_name.clone(),
-            first_name: full_name.split_whitespace().next().unwrap_or("").to_string(),
-            last_name: full_name.split_whitespace().skip(1).collect::<Vec<_>>().join(" "),
-            birthday: "1990-01-01".to_string(), // Fixed: use string format as per OpenAPI
-            address: "".to_string(),
-            gender: Gender::Other, // Fixed: use enum directly
+            first_name: first_name.trim().to_string(),
+            last_name: last_name.trim().to_string(),
+            username: username.trim().to_string(),
+            birthday,
+            address: address.trim().to_string(),
+            gender: gender_enum,
         };
 
         let profile_response: ApiSuccessResponseUserReadDto = self.http_client
@@ -208,15 +225,15 @@ impl AuthService {
     }
 
     /// Validate registration input parameters
-    fn validate_registration_input(&self, email: &str, password: &str, full_name: &str) -> Result<(), AuthError> {
+    fn validate_registration_input(&self, email: &str, password: &str, first_name: &str) -> Result<(), AuthError> {
         self.validate_login_input(email, password)?;
 
-        if full_name.trim().is_empty() {
-            return Err(AuthError::InvalidInput("Full name is required".to_string()));
+        if first_name.trim().is_empty() {
+            return Err(AuthError::InvalidInput("Nome è obbligatorio".to_string()));
         }
 
-        if password.len() < AuthConstants::MIN_PASSWORD_LENGTH {
-            return Err(AuthError::InvalidInput(format!("Password must be at least {} characters", AuthConstants::MIN_PASSWORD_LENGTH)));
+        if password.len() < 6 {
+            return Err(AuthError::InvalidInput("La password deve essere di almeno 6 caratteri".to_string()));
         }
 
         Ok(())

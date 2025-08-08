@@ -1,5 +1,9 @@
 // Pages module - UI pages/views
-pub mod login;
+pub mod landing;
+pub mod register;
+pub mod home;
 
 // Re-export pages
-pub use login::LoginPage;
+pub use landing::LandingPage;
+pub use register::RegisterPage;
+pub use home::HomePage;
