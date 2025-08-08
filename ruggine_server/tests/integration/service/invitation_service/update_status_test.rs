@@ -110,7 +110,7 @@ mod invitation_service_update_status_integration_tests {
 
         assert!(matches!(
             result.unwrap_err(),
-            ApiError::InvitationError(InvitationError::UserNotAuthorized)
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(_))
         ));
 
         cleanup_invitation(invitation.id).await;

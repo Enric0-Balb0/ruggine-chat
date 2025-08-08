@@ -9,6 +9,7 @@ use crate::get_database;
 #[cfg(test)]
 mod send_handler_integration_tests {
     use ruggine_server::entity::group_membership::MemberRole;
+    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_test_group_chat_with_invitation_and_membership};
     use super::*;
 
     /// Helper function to create a real invitation state with database connections
@@ -21,7 +22,7 @@ mod send_handler_integration_tests {
     async fn test_send_handler_creates_invitation_successfully_as_admin() {
         // Arrange: Create admin user and group chat
         let (admin_user, _password) = create_test_user("send_success_admin").await;
-        let group_chat = create_test_group_chat("send_success_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("send_success_group", admin_user.id).await;
         let (target_user, _password) = create_test_user("send_success_target").await;
         
         let invitation_state = create_invitation_state().await;
@@ -49,6 +50,7 @@ mod send_handler_integration_tests {
         assert!(invitation_response.data().sent_at <= chrono::Utc::now(), "Sent date should not be in future");
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(invitation_response.data().id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
@@ -59,7 +61,7 @@ mod send_handler_integration_tests {
     async fn test_send_handler_fails_when_user_not_admin() {
         // Arrange: Create admin user, group chat, and non-admin user
         let (admin_user, _password) = create_test_user("send_not_admin_admin").await;
-        let group_chat = create_test_group_chat("send_not_admin_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("send_not_admin_group", admin_user.id).await;
         let (non_admin_user, _password) = create_test_user("send_not_admin_user").await;
         let (target_user, _password) = create_test_user("send_not_admin_target").await;
         
@@ -80,13 +82,14 @@ mod send_handler_integration_tests {
         // Assert: Should fail with UserNotAuthorized error
         assert!(result.is_err(), "Send invitation should fail when user is not admin");
         match result.unwrap_err() {
-            ApiError::GroupChatError(GroupChatError::UserNotAuthorized) => {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(_)) => {
                 // Expected error
             }
             other => panic!("Expected GroupChatError::UserNotAuthorized, got {:?}", other),
         }
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
         cleanup_user(non_admin_user.email).await;
@@ -97,7 +100,7 @@ mod send_handler_integration_tests {
     async fn test_send_handler_fails_when_invitation_already_exists() {
         // Arrange: Create admin user, group chat, and target user
         let (admin_user, _password) = create_test_user("send_duplicate_admin").await;
-        let group_chat = create_test_group_chat("send_duplicate_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("send_duplicate_group", admin_user.id).await;
         let (target_user, _password) = create_test_user("send_duplicate_target").await;
         
         let invitation_state = create_invitation_state().await;
@@ -132,6 +135,7 @@ mod send_handler_integration_tests {
         }
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(first_result.unwrap().0.data().id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
@@ -210,7 +214,7 @@ mod send_handler_integration_tests {
     async fn test_send_handler_creates_invitation_with_different_users() {
         // Arrange: Create admin user, group chat, and different target users
         let (admin_user, _password) = create_test_user("send_different_admin").await;
-        let group_chat = create_test_group_chat("send_different_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("send_different_group", admin_user.id).await;
         let (target_user1, _password) = create_test_user("send_different_target1").await;
         let (target_user2, _password) = create_test_user("send_different_target2").await;
         
@@ -255,6 +259,7 @@ mod send_handler_integration_tests {
         assert_eq!(invitation2_response.data().from_user_id, admin_user.id);
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(invitation1_response.data().id).await;
         cleanup_invitation(invitation2_response.data().id).await;
         cleanup_group_chat(group_chat.id).await;

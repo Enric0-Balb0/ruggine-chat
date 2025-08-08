@@ -21,3 +21,4 @@ api_success_response_alias!(ApiSuccessResponseInvitationUpdateDto, InvitationUpd
 api_success_response_alias!(ApiSuccessResponseGroupMembershipReadDto, GroupMembershipReadDto);
 api_success_response_alias!(ApiSuccessResponseVecGroupMembershipReadDto, Vec<GroupMembershipReadDto>);
 api_success_response_alias!(ApiSuccessResponseInvitationUpdateResponseDto, InvitationUpdateResponseDto);
+api_success_response_alias!(ApiSuccessResponseVecInvitationReadDto, Vec<InvitationReadDto>);

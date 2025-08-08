@@ -11,7 +11,7 @@ use crate::common::{get_database, create_test_user, cleanup_group_chat};
 #[cfg(test)]
 mod group_chat_create_service_integration_tests {
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, cleanup_group_membership, cleanup_invitation, cleanup_user};
+    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, cleanup_group_membership, cleanup_invitation, cleanup_user};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -117,8 +117,8 @@ mod group_chat_create_service_integration_tests {
         assert_ne!(group1.id, group2.id, "Groups should have different IDs");
 
         // Cleanup
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group1.id).await;
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group2.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group1.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group2.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_user(user.email.clone()).await;
@@ -190,9 +190,9 @@ mod group_chat_create_service_integration_tests {
         assert_eq!(group3_membership.membership_status, MembershipStatus::Active);
 
         // Cleanup: Delete all test groups and user
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group1.id).await;
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group2.id).await;
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group3.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group1.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group2.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group3.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group3.id).await;

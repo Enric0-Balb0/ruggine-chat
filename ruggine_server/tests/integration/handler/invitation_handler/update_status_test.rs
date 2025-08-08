@@ -118,7 +118,7 @@ mod update_status_handler_integration_tests {
         // Assert: Should fail with UserNotAuthorized error
         assert!(result.is_err(), "Update status should fail when user is not the recipient");
         match result.unwrap_err() {
-            ApiError::InvitationError(InvitationError::UserNotAuthorized) => {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(_)) => {
                 // Expected error
             }
             _ => panic!("Expected UserNotAuthorized error"),

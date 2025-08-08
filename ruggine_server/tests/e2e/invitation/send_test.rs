@@ -9,6 +9,7 @@ use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, create
 
 #[cfg(test)]
 mod send_invitation_e2e_tests {
+    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_test_group_chat_with_invitation_and_membership};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -16,7 +17,7 @@ mod send_invitation_e2e_tests {
         // Arrange: Create router, admin user, group chat, and target user
         let app = create_invitation_router().await;
         let (admin_user, _password, token) = create_login_and_get_token("e2e_send_success_admin".to_string()).await;
-        let group_chat = create_test_group_chat("e2e_send_success_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("e2e_send_success_group", admin_user.id).await;
         let (target_user, _target_password) = create_test_user("e2e_send_success_target").await;
         
         // Create invitation payload
@@ -56,6 +57,7 @@ mod send_invitation_e2e_tests {
         assert_eq!(data["role_at_join"].as_str().unwrap(), "member");
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(data["id"].as_i64().unwrap() as i32).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
@@ -170,7 +172,7 @@ mod send_invitation_e2e_tests {
         // Arrange: Create router, admin user, group chat, and target user
         let app = create_invitation_router().await;
         let (admin_user, _password, token) = create_login_and_get_token("e2e_send_duplicate_admin".to_string()).await;
-        let group_chat = create_test_group_chat("e2e_send_duplicate_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("e2e_send_duplicate_group", admin_user.id).await;
         let (target_user, _target_password) = create_test_user("e2e_send_duplicate_target").await;
 
         let send_payload = json!({
@@ -214,6 +216,7 @@ mod send_invitation_e2e_tests {
         let data = &response_json["data"];
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(data["id"].as_i64().unwrap() as i32).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;

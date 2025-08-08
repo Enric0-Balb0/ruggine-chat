@@ -8,13 +8,8 @@ use crate::get_database;
 #[cfg(test)]
 mod find_by_id_handler_integration_tests {
     use ruggine_server::dto::invitation_dto::InvitationReadDto;
+    use crate::create_invitation_state;
     use super::*;
-
-    /// Helper function to create a real invitation state with database connections
-    async fn create_invitation_state() -> InvitationState {
-        let db = get_database().await;
-        InvitationState::new(&db)
-    }
 
     #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_and_user_id_handler_returns_invitation_successfully() {

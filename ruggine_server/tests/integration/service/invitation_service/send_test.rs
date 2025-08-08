@@ -4,10 +4,11 @@ use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::invitation_error::InvitationError;
 use ruggine_server::error::group_chat_error::GroupChatError;
 use ruggine_server::entity::invitation::InvitationStatus;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, cleanup_invitation};
+use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_service_send_integration_tests {
+    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_test_group_chat_with_invitation_and_membership};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -21,7 +22,7 @@ mod invitation_service_send_integration_tests {
         let (target_user, _) = create_test_user("invite_send_target").await;
         
         // Create group chat with admin as creator
-        let group_chat = create_test_group_chat("invite_send_group", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group", admin_user.id).await;
         
         // Create invitation DTO
         let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat.id);
@@ -32,7 +33,7 @@ mod invitation_service_send_integration_tests {
         // Assert: Verify invitation was sent successfully
         assert!(result.is_ok(), "Failed to send invitation: {:?}", result);
         let invitation_read_dto = result.unwrap();
-        
+
         assert!(invitation_read_dto.id > 0, "Invitation ID should be positive");
         assert_eq!(invitation_read_dto.from_user_id, admin_user.id);
         assert_eq!(invitation_read_dto.to_user_id, target_user.id);
@@ -42,6 +43,7 @@ mod invitation_service_send_integration_tests {
         assert!(invitation_read_dto.sent_at <= chrono::Utc::now());
 
         // Cleanup: Delete the test data
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(invitation_read_dto.id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
@@ -55,8 +57,8 @@ mod invitation_service_send_integration_tests {
         let invitation_service = InvitationService::new(&db);
         
         let (admin_user, _) = create_test_user("invite_send_admin_no_target").await;
-        let group_chat = create_test_group_chat("invite_send_group_no_target", admin_user.id).await;
-        
+        let group_chat = create_test_group_chat_with_invitation_and_membership("send_invitation_user_not_found", admin_user.id).await;
+
         let nonexistent_user_id = 99999;
         let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(nonexistent_user_id, group_chat.id);
 
@@ -73,6 +75,7 @@ mod invitation_service_send_integration_tests {
         }
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
     }
@@ -117,8 +120,8 @@ mod invitation_service_send_integration_tests {
         let (target_user, _) = create_test_user("invite_send_target_auth").await;
         
         // Create group with admin_user as creator
-        let group_chat = create_test_group_chat("invite_send_group_auth", admin_user.id).await;
-        
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_auth", admin_user.id).await;
+
         let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat.id);
 
         // Act: Try to send invitation as regular user (not admin)
@@ -127,13 +130,14 @@ mod invitation_service_send_integration_tests {
         // Assert: Should fail with UserNotAuthorized
         assert!(result.is_err(), "Should fail when user is not group admin");
         match result.unwrap_err() {
-            ApiError::GroupChatError(GroupChatError::UserNotAuthorized) => {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(_)) => {
                 // Expected error
             }
             e => panic!("Expected UserNotAuthorized error, got: {:?}", e),
         }
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
         cleanup_user(regular_user.email).await;
@@ -148,8 +152,8 @@ mod invitation_service_send_integration_tests {
         
         let (admin_user, _) = create_test_user("invite_send_admin_pending").await;
         let (target_user, _) = create_test_user("invite_send_target_pending").await;
-        let group_chat = create_test_group_chat("invite_send_group_pending", admin_user.id).await;
-        
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_pending", admin_user.id).await;
+
         // Create first invitation
         let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat.id);
         let first_result = invitation_service.send(invitation_dto.clone(), admin_user.id).await;
@@ -169,6 +173,7 @@ mod invitation_service_send_integration_tests {
         }
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(first_invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
         cleanup_user(admin_user.email).await;
@@ -183,8 +188,8 @@ mod invitation_service_send_integration_tests {
         
         let (admin_user, _) = create_test_user("invite_send_admin_multi").await;
         let (target_user, _) = create_test_user("invite_send_target_multi").await;
-        let group_chat1 = create_test_group_chat("invite_send_group_multi1", admin_user.id).await;
-        let group_chat2 = create_test_group_chat("invite_send_group_multi2", admin_user.id).await;
+        let group_chat1 = create_test_group_chat_with_invitation_and_membership("invite_send_group_multi1", admin_user.id).await;
+        let group_chat2 = create_test_group_chat_with_invitation_and_membership("invite_send_group_multi2", admin_user.id).await;
         
         // Create invitation DTOs for different groups
         let invitation_dto1 = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat1.id);
@@ -207,6 +212,8 @@ mod invitation_service_send_integration_tests {
         assert_eq!(invitation2.to_user_id, target_user.id);
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat1.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat2.id).await;
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
@@ -224,7 +231,7 @@ mod invitation_service_send_integration_tests {
         let (admin_user, _) = create_test_user("invite_send_admin_diff").await;
         let (target_user1, _) = create_test_user("invite_send_target_diff1").await;
         let (target_user2, _) = create_test_user("invite_send_target_diff2").await;
-        let group_chat = create_test_group_chat("invite_send_group_diff", admin_user.id).await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_diff", admin_user.id).await;
         
         // Create invitation DTOs for different users
         let invitation_dto1 = InvitationFactory::fake_invitation_create_dto_with_ids(target_user1.id, group_chat.id);
@@ -247,6 +254,7 @@ mod invitation_service_send_integration_tests {
         assert_eq!(invitation2.group_chat_id, group_chat.id);
 
         // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;

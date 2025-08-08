@@ -9,6 +9,7 @@ use chrono::Utc;
 
 impl InvitationService {
     pub async fn update_status_internal(&self, payload: InvitationUpdateStatusDto, auth_user_id: i32) -> Result<InvitationUpdateResponseDto, ApiError> {
+        // TODO: The operation must be atomic
         // Validate that the status is either accepted or rejected
         if let Err(e) = payload.validate_status() {
             return Err(ApiError::InvitationError(InvitationError::InvalidStatus(e)));
@@ -22,7 +23,7 @@ impl InvitationService {
 
         // Verify that the current user is the recipient of the invitation
         if invitation.to_user_id != auth_user_id {
-            return Err(ApiError::InvitationError(InvitationError::UserNotAuthorized));
+            return Err(ApiError::InvitationError(InvitationError::UserNotAuthorized("Not authorized to update".to_string())));
         }
 
         // Verify that the invitation is still pending
@@ -34,7 +35,6 @@ impl InvitationService {
         let update_invitation_status = UpdateInvitationStatus {
             invitation_id: payload.invitation_id,
             status: payload.status.clone(),
-            responded_at: Utc::now(),
         };
 
         // Update the invitation status

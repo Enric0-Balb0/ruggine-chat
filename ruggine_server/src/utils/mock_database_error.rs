@@ -15,11 +15,18 @@ impl MockDatabaseError {
         }
     }
 
+    pub fn with_message(code: String, message: String) -> Self {
+        Self {
+            code,
+            message,
+        }
+    }
+
     // PostgreSQL foreign key violation code
     pub fn foreign_key_violation() -> Error {
         Error::Database(Box::new(Self {
             code: "23503".to_string(),
-            message: "Foreign key violation".to_string(),
+            message: "Foreign key violation 23503".to_string(),
         }))
     }
 
@@ -27,7 +34,7 @@ impl MockDatabaseError {
     pub fn constraint_violation() -> Error {
         Error::Database(Box::new(Self {
             code: "23505".to_string(),
-            message: "Constraint violation".to_string(),
+            message: "Constraint violation 23505".to_string(),
         }))
     }
 }

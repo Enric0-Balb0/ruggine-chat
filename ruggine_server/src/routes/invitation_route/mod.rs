@@ -1,5 +1,6 @@
 pub mod send;
 pub mod find_by_id_and_user_id;
+pub mod find_by_user_id;
 pub mod update_status;
 
 use axum::Router;
@@ -19,6 +20,13 @@ pub fn routes(invitation_state: crate::state::invitation_state::InvitationState,
         )
         .merge(
             find_by_id_and_user_id::routes()
+                .with_state(invitation_state.clone())
+                .layer(ServiceBuilder::new().layer(
+                    middleware::from_fn_with_state(token_state.clone(), crate::middleware::auth_middleware::auth(all_user_types())),
+                ))
+        )
+        .merge(
+            find_by_user_id::routes()
                 .with_state(invitation_state.clone())
                 .layer(ServiceBuilder::new().layer(
                     middleware::from_fn_with_state(token_state.clone(), crate::middleware::auth_middleware::auth(all_user_types())),

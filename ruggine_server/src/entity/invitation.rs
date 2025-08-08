@@ -28,7 +28,6 @@ pub struct NewInvitation {
 pub struct UpdateInvitationStatus {
     pub invitation_id: i32,
     pub status: InvitationStatus,
-    pub responded_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema, Display)]
@@ -40,6 +39,17 @@ pub enum InvitationStatus {
     Pending,
     Accepted,
     Rejected,
+}
+
+/// Filter for finding invitations by user relationship
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UserInvitationFilter {
+    /// Find invitations where user is the sender (from_user_id)
+    AsSender,
+    /// Find invitations where user is the recipient (to_user_id)
+    AsRecipient,
+    /// Find invitations where user is either sender or recipient
+    Both,
 }
 
 impl Default for InvitationStatus {

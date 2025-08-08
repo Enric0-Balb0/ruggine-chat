@@ -214,7 +214,6 @@ impl InvitationFactory {
     pub fn fake_update_invitation_status() -> UpdateInvitationStatus {
         UpdateInvitationStatus {
             status: InvitationStatus::Accepted,
-            responded_at: Utc::now(),
             invitation_id: 1
         }
     }
@@ -222,7 +221,6 @@ impl InvitationFactory {
     pub fn fake_update_invitation_status_rejected() -> UpdateInvitationStatus {
         UpdateInvitationStatus {
             status: InvitationStatus::Rejected,
-            responded_at: Utc::now(),
             invitation_id: 1
         }
     }

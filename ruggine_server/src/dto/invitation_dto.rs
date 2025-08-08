@@ -55,7 +55,8 @@ impl From<Invitation> for InvitationReadDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 #[schema(example = json!({
-    "status": "accepted"
+    "status": "accepted",
+    "invitation_id": 4
 }))]
 pub struct InvitationUpdateStatusDto {
     #[schema(example = "accepted")]

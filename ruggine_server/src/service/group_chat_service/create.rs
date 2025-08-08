@@ -51,7 +51,7 @@ impl GroupChatService {
 
         let invitation_service = self.invitation_service();
 
-        let invitation = match invitation_service.send(invitation_create_dto, created_by).await {
+        let invitation = match invitation_service.send_for_group_chat_create(invitation_create_dto, created_by).await {
             Ok(invitation) => invitation,
             Err(e) => return Err(e),
         };
@@ -111,11 +111,11 @@ mod tests {
                 Box::pin(async move { Ok(expected_group_id) })
             });
 
-        // Mock: invitation_service.send should return a mock invitation
+        // Mock: invitation_service.send_for_group_chat_create should return a mock invitation
         let mock_invitation = InvitationFactory::fake_invitation_read_dto();
         let invitation_clone = mock_invitation.clone();
         mock_invitation_service
-            .expect_send()
+            .expect_send_for_group_chat_create()
             .returning(move |_, _| {
                 Box::pin({
                     let value = invitation_clone.clone();
@@ -253,9 +253,9 @@ mod tests {
                 Box::pin(async move { Ok(expected_group_id) })
             });
 
-        // Mock: invitation_service.send should fail
+        // Mock: invitation_service.send_for_group_chat_create should fail
         mock_invitation_service
-            .expect_send()
+            .expect_send_for_group_chat_create()
             .returning(move |_, _| {
                 Box::pin(async move { Err(ApiError::DbError(DbError::SomethingWentWrong("Invitation send failed".to_string()))) })
             });
@@ -298,11 +298,11 @@ mod tests {
                 Box::pin(async move { Ok(expected_group_id) })
             });
 
-        // Mock: invitation_service.send should succeed
+        // Mock: invitation_service.send_for_group_chat_create should succeed
         let mock_invitation = InvitationFactory::fake_invitation_read_dto();
         let invitation_clone = mock_invitation.clone();
         mock_invitation_service
-            .expect_send()
+            .expect_send_for_group_chat_create()
             .returning(move |_, _| {
                 Box::pin({
                     let value = invitation_clone.clone();

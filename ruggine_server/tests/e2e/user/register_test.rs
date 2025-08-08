@@ -154,7 +154,6 @@ mod register_e2e_tests {
     #[tokio_shared_rt::test(shared)]
     async fn test_register_failure_with_duplicate_email() {
         // Arrange: Create router and register a user first
-        let app = create_user_router().await;
         let register_dto = UserFactory::unique_fake_user_register_dto("e2e_register_duplicate");
 
         let register_payload = json!({

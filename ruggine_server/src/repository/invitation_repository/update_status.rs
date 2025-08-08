@@ -1,3 +1,4 @@
+use chrono::Utc;
 use crate::entity::invitation::{Invitation, UpdateInvitationStatus, InvitationStatus};
 use crate::entity::group_membership::{MemberRole};
 use crate::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
@@ -7,7 +8,7 @@ use sqlx::Error as SqlxError;
 impl InvitationRepository {
     pub async fn update_status_internal(&self, invitation_id: i32, update_invitation_status: UpdateInvitationStatus) -> Result<Invitation, SqlxError> {
         let update_status = update_invitation_status.status;
-        let responded_at = update_invitation_status.responded_at;
+        let responded_at = Utc::now();
 
         let invitation = sqlx::query_as!(
             Invitation,
@@ -172,7 +173,6 @@ mod tests {
         let mut update_status = UpdateInvitationStatus {
             invitation_id,
             status: InvitationStatus::Accepted,
-            responded_at: now,
         };
         let mut expected_invitation = InvitationFactory::fake_invitation_with_status(InvitationStatus::Accepted);
         expected_invitation.responded_at = Some(now);
@@ -181,7 +181,7 @@ mod tests {
         mock_repo
             .expect_update_status()
             .with(eq(invitation_id), function(move |update: &UpdateInvitationStatus| {
-                update.status == InvitationStatus::Accepted && update.responded_at == now
+                update.status == InvitationStatus::Accepted
             }))
             .times(1)
             .returning(move |_, _| {

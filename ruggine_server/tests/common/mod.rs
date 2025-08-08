@@ -8,6 +8,7 @@ use axum::Router;
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
+use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::group_membership::MemberRole;
 use ruggine_server::entity::user::User;
@@ -188,6 +189,18 @@ pub async fn create_test_group_chat(prefix: &str, created_by: i32) -> GroupChat 
     group_option.unwrap()
 }
 
+pub async fn create_test_group_chat_with_invitation_and_membership(prefix: &str, created_by: i32) -> GroupChatReadDto {
+    let db = get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let group_chat_service = service_init.group_chat_service();
+
+    let fake_group_chat_create_dto = GroupChatFactory::unique_fake_group_chat_create_dto(prefix);
+
+    let group_chat = group_chat_service.create(fake_group_chat_create_dto, created_by).await.unwrap();
+
+    group_chat
+}
+
 pub async fn cleanup_group_chat(group_id: i32) {
     let db = get_database().await;
     let group_repo = GroupChatRepository::new(&db);
@@ -206,6 +219,13 @@ pub async fn create_group_chat_state() -> GroupChatState {
         user_service: service_init.user_service(),
     }
 }
+
+/// Helper function to create a real invitation state with database connections
+pub async fn create_invitation_state() -> InvitationState {
+    let db = get_database().await;
+    InvitationState::new(&db)
+}
+
 
 /// Helper function to create a test invitation in the database
 pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_chat_id: i32) -> Invitation {
@@ -303,7 +323,7 @@ pub async fn cleanup_group_membership(membership_id: i32) {
     }
 }
 
-pub async fn clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user_id: i32, group_chat_id: i32) {
+pub async fn clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user_id: i32, group_chat_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let group_membership_service = service_init.group_membership_service();

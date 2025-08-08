@@ -2,6 +2,7 @@ pub mod invitation_repository;
 pub mod invitation_repository_trait;
 mod insert;
 mod find_by_id_and_user_id;
+mod find_by_user_id;
 mod find_pending_invitations_for_user;
 mod find_pending_invitations_between_users;
 mod update_status;
@@ -11,7 +12,7 @@ use async_trait::async_trait;
 use sqlx::Error;
 pub use invitation_repository::InvitationRepository;
 pub use invitation_repository_trait::InvitationRepositoryTrait;
-use crate::entity::invitation::{Invitation, NewInvitation, UpdateInvitationStatus};
+use crate::entity::invitation::{Invitation, NewInvitation, UpdateInvitationStatus, UserInvitationFilter};
 
 #[async_trait]
 impl InvitationRepositoryTrait for InvitationRepository {
@@ -25,6 +26,10 @@ impl InvitationRepositoryTrait for InvitationRepository {
 
     async fn find_by_id_and_user_id(&self, id: i32, user_id: i32) -> Result<Invitation, Error> {
         self.find_by_id_and_user_id_inner(id, user_id).await
+    }
+
+    async fn find_by_user_id(&self, user_id: i32, filter: UserInvitationFilter) -> Result<Vec<Invitation>, Error> {
+        self.find_by_user_id_inner(user_id, filter).await
     }
 
     async fn find_pending_invitations_for_user(&self, user_id: i32) -> Result<Vec<Invitation>, Error> {

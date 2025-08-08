@@ -10,7 +10,7 @@ use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, 
 
 #[cfg(test)]
 mod create_group_chat_e2e_tests {
-    use crate::clean_up_group_membership_invitation_by_user_id_and_group_chat_id;
+    use crate::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -58,7 +58,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         let group_id = data["id"].as_i64().unwrap() as i32;
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
         cleanup_group_chat(group_id).await;
         cleanup_user(user.email).await;
     }
@@ -259,7 +259,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
+            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;
@@ -321,8 +321,8 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response_json2["data"]["created_by"].as_i64().unwrap(), user2.id as i64);
 
         // Cleanup
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user1.id, group_id1).await;
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user2.id, group_id2).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user1.id, group_id1).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user2.id, group_id2).await;
         cleanup_group_chat(group_id1).await;
         cleanup_group_chat(group_id2).await;
         cleanup_user(user1.email).await;
@@ -391,7 +391,7 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, group_id).await;
+            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
         cleanup_user(user.email).await;

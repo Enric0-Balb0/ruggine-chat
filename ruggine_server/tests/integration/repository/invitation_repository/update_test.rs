@@ -18,11 +18,9 @@ mod invitation_repository_update_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let responded_at = Utc::now();
         let update_status = UpdateInvitationStatus {
             invitation_id: invitation.id,
             status: InvitationStatus::Accepted,
-            responded_at,
         };
 
         // Act
@@ -62,11 +60,9 @@ mod invitation_repository_update_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let responded_at = Utc::now();
         let update_status = UpdateInvitationStatus {
             invitation_id: invitation.id,
             status: InvitationStatus::Rejected,
-            responded_at,
         };
 
         // Act
@@ -104,7 +100,6 @@ mod invitation_repository_update_integration_tests {
         let update_status = UpdateInvitationStatus {
             invitation_id: -1,
             status: InvitationStatus::Accepted,
-            responded_at: Utc::now(),
         };
 
         // Act
@@ -132,21 +127,17 @@ mod invitation_repository_update_integration_tests {
         let repository = InvitationRepository::new(&db);
         
         // First update - accept the invitation
-        let first_responded_at = Utc::now();
         let first_update = UpdateInvitationStatus {
             invitation_id: invitation.id,
             status: InvitationStatus::Accepted,
-            responded_at: first_responded_at,
         };
         let first_result = repository.update_status(invitation.id, first_update).await;
         assert!(first_result.is_ok(), "First update should succeed");
 
         // Second update - try to reject the already accepted invitation
-        let second_responded_at = Utc::now();
         let second_update = UpdateInvitationStatus {
             invitation_id: invitation.id,
             status: InvitationStatus::Rejected,
-            responded_at: second_responded_at,
         };
 
         // Act
@@ -182,11 +173,9 @@ mod invitation_repository_update_integration_tests {
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
-        let responded_at = Utc::now();
         let update_status = UpdateInvitationStatus {
             invitation_id: invitation.id,
             status: InvitationStatus::Accepted,
-            responded_at,
         };
 
         // Act

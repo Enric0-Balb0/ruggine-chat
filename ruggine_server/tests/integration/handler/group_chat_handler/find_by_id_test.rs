@@ -15,7 +15,7 @@ use std::sync::Arc;
 mod find_by_id_handler_integration_tests {
     use ruggine_server::service::user_service::UserService;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_membership_invitation_by_user_id_and_group_chat_id, create_group_chat_state};
+    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_group_chat_state};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -242,7 +242,7 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(data.created_by, created_group.created_by);
 
         // Cleanup
-        clean_up_group_membership_invitation_by_user_id_and_group_chat_id(user.id, created_group.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, created_group.id).await;
         cleanup_group_chat(created_group.id).await;
         cleanup_user(user.email).await;
     }
