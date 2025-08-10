@@ -64,6 +64,14 @@ impl StorageService {
         Ok(())
     }
 
+    /// Clear all storage for tests
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn clear_all_test_data(&self) {
+        if let Ok(mut storage_write) = get_test_storage().write() {
+            storage_write.clear();
+        }
+    }
+
     // Platform-specific storage implementation
     #[cfg(target_arch = "wasm32")]
     fn get_item(&self, key: &str) -> Option<String> {
@@ -95,21 +103,36 @@ impl StorageService {
 
     // For non-WASM targets (testing), use in-memory storage
     #[cfg(not(target_arch = "wasm32"))]
-    fn get_item(&self, _key: &str) -> Option<String> {
-        // In tests, return None (no persistence)
-        None
+    fn get_item(&self, key: &str) -> Option<String> {
+        let storage_read = get_test_storage().read().ok()?;
+        storage_read.get(key).cloned()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn set_item(&self, _key: &str, _value: &str) -> Result<(), StorageError> {
-        // In tests, just succeed
+    fn set_item(&self, key: &str, value: &str) -> Result<(), StorageError> {
+        let mut storage_write = get_test_storage().write()
+            .map_err(|_| StorageError::WriteError("Failed to acquire write lock".to_string()))?;
+        
+        storage_write.insert(key.to_string(), value.to_string());
         Ok(())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn remove_item(&self, _key: &str) {
-        // In tests, no-op
+    fn remove_item(&self, key: &str) {
+        if let Ok(mut storage_write) = get_test_storage().write() {
+            storage_write.remove(key);
+        }
     }
+}
+
+// Helper function for test storage
+#[cfg(not(target_arch = "wasm32"))]
+fn get_test_storage() -> &'static std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, String>>> {
+    use std::sync::{Arc, RwLock};
+    use std::collections::HashMap;
+    
+    static STORAGE: std::sync::OnceLock<Arc<RwLock<HashMap<String, String>>>> = std::sync::OnceLock::new();
+    STORAGE.get_or_init(|| Arc::new(RwLock::new(HashMap::new())))
 }
 
 impl Default for StorageService {

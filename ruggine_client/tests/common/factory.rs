@@ -38,9 +38,9 @@ impl TestFactory {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             username,
-            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            birthday: "1990-01-01".to_string(), // String format as required by server
             address: "123 Test Street".to_string(),
-            gender: serde_json::json!("male"),  // Server expects serde_json::Value for enums
+            gender: Gender::Male,
         }
     }
 

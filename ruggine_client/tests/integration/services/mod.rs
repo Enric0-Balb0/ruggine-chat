@@ -1,2 +1,3 @@
-// Services integration tests placeholder
-// Will be implemented when we create the services layer
+// Services integration tests
+pub mod auth_service_integration_test;
+pub mod storage_auth_integration_test;

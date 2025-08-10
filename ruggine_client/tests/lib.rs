@@ -3,8 +3,8 @@
 
 mod common;
 mod unit;
-//mod integration;
-//mod e2e;
+mod integration;
+mod e2e;
 
 // Re-export common utilities for use in tests
 pub use common::*;

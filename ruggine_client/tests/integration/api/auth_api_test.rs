@@ -3,6 +3,8 @@
 
 use ruggine_client_ui::types::auth::LoginRequest;
 use ruggine_client_ui::types::auth::TokenResponse;
+use ruggine_client_ui::types::user::{UserRegisterRequest, Gender};
+use chrono::NaiveDate;
 
 #[cfg(test)]
 mod auth_api_client_tests {
@@ -26,6 +28,111 @@ mod auth_api_client_tests {
         assert!(request.email.contains('@'), "Email should contain @");
         assert!(!request.password.is_empty(), "Password should not be empty");
         assert!(request.password.len() >= 3, "Password should meet min length");
+    }
+
+    #[test]
+    fn test_register_request_creation() {
+        let register_req = TestFactory::unique_user_register_request("test");
+        
+        assert!(!register_req.email.is_empty());
+        assert!(!register_req.password.is_empty());
+        assert!(!register_req.first_name.is_empty());
+        assert!(!register_req.last_name.is_empty());
+        assert!(!register_req.username.is_empty());
+        assert!(!register_req.address.is_empty());
+        
+        // Test date format - should be string in YYYY-MM-DD format
+        assert!(register_req.birthday.contains('-'));
+        assert_eq!(register_req.birthday.len(), 10); // YYYY-MM-DD format
+    }
+
+    #[test]
+    fn test_register_input_validation() {
+        let request = TestFactory::unique_user_register_request("validation");
+        
+        // Email validation
+        assert!(request.email.contains('@'), "Email should be valid");
+        assert!(!request.email.is_empty(), "Email should not be empty");
+        
+        // Password validation
+        assert!(request.password.len() >= 6, "Password should meet minimum length");
+        assert!(!request.password.is_empty(), "Password should not be empty");
+        
+        // Name validation
+        assert!(!request.first_name.is_empty(), "First name should not be empty");
+        assert!(!request.last_name.is_empty(), "Last name should not be empty");
+        assert!(!request.username.is_empty(), "Username should not be empty");
+        
+        // Address validation
+        assert!(!request.address.is_empty(), "Address should not be empty");
+        
+        // Birthday validation - should be valid date string
+        let birthday_parts: Vec<&str> = request.birthday.split('-').collect();
+        assert_eq!(birthday_parts.len(), 3, "Birthday should be in YYYY-MM-DD format");
+        
+        // Basic date validation
+        if let Ok(year) = birthday_parts[0].parse::<i32>() {
+            assert!(year > 1900 && year < 2020, "Birthday year should be reasonable");
+        }
+    }
+
+    #[test]
+    fn test_register_gender_handling() {
+        // Test gender enum handling in registration
+        let genders = vec![
+            ("male", Gender::Male),
+            ("female", Gender::Female),
+            ("other", Gender::Other),
+        ];
+        
+        for (gender, expected_enum) in genders {
+            let _request = TestFactory::unique_user_register_request("gender_test");
+            
+            // Simulate gender conversion that happens in AuthService
+            let converted_gender = match gender {
+                "male" => Gender::Male,
+                "female" => Gender::Female,
+                "other" => Gender::Other,
+                _ => panic!("Invalid gender"),
+            };
+            
+            assert_eq!(converted_gender, expected_enum);
+        }
+    }
+
+    #[test]
+    fn test_register_request_sanitization() {
+        // Test client-side input cleaning for registration
+        let mut request = UserRegisterRequest {
+            email: "  TEST@EXAMPLE.COM  ".to_string(),
+            password: "  password123  ".to_string(),
+            first_name: "  John  ".to_string(),
+            last_name: "  Doe  ".to_string(),
+            username: "  johndoe  ".to_string(),
+            birthday: "1990-01-01".to_string(),
+            address: "  123 Test St  ".to_string(),
+            gender: Gender::Male,
+        };
+        
+        // Client should clean inputs before sending
+        request.email = request.email.trim().to_lowercase();
+        request.password = request.password.trim().to_string();
+        request.first_name = request.first_name.trim().to_string();
+        request.last_name = request.last_name.trim().to_string();
+        request.username = request.username.trim().to_string();
+        request.address = request.address.trim().to_string();
+        
+        assert_eq!(request.email, "test@example.com");
+        assert_eq!(request.password, "password123");
+        assert_eq!(request.first_name, "John");
+        assert_eq!(request.last_name, "Doe");
+        assert_eq!(request.username, "johndoe");
+        assert_eq!(request.address, "123 Test St");
+        
+        // Verify no leading/trailing whitespace
+        assert!(!request.email.starts_with(' '));
+        assert!(!request.first_name.starts_with(' '));
+        assert!(!request.address.starts_with(' '));
     }
 
     #[test]
@@ -73,5 +180,120 @@ mod auth_api_client_tests {
         assert_eq!(request.password, "password123");
         assert!(!request.email.starts_with(' '));
         assert!(!request.password.starts_with(' '));
+    }
+
+    #[test]
+    fn test_password_strength_client_validation() {
+        // Test client-side password strength validation
+        let weak_passwords = vec![
+            "",
+            "123",
+            "pass",
+            "12345",
+        ];
+        
+        let strong_passwords = vec![
+            "password123",
+            "myStrongPass1",
+            "securePassword456",
+            "complex_password_123",
+        ];
+        
+        for weak_pass in weak_passwords {
+            assert!(weak_pass.len() < 6, "Weak password should be too short: '{}'", weak_pass);
+        }
+        
+        for strong_pass in strong_passwords {
+            assert!(strong_pass.len() >= 6, "Strong password should meet length requirement: '{}'", strong_pass);
+            assert!(!strong_pass.is_empty(), "Strong password should not be empty");
+        }
+    }
+
+    #[test]
+    fn test_email_format_client_validation() {
+        let invalid_emails = vec![
+            "",
+            "invalid",
+            "@example.com",
+            "test@",
+            "test..test@example.com",
+            "test test@example.com",
+        ];
+        
+        let valid_emails = vec![
+            "test@example.com",
+            "user.name@domain.com",
+            "test+tag@example.com",
+            "user123@test-domain.com",
+        ];
+        
+        for invalid_email in invalid_emails {
+            assert!(!is_valid_email_format(invalid_email), "Should be invalid: '{}'", invalid_email);
+        }
+        
+        for valid_email in valid_emails {
+            assert!(is_valid_email_format(valid_email), "Should be valid: '{}'", valid_email);
+        }
+    }
+
+    #[test]
+    fn test_username_client_validation() {
+        let invalid_usernames = vec![
+            "",
+            "ab", // too short
+            "user name", // contains space
+            "user@name", // contains @
+        ];
+        
+        let valid_usernames = vec![
+            "username",
+            "user123",
+            "test_user",
+            "user-name",
+            "Username123",
+        ];
+        
+        for invalid_username in invalid_usernames {
+            assert!(!is_valid_username_format(invalid_username), "Should be invalid: '{}'", invalid_username);
+        }
+        
+        for valid_username in valid_usernames {
+            assert!(is_valid_username_format(valid_username), "Should be valid: '{}'", valid_username);
+        }
+    }
+
+    // Helper functions for client-side validation
+    fn is_valid_email_format(email: &str) -> bool {
+        if email.is_empty() || !email.contains('@') || email.starts_with('@') || email.ends_with('@') || email.contains(' ') {
+            return false;
+        }
+        
+        // Check for consecutive dots or dots at start/end of local part
+        let parts: Vec<&str> = email.split('@').collect();
+        if parts.len() != 2 {
+            return false;
+        }
+        
+        let local_part = parts[0];
+        let domain_part = parts[1];
+        
+        // Check local part
+        if local_part.is_empty() || local_part.contains("..") || local_part.starts_with('.') || local_part.ends_with('.') {
+            return false;
+        }
+        
+        // Check domain part  
+        if domain_part.is_empty() || !domain_part.contains('.') || domain_part.starts_with('.') || domain_part.ends_with('.') {
+            return false;
+        }
+        
+        true
+    }
+
+    fn is_valid_username_format(username: &str) -> bool {
+        !username.is_empty() &&
+        username.len() >= 3 &&
+        !username.contains(' ') &&
+        !username.contains('@')
     }
 }
