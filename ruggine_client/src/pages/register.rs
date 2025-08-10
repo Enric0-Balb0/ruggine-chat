@@ -5,6 +5,7 @@ use crate::services::storage_service::StorageService;
 use crate::http::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::error::AuthError;
+use crate::components::ThemeToggle;
 
 #[component]
 pub fn RegisterPage() -> impl IntoView {
@@ -102,13 +103,13 @@ pub fn RegisterPage() -> impl IntoView {
             // Overlay per migliorare la leggibilità del testo
             <div class="absolute inset-0 bg-black bg-opacity-50"></div>
             
-            // Logo posizionato direttamente
-            <div class="absolute top-4 left-8 z-20">
+            <div class="absolute top-4 left-8 right-8 z-20 flex items-center justify-between">
                 <img 
                     src="public/logos/logo-full-white.png" 
                     alt="Ruggine" 
                     class="h-24 w-auto drop-shadow-lg"
                 />
+                <ThemeToggle />
             </div>
             
             // Contenuto principale centrato  
@@ -125,20 +126,20 @@ pub fn RegisterPage() -> impl IntoView {
                     </div>
 
                     // Register Form
-                    <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-xl border border-white border-opacity-20">
+                    <div class="bg-surface dark:bg-surface-dark bg-opacity-95 backdrop-blur-sm rounded-lg shadow-xl border border-border dark:border-border-dark transition-colors">
                         
                         <div class="max-h-96 overflow-y-auto px-6 pb-6">
                             <form id="register-form" on:submit=handle_register class="space-y-3">
                                 <div class="grid grid-cols-2 mt-6 gap-3">
                                     <div>
-                                        <label for="first_name" class="block text-sm font-medium text-[#323130] mb-1">
+                                        <label for="first_name" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                             "Nome"
                                         </label>
                                         <input
                                             type="text"
                                             id="first_name"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             placeholder="Nome"
                                             prop:value=first_name
                                             on:input=move |ev| set_first_name.set(event_target_value(&ev))
@@ -146,14 +147,14 @@ pub fn RegisterPage() -> impl IntoView {
                                     </div>
 
                                     <div>
-                                        <label for="last_name" class="block text-sm font-medium text-[#323130] mb-1">
+                                        <label for="last_name" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                             "Cognome"
                                         </label>
                                         <input
                                             type="text"
                                             id="last_name"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             placeholder="Cognome"
                                             prop:value=last_name
                                             on:input=move |ev| set_last_name.set(event_target_value(&ev))
@@ -162,14 +163,14 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label for="username" class="block text-sm font-medium text-[#323130] mb-1">
+                                    <label for="username" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                         "Username"
                                     </label>
                                     <input
                                         type="text"
                                         id="username"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Username"
                                         prop:value=username
                                         on:input=move |ev| set_username.set(event_target_value(&ev))
@@ -177,14 +178,14 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label for="email" class="block text-sm font-medium text-[#323130] mb-1">
+                                    <label for="email" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                         "Email"
                                     </label>
                                     <input
                                         type="email"
                                         id="email"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Email"
                                         prop:value=email
                                         on:input=move |ev| set_email.set(event_target_value(&ev))
@@ -193,27 +194,27 @@ pub fn RegisterPage() -> impl IntoView {
 
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label for="birthday" class="block text-sm font-medium text-[#323130] mb-1">
+                                        <label for="birthday" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                             "Data di nascita"
                                         </label>
                                         <input
                                             type="date"
                                             id="birthday"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             prop:value=birthday
                                             on:input=move |ev| set_birthday.set(event_target_value(&ev))
                                         />
                                     </div>
 
                                     <div>
-                                        <label for="gender" class="block text-sm font-medium text-[#323130] mb-1">
+                                        <label for="gender" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                             "Genere"
                                         </label>
                                         <select
                                             id="gender"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             prop:value=gender
                                             on:change=move |ev| set_gender.set(event_target_value(&ev))
                                         >
@@ -226,14 +227,14 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label for="address" class="block text-sm font-medium text-[#323130] mb-1">
+                                    <label for="address" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                         "Indirizzo"
                                     </label>
                                     <input
                                         type="text"
                                         id="address"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Indirizzo"
                                         prop:value=address
                                         on:input=move |ev| set_address.set(event_target_value(&ev))
@@ -241,14 +242,14 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label for="password" class="block text-sm font-medium text-[#323130] mb-1">
+                                    <label for="password" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                         "Password"
                                     </label>
                                     <input
                                         type="password"
                                         id="password"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Password"
                                         prop:value=password
                                         on:input=move |ev| set_password.set(event_target_value(&ev))
@@ -256,14 +257,14 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 <div>
-                                    <label for="confirm_password" class="block text-sm font-medium text-[#323130] mb-1">
+                                    <label for="confirm_password" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                         "Conferma password"
                                     </label>
                                     <input
                                         type="password"
                                         id="confirm_password"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-[#e1dfdd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6264a7] focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Conferma password"
                                         prop:value=confirm_password
                                         on:input=move |ev| set_confirm_password.set(event_target_value(&ev))
@@ -283,16 +284,16 @@ pub fn RegisterPage() -> impl IntoView {
                                 form="register-form"
                                 type="submit"
                                 disabled=loading
-                                class="w-full bg-[#6264a7] hover:bg-[#5559a0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors text-sm"
+                                class="w-full bg-brand-primary dark:bg-brand-primary-dark hover:bg-brand-primary-light dark:hover:bg-brand-primary disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors text-sm"
                             >
                                 {move || if loading.get() { "Registrazione in corso..." } else { "Registrati" }}
                             </button>
                             
                             <div class="mt-4 text-center text-sm">
-                                <span class="text-[#605e5c]">"Hai già un account? "</span>
+                                <span class="text-brand-secondary-light">"Hai già un account? "</span>
                                 <button 
                                     type="button"
-                                    class="text-[#6264a7] hover:text-[#5559a0] font-medium"
+                                    class="text-brand-primary-light hover:text-brand-primary font-medium"
                                     on:click=move |_| {
                                         navigate("/login", Default::default());
                                     }
