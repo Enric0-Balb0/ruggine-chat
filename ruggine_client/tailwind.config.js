@@ -26,6 +26,16 @@ module.exports = {
           'sidebar-dark': '#2a2a2a',
           'card-dark': '#333333',
         },
+        // Surface colors for forms and cards
+        'surface': {
+          DEFAULT: '#ffffff',
+          dark: '#333333',
+        },
+        // Accent colors for focus states
+        'accent': {
+          DEFAULT: '#6264a7',
+          dark: '#8e8cd8',
+        },
         // Border colors for both themes
         'border': {
           DEFAULT: '#e1dfdd',
@@ -48,6 +58,12 @@ module.exports = {
           success: '#107c10',
           danger: '#c4314b',
           warning: '#f7630c',
+        },
+        // Error colors for forms and alerts
+        'error': {
+          DEFAULT: '#c4314b',
+          light: '#fef2f2',
+          dark: '#450a0a',
         },
         // Avatar colors palette (same for both themes)
         'avatar': {

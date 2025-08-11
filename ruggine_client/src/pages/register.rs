@@ -99,9 +99,9 @@ pub fn RegisterPage() -> impl IntoView {
     };
 
     view! {
-        <div class="min-h-screen w-screen overflow-auto bg-cover bg-center bg-no-repeat" style="background-image: url('public/images/bg-landing-full.png');">
+        <div class="min-h-screen w-screen overflow-auto bg-cover bg-center bg-no-repeat transition-colors" style="background-image: url('public/images/bg-landing-full.png');">
             // Overlay per migliorare la leggibilità del testo
-            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="absolute inset-0 bg-black bg-opacity-50 dark:bg-opacity-70"></div>
             
             <div class="absolute top-4 left-8 right-8 z-20 flex items-center justify-between">
                 <img 
@@ -126,9 +126,9 @@ pub fn RegisterPage() -> impl IntoView {
                     </div>
 
                     // Register Form
-                    <div class="bg-surface dark:bg-surface-dark bg-opacity-95 backdrop-blur-sm rounded-lg shadow-xl border border-border dark:border-border-dark transition-colors">
+                    <div class="bg-white/95 dark:bg-surface-dark/95 backdrop-blur-sm rounded-lg shadow-xl border border-border dark:border-border-dark transition-colors">
                         
-                        <div class="max-h-96 overflow-y-auto px-6 pb-6">
+                        <div class="max-h-96 overflow-y-auto form-container-scroll px-6 pb-6">
                             <form id="register-form" on:submit=handle_register class="space-y-3">
                                 <div class="grid grid-cols-2 mt-6 gap-3">
                                     <div>
@@ -139,7 +139,7 @@ pub fn RegisterPage() -> impl IntoView {
                                             type="text"
                                             id="first_name"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             placeholder="Nome"
                                             prop:value=first_name
                                             on:input=move |ev| set_first_name.set(event_target_value(&ev))
@@ -154,7 +154,7 @@ pub fn RegisterPage() -> impl IntoView {
                                             type="text"
                                             id="last_name"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                             placeholder="Cognome"
                                             prop:value=last_name
                                             on:input=move |ev| set_last_name.set(event_target_value(&ev))
@@ -170,7 +170,7 @@ pub fn RegisterPage() -> impl IntoView {
                                         type="text"
                                         id="username"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Username"
                                         prop:value=username
                                         on:input=move |ev| set_username.set(event_target_value(&ev))
@@ -185,7 +185,7 @@ pub fn RegisterPage() -> impl IntoView {
                                         type="email"
                                         id="email"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Email"
                                         prop:value=email
                                         on:input=move |ev| set_email.set(event_target_value(&ev))
@@ -201,7 +201,8 @@ pub fn RegisterPage() -> impl IntoView {
                                             type="date"
                                             id="birthday"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            style="color: inherit;"
                                             prop:value=birthday
                                             on:input=move |ev| set_birthday.set(event_target_value(&ev))
                                         />
@@ -214,7 +215,8 @@ pub fn RegisterPage() -> impl IntoView {
                                         <select
                                             id="gender"
                                             required
-                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                            style="color: inherit;"
                                             prop:value=gender
                                             on:change=move |ev| set_gender.set(event_target_value(&ev))
                                         >
@@ -234,7 +236,7 @@ pub fn RegisterPage() -> impl IntoView {
                                         type="text"
                                         id="address"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Indirizzo"
                                         prop:value=address
                                         on:input=move |ev| set_address.set(event_target_value(&ev))
@@ -249,7 +251,7 @@ pub fn RegisterPage() -> impl IntoView {
                                         type="password"
                                         id="password"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Password"
                                         prop:value=password
                                         on:input=move |ev| set_password.set(event_target_value(&ev))
@@ -264,7 +266,7 @@ pub fn RegisterPage() -> impl IntoView {
                                         type="password"
                                         id="confirm_password"
                                         required
-                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark transition-colors focus:border-transparent"
                                         placeholder="Conferma password"
                                         prop:value=confirm_password
                                         on:input=move |ev| set_confirm_password.set(event_target_value(&ev))
@@ -272,7 +274,7 @@ pub fn RegisterPage() -> impl IntoView {
                                 </div>
 
                                 {move || error_message.get().map(|msg| view! {
-                                    <div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 mb-2 rounded-md text-sm">
+                                    <div class="bg-error-light dark:bg-error-dark border border-error dark:border-error text-error-dark dark:text-error-light px-3 py-2 mb-2 rounded-md text-sm text-center">
                                         {msg}
                                     </div>
                                 })}
@@ -290,10 +292,10 @@ pub fn RegisterPage() -> impl IntoView {
                             </button>
                             
                             <div class="mt-4 text-center text-sm">
-                                <span class="text-brand-secondary-light">"Hai già un account? "</span>
+                                <span class="text-text-secondary dark:text-text-secondary-dark">"Hai già un account? "</span>
                                 <button 
                                     type="button"
-                                    class="text-brand-primary-light hover:text-brand-primary font-medium"
+                                    class="text-brand-primary dark:text-accent hover:text-brand-primary-light dark:hover:text-accent-dark font-medium"
                                     on:click=move |_| {
                                         navigate("/login", Default::default());
                                     }

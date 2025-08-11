@@ -31,11 +31,11 @@ pub fn ThemeToggle() -> impl IntoView {
 
     view! {
         <button
-            class="w-8 h-8 rounded-full bg-white bg-opacity-10 hover:bg-opacity-20 flex items-center justify-center transition-colors"
+            class="w-10 h-10 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 dark:bg-gray-800 dark:bg-opacity-50 dark:hover:bg-opacity-70 flex items-center justify-center transition-all duration-200 border border-white border-opacity-20"
             on:click=toggle_theme
             title=tooltip
         >
-            <span class="text-sm">
+            <span class="text-lg">
                 {icon}
             </span>
         </button>

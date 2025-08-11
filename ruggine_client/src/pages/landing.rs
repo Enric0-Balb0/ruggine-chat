@@ -57,7 +57,7 @@ pub fn LandingPage() -> impl IntoView {
     };
 
     view! {
-        <div class="h-screen w-screen overflow-hidden bg-cover bg-center bg-no-repeat bg-surface dark:bg-surface-dark transition-colors" 
+        <div class="h-screen w-screen overflow-hidden bg-cover bg-center bg-no-repeat transition-colors" 
              style="background-image: url('public/images/bg-landing-full.png');">
             // Overlay per migliorare la leggibilità del testo
             <div class="absolute inset-0 bg-black bg-opacity-50 dark:bg-opacity-70"></div>
@@ -86,9 +86,9 @@ pub fn LandingPage() -> impl IntoView {
                     </div>
 
                     // Login Form
-                    <div class="bg-surface dark:bg-surface-dark bg-opacity-95 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-border dark:border-border-dark transition-colors">
+                    <div class="bg-white/95 dark:bg-surface-dark/95 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-border dark:border-border-dark transition-colors">
                         <h2 class="text-2xl font-semibold text-text-primary dark:text-text-primary-dark mb-6 text-center">
-                            "Accedi"
+                            "Accedi Ora"
                         </h2>
                         
                         <form on:submit=handle_login class="space-y-4">
@@ -100,7 +100,7 @@ pub fn LandingPage() -> impl IntoView {
                                     type="email"
                                     id="email"
                                     required
-                                    class="w-full px-3 py-2 border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark focus:border-transparent transition-colors"
+                                    class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark focus:border-transparent transition-colors"
                                     placeholder="Email"
                                     prop:value=email
                                     on:input=move |ev| set_email.set(event_target_value(&ev))
@@ -115,7 +115,7 @@ pub fn LandingPage() -> impl IntoView {
                                     type="password"
                                     id="password"
                                     required
-                                    class="w-full px-3 py-2 border border-border dark:border-border-dark rounded-md bg-surface dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark focus:border-transparent transition-colors"
+                                    class="w-full px-3 py-2 text-sm border border-border dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-accent dark:focus:ring-accent-dark focus:border-transparent transition-colors"
                                     placeholder="Password"
                                     prop:value=password
                                     on:input=move |ev| set_password.set(event_target_value(&ev))
@@ -123,7 +123,7 @@ pub fn LandingPage() -> impl IntoView {
                             </div>
 
                             {move || error_message.get().map(|msg| view! {
-                                <div class="bg-error-light dark:bg-error-dark border border-error dark:border-error-dark text-error dark:text-error-light px-3 py-2 mb-3 rounded-md text-sm text-center">
+                                <div class="bg-error-light dark:bg-error-dark border border-error dark:border-error text-error-dark dark:text-error-light px-3 py-2 mb-3 rounded-md text-sm text-center">
                                     {msg}
                                 </div>
                             })}
@@ -143,7 +143,7 @@ pub fn LandingPage() -> impl IntoView {
                             </p>
                             <button 
                                 type="button"
-                                class="text-brand-primary dark:text-brand-primary-dark hover:text-brand-primary-light dark:hover:text-brand-primary font-medium"
+                                class="text-brand-primary dark:text-accent hover:text-brand-primary-light dark:hover:text-accent-dark font-medium"
                                 on:click=move |_| {
                                     navigate("/register", Default::default());
                                 }
