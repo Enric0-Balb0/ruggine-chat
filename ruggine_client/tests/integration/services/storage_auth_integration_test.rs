@@ -1,5 +1,5 @@
 // Integration tests for storage service with authentication
-use ruggine_client_ui::services::storage_service::StorageService;
+use ruggine_client_ui::utils::storage::StorageService;
 use ruggine_client_ui::dto::{UserProfile, TokenResponse};
 
 #[cfg(test)]

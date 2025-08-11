@@ -1,6 +1,6 @@
 use leptos::*;
 use crate::router::AppRouter;
-use crate::services::{ThemeProvider, use_theme, Theme};
+use crate::utils::{ThemeProvider, use_theme, Theme};
 
 #[component]
 pub fn App() -> impl IntoView {

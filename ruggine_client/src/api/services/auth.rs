@@ -1,5 +1,5 @@
-use crate::http::{client::ApiClient, error::HttpError};
-use crate::services::storage_service::StorageService;
+use crate::api::{client::ApiClient, error::HttpError};
+use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::dto::{UserProfile, TokenResponse};
 use crate::config::{constants::{AuthConstants, AppConstants}, endpoints::ApiEndpoints};
@@ -52,7 +52,7 @@ impl AuthService {
     /// Clear user session (logout without API call)
     pub fn clear_session(&self) -> Result<(), AuthError> {
         self.storage_service.clear_session()
-            .map_err(AuthError::from)
+            .map_err(|e| AuthError::Storage(e))
     }
 
     /// Check if token needs refresh (within threshold before expiry)
@@ -103,7 +103,7 @@ impl AuthService {
         };
         
         self.storage_service.store_token(&dto_token)
-            .map_err(AuthError::from)?;
+            .map_err(|e| AuthError::Storage(e))?;
 
         // Update the HTTP client with the new token for subsequent requests
         self.http_client.set_auth_token(Some(token_response.data.token));

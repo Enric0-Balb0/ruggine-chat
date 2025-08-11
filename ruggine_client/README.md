@@ -68,24 +68,24 @@ Use the VS Code Command Palette (`Ctrl+Shift+P`):
 │  │  Components │  │     Pages       │   │
 │  └─────────────┘  └─────────────────┘   │
 ├─────────────────────────────────────────┤
-│              Service Layer              │
-│  ┌─────────────┐  ┌─────────────────┐   │
-│  │ Auth Service│  │ Storage Service │   │
-│  └─────────────┘  └─────────────────┘   │
-├─────────────────────────────────────────┤
 │               API Layer                 │
 │  ┌─────────────┐  ┌─────────────────┐   │
-│  │  Auth API   │  │    User API     │   │
+│  │API Services │  │   API Facade    │   │
+│  │(Auth, User) │  │ (Unified Access)│   │
 │  └─────────────┘  └─────────────────┘   │
-├─────────────────────────────────────────┤
-│              HTTP Layer                 │
 │  ┌─────────────────────────────────────┐ │
-│  │         ApiClient                   │ │
+│  │         API Client (HTTP)           │ │
 │  └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│             Utilities Layer             │
+│  ┌─────────────┐  ┌─────────────────┐   │
+│  │   Storage   │  │     Theme       │   │
+│  └─────────────┘  └─────────────────┘   │
 ├─────────────────────────────────────────┤
 │              Type Layer                 │
 │  ┌─────────────┐  ┌─────────────────┐   │
-│  │    DTOs     │  │  Common Types   │   │
+│  │Server Types │  │  Common Types   │   │
+│  │(Auth,User,..)│  │  (LoadingState) │   │
 │  └─────────────┘  └─────────────────┘   │
 └─────────────────────────────────────────┘
 ```
@@ -93,9 +93,10 @@ Use the VS Code Command Palette (`Ctrl+Shift+P`):
 ### Design Principles
 
 - **Type Safety**: Leveraging Rust's type system for compile-time guarantees
-- **Reactive Architecture**: Leptos signals for efficient UI updates
-- **Separation of Concerns**: Clear boundaries between layers
-- **Testability**: Comprehensive unit and integration testing
+- **Reactive Architecture**: Leptos signals for efficient UI updates  
+- **Clear Separation**: API layer handles server communication, utils handle client-side concerns
+- **Unified Access**: API facade provides consistent interface across all services
+- **Testability**: Comprehensive unit and integration testing with 68+ test cases
 - **Performance**: WASM compilation for near-native performance
 - **Scalability**: Modular architecture supporting large-scale development
 
@@ -151,40 +152,50 @@ cargo tauri dev
 
 ```
 src/
-├── api/                    # API client layer
-│   ├── client_facade.rs   # Main API facade with unified access
+├── api/                    # API communication layer
+│   ├── services/          # API service implementations
+│   │   ├── auth.rs        # Authentication API calls
+│   │   ├── user.rs        # User management API calls
+│   │   └── mod.rs
+│   ├── client.rs          # HTTP client with auth support
+│   ├── error.rs           # API error handling
+│   ├── facade.rs          # Unified API facade
 │   └── mod.rs
 ├── components/            # Reusable UI components
+│   ├── app_layout.rs      # Main application layout
+│   ├── app_navbar.rs      # Navigation bar component
+│   ├── sidebar.rs         # Sidebar component
+│   ├── theme_toggle.rs    # Theme switching component
 │   └── mod.rs
 ├── config/                # Configuration and constants
 │   ├── constants.rs       # Application constants (Auth, UI, Chat, etc.)
 │   ├── endpoints.rs       # API endpoint definitions
 │   ├── storage.rs         # Storage configuration and keys
 │   └── mod.rs
-├── dto.rs                 # Legacy DTO definitions (being phased out)
-├── error.rs               # Error type definitions
+├── error.rs               # Application error type definitions
 ├── hooks/                 # Leptos custom hooks
 │   └── mod.rs
-├── http/                  # HTTP client infrastructure
-│   ├── client.rs          # Base HTTP client with auth
-│   ├── error.rs           # HTTP error handling
-│   └── mod.rs
 ├── pages/                 # Application pages/views
+│   ├── home.rs            # Home/dashboard page
+│   ├── landing.rs         # Landing page
 │   ├── login.rs           # Login page
+│   ├── register.rs        # Registration page
 │   └── mod.rs
-├── services/              # Business logic layer
-│   ├── auth_service.rs    # Authentication business logic
-│   ├── storage_service.rs # Client-side data persistence
-│   ├── user_service.rs    # User management business logic
+├── router/                # Routing and navigation guards
+│   ├── app_router.rs      # Main application router
+│   ├── guards.rs          # Route guards (auth protection)
+│   ├── login_guard.rs     # Login-specific guards
 │   └── mod.rs
-├── types/                 # Modern type definitions (server-synchronized)
+├── types/                 # Server-synchronized type definitions
 │   ├── auth.rs            # Authentication types (LoginRequest, TokenResponse)
 │   ├── common.rs          # Common utility types (ApiResponse, LoadingState)
 │   ├── group.rs           # Group chat types (GroupChat, GroupChatCreateRequest)
 │   ├── invitation.rs      # Invitation types (Invitation, InvitationStatus)
 │   ├── user.rs            # User-related types (UserProfile, UserRegisterRequest)
 │   └── mod.rs
-├── utils/                 # Utility functions
+├── utils/                 # Client-side utilities and services
+│   ├── storage.rs         # Browser storage service (localStorage)
+│   ├── theme.rs           # Theme management service
 │   └── mod.rs
 ├── app.rs                 # Root application component
 ├── lib.rs                 # Library entry point
@@ -239,10 +250,11 @@ cargo test types::auth::tests
 ### Test Philosophy
 
 - **Client-Focused Testing**: Tests focus on client-specific concerns, not server logic duplication
+- **Comprehensive Coverage**: 68+ tests covering authentication, user management, and type validation
+- **API Layer Testing**: Integration tests for API services and HTTP client
+- **Client Services Testing**: Dedicated tests for storage and theme utilities
 - **Embedded Unit Tests**: Type tests are embedded within type modules using `#[cfg(test)]`
 - **Server-Synchronized Types**: All types in `src/types/` are synchronized with server OpenAPI definitions
-- **Business Logic Testing**: Service layer business rules and data transformations
-- **Comprehensive Coverage**: 15+ tests covering authentication, user management, and common utilities
 - **Type Safety Validation**: Tests ensure proper serialization/deserialization and business logic methods
 
 ## 🔧 Development Guidelines
@@ -255,17 +267,23 @@ cargo test types::auth::tests
 
 ### Code Organization
 
-- **Layered Architecture**: Strict separation between UI, Services, API, HTTP, and Types
+- **Layered Architecture**: Clean separation between API, UI, Utils, Router, and Types
+- **API Layer**: Unified API communication with services (auth, user) and HTTP client
+- **Client-side Services**: Storage and theme management in utils layer
 - **Server-Synchronized Types**: Modern type system in `src/types/` with server OpenAPI synchronization
 - **Configuration Management**: Centralized constants and endpoints in `src/config/`
-- **Embedded Testing**: Unit tests embedded within type modules for better maintainability
-- **Business Logic Services**: Rich service layer with authentication, storage, and user management
+- **Routing & Guards**: Comprehensive routing with authentication guards
+- **Component System**: Reusable UI components with proper state management
 - **Error Handling**: Comprehensive error handling with typed errors across all layers
 
 ### Coding Standards
 
 ```rust
-// Example: Service method with proper error handling
+// Example: API service method with proper error handling
+use crate::api::services::auth::AuthService;
+use crate::utils::storage::StorageService;
+use crate::api::client::ApiClient;
+
 impl AuthService {
     /// Login user with email and password
     /// 
@@ -279,7 +297,9 @@ impl AuthService {
     /// 
     /// # Example
     /// ```rust
-    /// let auth_service = AuthService::new(api_client);
+    /// let api_client = ApiClient::new("http://localhost:8002");
+    /// let storage = StorageService::new();
+    /// let auth_service = AuthService::new(api_client, storage);
     /// let user = auth_service.login("test@example.com", "password").await?;
     /// ```
     pub async fn login(&self, email: String, password: String) -> Result<UserProfile, AuthError> {
@@ -340,12 +360,19 @@ This client is designed to work with the [ruggine_server](../ruggine_server/READ
 
 ```rust
 // Login example
-let auth_service = AuthService::new(api_client);
+use crate::api::services::auth::AuthService;
+use crate::api::client::ApiClient;
+use crate::utils::storage::StorageService;
+
+let api_client = ApiClient::new("http://localhost:8002");
+let storage = StorageService::new();
+let auth_service = AuthService::new(api_client, storage);
+
 let user_profile = auth_service.login("user@example.com", "password").await?;
 
 // Check authentication status
 if auth_service.is_authenticated() {
-    let current_user = auth_service.current_user().unwrap();
+    let current_user = auth_service.get_current_user().unwrap();
 }
 
 // Logout

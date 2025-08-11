@@ -1,8 +1,8 @@
 use leptos::*;
 use leptos_router::*;
-use crate::services::auth_service::AuthService;
-use crate::services::storage_service::StorageService;
-use crate::http::client::ApiClient;
+use crate::api::services::AuthService;
+use crate::utils::StorageService;
+use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::error::AuthError;
 use crate::components::ThemeToggle;

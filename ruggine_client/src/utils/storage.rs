@@ -4,7 +4,6 @@
 use crate::dto::{TokenResponse, UserProfile};
 use crate::error::StorageError;
 use crate::config::storage::StorageKeys;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
 pub struct StorageService;

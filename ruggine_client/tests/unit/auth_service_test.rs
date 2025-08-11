@@ -1,16 +1,14 @@
 // Unit tests for AuthService
 // Testing authentication logic, validation, and error handling
 
-use ruggine_client_ui::services::auth_service::AuthService;
-use ruggine_client_ui::services::storage_service::StorageService;
-use ruggine_client_ui::http::client::ApiClient;
+use ruggine_client_ui::api::services::auth::AuthService;
+use ruggine_client_ui::utils::storage::StorageService;
+use ruggine_client_ui::api::client::ApiClient;
 use ruggine_client_ui::error::AuthError;
-use ruggine_client_ui::types::user::Gender;
 
 #[cfg(test)]
 mod auth_service_unit_tests {
     use super::*;
-    use crate::common::TestFactory;
     use std::sync::Mutex;
     
     // Mutex to serialize tests that use shared storage

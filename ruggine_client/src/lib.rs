@@ -1,7 +1,5 @@
 pub mod types;
-pub mod http;
 pub mod api;
-pub mod services;
 pub mod hooks;
 pub mod components;
 pub mod pages;

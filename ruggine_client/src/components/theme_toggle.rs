@@ -1,5 +1,5 @@
 use leptos::*;
-use crate::services::{use_theme, Theme};
+use crate::utils::{use_theme, Theme};
 
 /// Theme toggle button component
 #[component]

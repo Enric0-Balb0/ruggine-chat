@@ -1,5 +1,4 @@
 use leptos::*;
-use wasm_bindgen::prelude::*;
 
 /// Theme management service
 #[derive(Clone, Debug, PartialEq)]

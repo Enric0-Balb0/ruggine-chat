@@ -1,6 +1,6 @@
-use ruggine_client_ui::services::auth_service::AuthService;
-use ruggine_client_ui::services::storage_service::StorageService;
-use ruggine_client_ui::http::client::ApiClient;
+use ruggine_client_ui::api::services::auth::AuthService;
+use ruggine_client_ui::utils::storage::StorageService;
+use ruggine_client_ui::api::client::ApiClient;
 use ruggine_client_ui::dto::TokenResponse;
 use ruggine_client_ui::config::constants::AppConstants;
 use std::sync::{LazyLock, Mutex};
