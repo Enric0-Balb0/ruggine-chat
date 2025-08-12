@@ -1,13 +1,12 @@
-use crate::http::{client::ApiClient, error::HttpError};
-use crate::services::storage_service::StorageService;
+use crate::api::{client::ApiClient, error::HttpError};
+use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::dto::{UserProfile, TokenResponse};
 use crate::config::{constants::{AuthConstants, AppConstants}, endpoints::ApiEndpoints};
 
 // Direct type imports
-use crate::types::auth::{LoginRequest, TokenResponse as TypesTokenResponse, ApiSuccessResponseTokenReadDto};
+use crate::types::auth::{LoginRequest, ApiSuccessResponseTokenReadDto};
 use crate::types::user::{UserRegisterRequest, ChangePasswordRequest, ApiSuccessResponseUserReadDto, Gender};
-use chrono::NaiveDate;
 
 /// Authentication service managing user sessions and tokens
 #[derive(Clone)]
@@ -25,14 +24,61 @@ impl AuthService {
         }
     }
 
-    /// Check if user is currently authenticated
+    /// Check if user is currently authenticated with valid token
     pub fn is_authenticated(&self) -> bool {
-        self.storage_service.get_token().is_some()
+        if let Some(token) = self.storage_service.get_token() {
+            // Check if token exists and is not expired
+            let now = chrono::Utc::now().timestamp();
+            if let Some(expires_in) = token.expires_in {
+                // If expires_in is available, use it (assumes it was stored as timestamp)
+                let is_valid = now < expires_in as i64;
+                
+                // If token is expired, clean up storage
+                if !is_valid {
+                    leptos::logging::warn!("Token expired, cleaning up storage");
+                    let _ = self.storage_service.clear_session();
+                }
+                
+                is_valid
+            } else {
+                // If no expiry info, assume valid (backward compatibility)
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Clear user session (logout without API call)
+    pub fn clear_session(&self) -> Result<(), AuthError> {
+        self.storage_service.clear_session()
+            .map_err(|e| AuthError::Storage(e))
+    }
+
+    /// Check if token needs refresh (within threshold before expiry)
+    pub fn needs_token_refresh(&self) -> bool {
+        if let Some(token) = self.storage_service.get_token() {
+            if let Some(expires_in) = token.expires_in {
+                let now = chrono::Utc::now().timestamp();
+                let time_to_expiry = expires_in as i64 - now;
+                // Refresh if less than 5 minutes remaining
+                time_to_expiry < 300 && time_to_expiry > 0
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
     /// Get current user profile from storage
     pub fn get_current_user(&self) -> Option<UserProfile> {
         self.storage_service.get_user_profile()
+    }
+
+    /// Get reference to storage service (for testing)
+    pub fn get_storage_service(&self) -> &StorageService {
+        &self.storage_service
     }
 
     /// Login user with email and password
@@ -53,11 +99,11 @@ impl AuthService {
         // Convert and store token
         let dto_token = TokenResponse {
             token: token_response.data.token.clone(),
-            expires_in: Some(token_response.data.exp as u64),
+            expires_in: Some(token_response.data.exp as u64), // Store actual exp timestamp
         };
         
         self.storage_service.store_token(&dto_token)
-            .map_err(AuthError::from)?;
+            .map_err(|e| AuthError::Storage(e))?;
 
         // Update the HTTP client with the new token for subsequent requests
         self.http_client.set_auth_token(Some(token_response.data.token));

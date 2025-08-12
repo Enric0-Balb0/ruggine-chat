@@ -1,5 +1,13 @@
 /// Utility functions module
 
+// Client-side services
+pub mod storage;
+pub mod theme;
+
+// Re-exports for services
+pub use storage::StorageService;
+pub use theme::{ThemeService, Theme, ThemeContext, ThemeProvider, use_theme};
+
 /// Common validation utilities
 pub mod validation {
     /// Validate email format

@@ -1,5 +1,6 @@
-use crate::http::client::ApiClient;
-use crate::services::{AuthService, StorageService, UserService};
+use crate::api::client::ApiClient;
+use crate::api::services::{AuthService, UserService};
+use crate::utils::storage::StorageService;
 use crate::dto::UserProfile;
 use crate::config::constants::AppConstants;
 

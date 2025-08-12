@@ -1,9 +1,9 @@
 use leptos::*;
 use leptos_router::*;
 use wasm_bindgen::JsCast;
-use crate::services::auth_service::AuthService;
-use crate::services::storage_service::StorageService;
-use crate::http::client::ApiClient;
+use crate::api::services::AuthService;
+use crate::utils::StorageService;
+use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 
 #[component]
@@ -21,7 +21,24 @@ pub fn AuthGuard(children: ChildrenFn) -> impl IntoView {
             ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
             StorageService::new(),
         );
-        auth_service.is_authenticated()
+        
+        // Check if authenticated with valid token
+        let authenticated = auth_service.is_authenticated();
+        
+        // If authenticated but token needs refresh, try to refresh it
+        if authenticated && auth_service.needs_token_refresh() {
+            leptos::logging::log!("Token needs refresh, attempting refresh...");
+            // Spawn async task for token refresh
+            spawn_local(async move {
+                if let Err(e) = auth_service.refresh_token().await {
+                    leptos::logging::warn!("Token refresh failed: {:?}", e);
+                    // Clear storage on refresh failure
+                    let _ = auth_service.clear_session();
+                }
+            });
+        }
+        
+        authenticated
     });
 
     // Check authentication and redirect if needed

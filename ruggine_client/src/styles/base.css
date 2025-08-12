@@ -50,11 +50,20 @@
   }
 
   html {
-    font-family: var(--font-family-base);
+    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     font-size: var(--font-size-base);
     line-height: 1.5;
     height: 100%;
     overflow: hidden; /* No scroll for desktop app */
+    
+    /* CSS Variables for form controls */
+    --form-text-color: #323130;
+    --form-bg-color: #ffffff;
+  }
+  
+  html.dark {
+    --form-text-color: #c8c6c4;
+    --form-bg-color: #333333;
   }
   
   body {
@@ -65,6 +74,12 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden; /* No scroll for desktop app */
+    @apply text-gray-900; /* Default text color */
     /* No background - let components handle it */
+  }
+  
+  /* Apply CSS variables to form elements */
+  input, select, textarea {
+    color: var(--form-text-color) !important;
   }
 }

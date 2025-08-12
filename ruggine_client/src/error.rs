@@ -1,4 +1,4 @@
-use crate::http::error::HttpError;
+use crate::api::error::HttpError;
 
 /// Authentication related errors
 #[derive(Debug, Clone)]

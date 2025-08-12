@@ -3,17 +3,26 @@ use leptos_router::*;
 use crate::pages::{LandingPage, RegisterPage, HomePage};
 use crate::components::AppLayout;
 use super::guards::AuthGuard;
+use super::login_guard::PublicGuard;
 
 #[component]
 pub fn AppRouter() -> impl IntoView {
     view! {
         <Router>
             <Routes>
-                // Landing page with login
-                <Route path="/login" view=LandingPage />
+                // Landing page with login - protetto per utenti già autenticati
+                <Route path="/login" view=|| view! {
+                    <PublicGuard>
+                        <LandingPage />
+                    </PublicGuard>
+                } />
                 
-                // Registration page
-                <Route path="/register" view=RegisterPage />
+                // Registration page - protetto per utenti già autenticati
+                <Route path="/register" view=|| view! {
+                    <PublicGuard>
+                        <RegisterPage />
+                    </PublicGuard>
+                } />
                 
                 // Protected app routes
                 <Route path="/" view=|| view! { 
@@ -32,7 +41,7 @@ pub fn AppRouter() -> impl IntoView {
                     });
                     view! { <div class="min-h-screen flex items-center justify-center">
                         <div class="text-center">
-                            <p class="text-[#605e5c]">"Reindirizzamento..."</p>
+                            <p class="text-brand-secondary-light">"Reindirizzamento..."</p>
                         </div>
                     </div> }
                 } />

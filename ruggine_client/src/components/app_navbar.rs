@@ -1,7 +1,8 @@
 use leptos::*;
-use crate::services::auth_service::AuthService;
-use crate::services::storage_service::StorageService;
-use crate::http::client::ApiClient;
+use crate::components::{UserAvatar, ThemeToggle};
+use crate::api::services::AuthService;
+use crate::utils::StorageService;
+use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 
 /// Main app navbar for authenticated users (based on UI mock)
@@ -12,54 +13,48 @@ pub fn AppNavbar() -> impl IntoView {
         StorageService::new(),
     );
 
-    let handle_logout = {
-        let auth_service = auth_service.clone();
-        move |_| {
-            let auth_service = auth_service.clone();
-            spawn_local(async move {
-                let _ = auth_service.logout().await;
-                // Navigation will be handled by AuthGuard automatically
-            });
-        }
-    };
+    // Recupera i dati dell'utente corrente
+    let user_profile = auth_service.get_current_user();
 
     view! {
-        <header class="bg-[#464775] text-white flex items-center justify-between px-6 py-3 border-b border-[#e1dfdd]">
+        <header class="h-16 bg-brand-primary dark:bg-brand-primary-dark text-white flex items-center justify-between pl-2 pr-6 border-b border-border dark:border-border-dark flex-shrink-0">
             <div class="flex items-center gap-4">
                 <img 
-                    src="public/logos/nav-logo.png" 
-                    alt="Ruggine   " 
-                    class="h-8 w-auto"
+                    src="public/logos/logo-full-white.png" 
+                    alt="Ruggine" 
+                    class="h-10 w-auto"
                 />
-                <div>
-                    <h1 class="text-base font-semibold">
-                        "Ruggine Chat"
-                    </h1>
-                    <p class="text-sm opacity-90">
-                        "Dashboard"
-                    </p>
-                </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <button class="bg-white bg-opacity-10 hover:bg-opacity-20 px-3 py-1.5 rounded text-xs transition-colors">
-                    "Nuova Chat"
-                </button>
-                
-                <button class="bg-white bg-opacity-10 hover:bg-opacity-20 px-3 py-1.5 rounded text-xs transition-colors">
-                    "Impostazioni"
-                </button>
-
-                <div class="w-8 h-8 bg-[#6264a7] rounded-full flex items-center justify-center text-xs font-bold cursor-pointer">
-                    "U"
-                </div>
-
-                <button 
-                    on:click=handle_logout
-                    class="bg-white bg-opacity-10 hover:bg-opacity-20 px-3 py-1.5 rounded text-xs transition-colors"
-                >
-                    "Logout"
-                </button>
+                <ThemeToggle />
+                {match user_profile {
+                    Some(user) => {
+                        // Dividi il full_name in first_name e last_name
+                        let name_parts: Vec<&str> = user.full_name.split_whitespace().collect();
+                        let first_name = name_parts.first().unwrap_or(&"User").to_string();
+                        let last_name = name_parts.get(1).unwrap_or(&"Default").to_string();
+                        // Usa l'email come username temporaneo (manca username nel DTO)
+                        let username = user.email.split('@').next().unwrap_or("user").to_string();
+                        
+                        view! {
+                            <UserAvatar 
+                                name=first_name 
+                                surname=last_name 
+                                username=username 
+                                size="md" 
+                            />
+                        }.into_view()
+                    },
+                    None => view! {
+                        <UserAvatar 
+                            name="User".to_string() 
+                            surname="Default".to_string() 
+                            username="user".to_string() 
+                            size="md" 
+                        />
+                    }.into_view(),
+                }}
             </div>
         </header>
     }

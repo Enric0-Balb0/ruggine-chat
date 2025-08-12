@@ -1,4 +1,4 @@
-use crate::http::error::HttpError;
+use crate::api::error::HttpError;
 use crate::types::common::{ApiErrorResponse, ApiResponse, ApiSuccessResponse};
 use crate::config::constants::AppConstants;
 use reqwest::{Client, RequestBuilder, Response};

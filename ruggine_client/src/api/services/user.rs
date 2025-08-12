@@ -1,5 +1,5 @@
-use crate::http::{client::ApiClient, error::HttpError};
-use crate::services::storage_service::StorageService;
+use crate::api::client::ApiClient;
+use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::user::{ApiSuccessResponseUserReadDto, UserReadDto};
