@@ -17,6 +17,8 @@ pub enum GroupMembershipError {
     GroupNotFound,
     #[error("User already in the group")]
     UserAlreadyInGroup,
+    #[error("User already left the group")]
+    UserAlreadyLeftGroup,
 }
 
 impl IntoResponse for GroupMembershipError {
@@ -27,6 +29,7 @@ impl IntoResponse for GroupMembershipError {
             GroupMembershipError::InvitationNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::GroupNotFound => StatusCode::UNPROCESSABLE_ENTITY,
             GroupMembershipError::UserAlreadyInGroup => StatusCode::CONFLICT,
+            GroupMembershipError::UserAlreadyLeftGroup => StatusCode::CONFLICT,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

@@ -1,6 +1,6 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
-use crate::entity::group_membership::{NewGroupMembership};
+use crate::entity::group_membership::{NewGroupMembership, UpdateGroupMembership};
 use async_trait::async_trait;
 use std::sync::Arc;
 use sqlx::Error as SqlxError;
@@ -45,6 +45,10 @@ impl GroupMembershipRepository {
 impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
     async fn insert(&self, new_group_membership: NewGroupMembership) -> Result<i32, SqlxError> {
         self.insert_inner(new_group_membership).await
+    }
+
+    async fn update(&self, update_group_membership: UpdateGroupMembership) -> Result<(), SqlxError> {
+        self.update_inner(update_group_membership).await
     }
 
     async fn find_by_id_and_user_id(&self, id: i32, user_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError> {

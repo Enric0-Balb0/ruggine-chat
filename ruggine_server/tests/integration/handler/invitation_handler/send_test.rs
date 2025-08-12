@@ -1,7 +1,7 @@
 use ruggine_server::handler::invitation_handler::send::send;
 use ruggine_server::dto::invitation_dto::InvitationCreateDto;
 use ruggine_server::state::invitation_state::InvitationState;
-use ruggine_server::error::{api_error::ApiError, request_error::ValidatedRequest, invitation_error::InvitationError, group_chat_error::GroupChatError, user_error::UserError};
+use ruggine_server::error::{api_error::ApiError, request_error::ValidatedRequest, invitation_error::InvitationError, group_chat_error::GroupChatError};
 use axum::{extract::State, Extension};
 use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, create_test_user, create_test_group_chat};
 use crate::get_database;

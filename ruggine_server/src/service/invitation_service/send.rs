@@ -1,6 +1,6 @@
 use crate::dto::group_membership_dto::GroupMembershipReadDto;
 use crate::dto::invitation_dto::{InvitationCreateDto, InvitationReadDto};
-use crate::entity::group_membership::MemberRole;
+use crate::entity::group_membership::{MemberRole, MembershipStatus};
 use crate::error::api_error::ApiError;
 use crate::error::invitation_error::InvitationError;
 use crate::error::group_chat_error::GroupChatError;
@@ -26,14 +26,16 @@ impl InvitationService {
             Err(e) => return Err(e),
         };
 
-        // TODO: Check if user is already in the group chat
+        //  Check if user is already in the group chat
         match self.group_membership_service
             .find_by_user_id_and_group_id(invitation.to_user_id, group_chat.id)
             .await
         {
-            Ok(_) => {
+            Ok(membership) => {
                 // L'utente è già nel gruppo
-                return Err(ApiError::InvitationError(InvitationError::UserAlreadyInGroup));
+                if membership.membership_status == MembershipStatus::Active {
+                    return Err(ApiError::InvitationError(InvitationError::UserAlreadyInGroup));
+                }
             }
             Err(err) => {
                 // Se l'errore NON è che la membership non è stata trovata, propaga l'errore
@@ -52,7 +54,7 @@ impl InvitationService {
         {
             Ok(membership) => {
                 // If the from_user is the group he must be admin
-                if membership.role != MemberRole::Admin {
+                if membership.role != MemberRole::Admin || membership.membership_status != MembershipStatus::Active {
                     return Err(
                         ApiError::InvitationError(
                             InvitationError::UserNotAuthorized("Sender is not an admin of the group".to_string())
@@ -525,6 +527,285 @@ mod invitation_service_send_tests {
                 // Expected error
             }
             _ => panic!("Expected AlreadyInvitationPending error"),
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_send_internal_user_already_in_group_active() {
+        // Arrange
+        let mock_invitation_repo = MockInvitationRepositoryTrait::new();
+        let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
+        let mut mock_user_service = MockUserServiceTrait::new();
+        let mut mock_group_membership_service = MockGroupMembershipServiceTrait::new();
+
+        let from_user_id = 1;
+        let to_user_id = 2;
+        let group_chat_id = 1;
+        
+        let invitation_dto = InvitationCreateDto {
+            to_user_id,
+            group_chat_id,
+            role_at_join: MemberRole::Member,
+        };
+
+        let group_chat_dto = GroupChatReadDto {
+            id: group_chat_id,
+            name: "Test Group".to_string(),
+            description: "Test Description".to_string(),
+            created_by: from_user_id,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        let mut user_dto = UserFactory::fake_read_user_dto();
+        user_dto.id = to_user_id;
+
+        // Mock user service to return the user exists
+        mock_user_service
+            .expect_find_by_id()
+            .with(eq(to_user_id))
+            .times(1)
+            .returning(move |_| {
+                let user = user_dto.clone();
+                Box::pin(async move { Ok(user) })
+            });
+
+        // Mock group chat service to return the group exists
+        mock_group_chat_service
+            .expect_find_by_id()
+            .with(eq(group_chat_id))
+            .times(1)
+            .returning(move |_| {
+                let group = group_chat_dto.clone();
+                Box::pin(async move { Ok(group) })
+            });
+
+        // Mock group membership service - recipient IS already in the group with active status
+        let active_membership_row = GroupMembershipWithInvitationRow {
+            id: 1,
+            role: MemberRole::Member,
+            joined_at: Utc::now(),
+            left_at: None,
+            membership_status: MembershipStatus::Active,
+            invitation_id: 100,
+            user_id: to_user_id,
+            group_chat_id,
+        };
+        let active_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(active_membership_row);
+        mock_group_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(to_user_id), eq(group_chat_id))
+            .times(1)
+            .returning(move |_, _| {
+                let membership = active_membership_dto.clone();
+                Box::pin(async move { Ok(membership) })
+            });
+
+        let service = InvitationService::with(
+            Arc::new(mock_invitation_repo),
+            Arc::new(mock_group_chat_service),
+            Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
+        );
+
+        // Act
+        let result = service.send_internal(invitation_dto, from_user_id).await;
+
+        // Assert
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ApiError::InvitationError(InvitationError::UserAlreadyInGroup) => {
+                // Expected error
+            }
+            other => panic!("Expected UserAlreadyInGroup error, got: {:?}", other),
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_send_internal_sender_not_in_group() {
+        // Arrange
+        let mock_invitation_repo = MockInvitationRepositoryTrait::new();
+        let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
+        let mut mock_user_service = MockUserServiceTrait::new();
+        let mut mock_group_membership_service = MockGroupMembershipServiceTrait::new();
+
+        let from_user_id = 1;
+        let to_user_id = 2;
+        let group_chat_id = 1;
+        
+        let invitation_dto = InvitationCreateDto {
+            to_user_id,
+            group_chat_id,
+            role_at_join: MemberRole::Member,
+        };
+
+        let group_chat_dto = GroupChatReadDto {
+            id: group_chat_id,
+            name: "Test Group".to_string(),
+            description: "Test Description".to_string(),
+            created_by: 3, // Different user created the group
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        let mut user_dto = UserFactory::fake_read_user_dto();
+        user_dto.id = to_user_id;
+
+        // Mock user service to return the user exists
+        mock_user_service
+            .expect_find_by_id()
+            .with(eq(to_user_id))
+            .times(1)
+            .returning(move |_| {
+                let user = user_dto.clone();
+                Box::pin(async move { Ok(user) })
+            });
+
+        // Mock group chat service to return the group exists
+        mock_group_chat_service
+            .expect_find_by_id()
+            .with(eq(group_chat_id))
+            .times(1)
+            .returning(move |_| {
+                let group = group_chat_dto.clone();
+                Box::pin(async move { Ok(group) })
+            });
+
+        // Mock group membership service - recipient is NOT already in the group
+        mock_group_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(to_user_id), eq(group_chat_id))
+            .times(1)
+            .returning(move |_, _| {
+                Box::pin(async move { Err(ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound)) })
+            });
+
+        // Mock group membership service - sender is NOT in the group
+        mock_group_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(from_user_id), eq(group_chat_id))
+            .times(1)
+            .returning(move |_, _| {
+                Box::pin(async move { Err(ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound)) })
+            });
+
+        let service = InvitationService::with(
+            Arc::new(mock_invitation_repo),
+            Arc::new(mock_group_chat_service),
+            Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
+        );
+
+        // Act
+        let result = service.send_internal(invitation_dto, from_user_id).await;
+
+        // Assert
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(msg)) => {
+                assert!(msg.contains("Sender is not in the group"));
+            }
+            other => panic!("Expected UserNotAuthorized error with 'not in the group' message, got: {:?}", other),
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_send_internal_sender_inactive_membership() {
+        // Arrange
+        let mock_invitation_repo = MockInvitationRepositoryTrait::new();
+        let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
+        let mut mock_user_service = MockUserServiceTrait::new();
+        let mut mock_group_membership_service = MockGroupMembershipServiceTrait::new();
+
+        let from_user_id = 1;
+        let to_user_id = 2;
+        let group_chat_id = 1;
+        
+        let invitation_dto = InvitationCreateDto {
+            to_user_id,
+            group_chat_id,
+            role_at_join: MemberRole::Member,
+        };
+
+        let group_chat_dto = GroupChatReadDto {
+            id: group_chat_id,
+            name: "Test Group".to_string(),
+            description: "Test Description".to_string(),
+            created_by: from_user_id,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        let mut user_dto = UserFactory::fake_read_user_dto();
+        user_dto.id = to_user_id;
+
+        // Mock user service to return the user exists
+        mock_user_service
+            .expect_find_by_id()
+            .with(eq(to_user_id))
+            .times(1)
+            .returning(move |_| {
+                let user = user_dto.clone();
+                Box::pin(async move { Ok(user) })
+            });
+
+        // Mock group chat service to return the group exists
+        mock_group_chat_service
+            .expect_find_by_id()
+            .with(eq(group_chat_id))
+            .times(1)
+            .returning(move |_| {
+                let group = group_chat_dto.clone();
+                Box::pin(async move { Ok(group) })
+            });
+
+        // Mock group membership service - recipient is NOT already in the group
+        mock_group_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(to_user_id), eq(group_chat_id))
+            .times(1)
+            .returning(move |_, _| {
+                Box::pin(async move { Err(ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound)) })
+            });
+
+        // Mock group membership service - sender is in the group but has inactive status
+        let inactive_admin_membership_row = GroupMembershipWithInvitationRow {
+            id: 1,
+            role: MemberRole::Admin,
+            joined_at: Utc::now(),
+            left_at: Some(Utc::now()), // Has left the group
+            membership_status: MembershipStatus::Left,
+            invitation_id: 100,
+            user_id: from_user_id,
+            group_chat_id,
+        };
+        let inactive_admin_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(inactive_admin_membership_row);
+        mock_group_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(from_user_id), eq(group_chat_id))
+            .times(1)
+            .returning(move |_, _| {
+                let membership = inactive_admin_membership_dto.clone();
+                Box::pin(async move { Ok(membership) })
+            });
+
+        let service = InvitationService::with(
+            Arc::new(mock_invitation_repo),
+            Arc::new(mock_group_chat_service),
+            Arc::new(mock_user_service),
+            Arc::new(mock_group_membership_service),
+        );
+
+        // Act
+        let result = service.send_internal(invitation_dto, from_user_id).await;
+
+        // Assert
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(msg)) => {
+                assert!(msg.contains("Sender is not an admin of the group"));
+            }
+            other => panic!("Expected UserNotAuthorized error with 'not an admin' message, got: {:?}", other),
         }
     }
 }

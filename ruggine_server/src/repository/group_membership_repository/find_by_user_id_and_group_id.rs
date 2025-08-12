@@ -24,7 +24,6 @@ impl GroupMembershipRepository {
             JOIN invitation i ON gm.invitation_id = i.id
             WHERE i.to_user_id = $1
               AND i.group_chat_id = $2
-              AND gm.membership_status = 'active'
             "#
         )
         .bind(user_id)

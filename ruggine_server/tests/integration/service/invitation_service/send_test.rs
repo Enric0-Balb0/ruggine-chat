@@ -8,6 +8,9 @@ use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_
 
 #[cfg(test)]
 mod invitation_service_send_integration_tests {
+    use ruggine_server::dto::group_membership_dto::{GroupMembershipCreateDto, LeaveGroupMembershipDto};
+    use ruggine_server::dto::invitation_dto::InvitationUpdateStatusDto;
+    use ruggine_server::utils::service_initializer::ServiceInitializer;
     use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_test_group_chat_with_invitation_and_membership};
     use super::*;
 
@@ -261,5 +264,94 @@ mod invitation_service_send_integration_tests {
         cleanup_user(admin_user.email).await;
         cleanup_user(target_user1.email).await;
         cleanup_user(target_user2.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_send_invitation_user_already_in_group() {
+        // Arrange: Create users, group, and existing active membership for target user
+        let db = get_database().await;
+        let service_init = ServiceInitializer::new(&db);
+        let invitation_service = service_init.invitation_service();
+        let group_membership_service = service_init.group_membership_service();
+        
+        let (admin_user, _) = create_test_user("invite_send_admin_existing").await;
+        let (target_user, _) = create_test_user("invite_send_target_existing").await;
+        
+        // Create group with admin as creator
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_existing", admin_user.id).await;
+
+        // Add target user to the group by creating invitation and active membership
+        let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat.id);
+
+        let existing_invitation = invitation_service.send(invitation_dto.clone(), admin_user.id).await.unwrap();
+
+        // Accept the invitation
+        let invitation_update_status_dto = InvitationUpdateStatusDto {
+            status: InvitationStatus::Accepted,
+            invitation_id: existing_invitation.id,
+        };
+        let _ = invitation_service.update_status(invitation_update_status_dto, target_user.id).await.unwrap();
+        
+        // Act: Try to send invitation to user already in group
+        let result = invitation_service.send(invitation_dto, admin_user.id).await;
+
+        // Assert: Should fail with UserAlreadyInGroup
+        assert!(result.is_err(), "Should fail when user is already in group");
+        match result.unwrap_err() {
+            ApiError::InvitationError(InvitationError::UserAlreadyInGroup) => {
+                // Expected error
+            }
+            e => panic!("Expected UserAlreadyInGroup error, got: {:?}", e),
+        }
+
+        // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(target_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user(admin_user.email).await;
+        cleanup_user(target_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_send_invitation_sender_left_group() {
+        // Arrange: Create users and group where admin left the group
+        let db = get_database().await;
+        let service_init = ServiceInitializer::new(&db);
+        let invitation_service = service_init.invitation_service();
+        let group_membership_service = service_init.group_membership_service();
+        
+        let (admin_user, _) = create_test_user("invite_send_admin_left").await;
+        let (target_user, _) = create_test_user("invite_send_target_left").await;
+        
+        // Create group with admin as creator
+        let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_left", admin_user.id).await;
+
+        // Simulate admin leaving the group by updating membership status
+        let admin_group_membership = group_membership_service.find_by_user_id_and_group_id(
+            admin_user.id,
+            group_chat.id
+        ).await.unwrap();
+        let leave_group_membership_dto = LeaveGroupMembershipDto{ id:admin_group_membership.id };
+        let _ = group_membership_service.leave_group(leave_group_membership_dto, admin_user.id).await.unwrap();
+
+        let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(target_user.id, group_chat.id);
+
+        // Act: Try to send invitation when sender is no longer in the group
+        let result = invitation_service.send(invitation_dto, admin_user.id).await;
+
+        // Assert: Should fail with UserNotAuthorized
+        assert!(result.is_err(), "Should fail when sender is not in group");
+        match result.unwrap_err() {
+            ApiError::InvitationError(InvitationError::UserNotAuthorized(_)) => {
+                // OK
+            }
+            e => panic!("Expected UserNotAuthorized error with 'not in the group' message, got: {:?}", e),
+        }
+
+        // Cleanup
+        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user(admin_user.email).await;
+        cleanup_user(target_user.email).await;
     }
 }

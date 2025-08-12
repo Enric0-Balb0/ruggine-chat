@@ -2,6 +2,7 @@ use utoipa::OpenApi;
 use crate::{dto::{
         user_dto::{UserLoginDto, UserRegisterDto, ProfileUpdateDto}, 
         group_chat_dto::{GroupChatCreateDto},
+        group_membership_dto::{LeaveGroupMembershipDto},
         ApiSuccessResponseTokenReadDto, 
         ApiSuccessResponseUserReadDto,
         ApiSuccessResponseGroupChatReadDto,
@@ -40,7 +41,8 @@ use crate::handler::{
         invitation_handler::update_status::update_status,
         invitation_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_by_user_id::find_by_user_id,
-        group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id
+        group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id,
+        group_membership_handler::leave_group::leave_group
     ),
     components(
         schemas(
@@ -48,6 +50,7 @@ use crate::handler::{
             UserRegisterDto,
             ProfileUpdateDto,
             GroupChatCreateDto,
+            LeaveGroupMembershipDto,
             ApiSuccessResponseUserReadDto,
             ApiSuccessResponseTokenReadDto,
             ApiSuccessResponseGroupChatReadDto,

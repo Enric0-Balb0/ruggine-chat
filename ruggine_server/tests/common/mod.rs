@@ -10,7 +10,8 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
 use ruggine_server::entity::group_chat::GroupChat;
-use ruggine_server::entity::group_membership::MemberRole;
+use ruggine_server::entity::group_membership;
+use ruggine_server::entity::group_membership::{GroupMembership, MemberRole};
 use ruggine_server::entity::user::User;
 use ruggine_server::entity::invitation::{Invitation, NewInvitation};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
@@ -20,10 +21,11 @@ use ruggine_server::repository::group_chat_repository::{GroupChatRepository, Gro
 use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
-use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route};
+use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route, group_membership_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::group_chat_state::GroupChatState;
+use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::state::invitation_state::InvitationState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
@@ -94,6 +96,19 @@ pub async fn create_invitation_router() -> Router {
     let invitation_state = InvitationState::new(&db);
     let token_state = TokenState::new(&db);
     invitation_route::routes(invitation_state, token_state)
+}
+
+pub async fn create_group_membership_router() -> Router {
+    let db = get_database().await;
+    let group_membership_state = GroupMembershipState::new(&db);
+    let token_state = TokenState::new(&db);
+    group_membership_route::routes(group_membership_state, token_state)
+}
+
+/// Helper function to create the full application router for e2e tests
+pub async fn create_full_router() -> Router {
+    let db = get_database().await;
+    ruggine_server::routes::root::routes(db)
 }
 
 /// Helper function to create a real user in the database
