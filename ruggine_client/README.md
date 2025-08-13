@@ -73,9 +73,9 @@ Use the VS Code Command Palette (`Ctrl+Shift+P`):
 │  │API Services │  │   API Facade    │   │
 │  │(Auth, User) │  │ (Unified Access)│   │
 │  └─────────────┘  └─────────────────┘   │
-│  ┌─────────────────────────────────────┐ │
-│  │         API Client (HTTP)           │ │
-│  └─────────────────────────────────────┘ │
+│  ┌──────────────────────────────────┐   │
+│  │         API Client (HTTP)        │   │
+│  └──────────────────────────────────┘   │
 ├─────────────────────────────────────────┤
 │             Utilities Layer             │
 │  ┌─────────────┐  ┌─────────────────┐   │
@@ -85,7 +85,7 @@ Use the VS Code Command Palette (`Ctrl+Shift+P`):
 │              Type Layer                 │
 │  ┌─────────────┐  ┌─────────────────┐   │
 │  │Server Types │  │  Common Types   │   │
-│  │(Auth,User,..)│  │  (LoadingState) │   │
+│  │(Auth,User,.)│  │  (LoadingState) │   │
 │  └─────────────┘  └─────────────────┘   │
 └─────────────────────────────────────────┘
 ```

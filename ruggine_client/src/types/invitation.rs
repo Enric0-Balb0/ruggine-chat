@@ -1,6 +1,26 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
+/// Member role from server
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MemberRole {
+    #[serde(rename = "member")]
+    Member,
+    #[serde(rename = "admin")]
+    Admin,
+}
+
+/// Membership status from server
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MembershipStatus {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "left")]
+    Left,
+    #[serde(rename = "banned")]
+    Banned,
+}
+
 /// Invitation status from server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InvitationStatus {
@@ -21,12 +41,14 @@ pub enum InvitationStatus {
 pub struct InvitationCreateRequest {
     pub to_user_id: i32,
     pub group_chat_id: i32,
+    pub role_at_join: MemberRole, // MISSING FIELD! Required by OpenAPI
 }
 
 /// Invitation status update request - exact server DTO (InvitationUpdateStatusDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvitationUpdateRequest {
     pub status: InvitationStatus,
+    pub invitation_id: i32, // MISSING FIELD! Required by OpenAPI
 }
 
 /// Invitation response wrapper from server
@@ -45,6 +67,7 @@ pub struct InvitationReadDto {
     pub status: InvitationStatus,
     pub sent_at: String, // date-time format from OpenAPI
     pub responded_at: Option<String>, // date-time format, nullable
+    pub role_at_join: MemberRole, // MISSING FIELD! Required by OpenAPI
 }
 
 /// Invitation update response data from server - from ApiSuccessResponseInvitationUpdateDto
@@ -53,6 +76,7 @@ pub struct InvitationUpdateDto {
     pub id: i32,
     pub status: InvitationStatus,
     pub responded_at: String, // date-time format from OpenAPI
+    pub group_membership_id: Option<i32>, // MISSING FIELD! Nullable from OpenAPI
 }
 
 // =============================================================================

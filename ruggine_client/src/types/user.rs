@@ -116,6 +116,7 @@ pub struct UserProfile {
     pub user_type: UserType,
     pub user_status: UserStatus,
     pub current_action: CurrentAction,
+    pub is_online: bool, // MISSING FIELD! From server UserReadDto
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,
@@ -148,6 +149,7 @@ impl From<ApiSuccessResponseUserReadDto> for UserProfile {
             user_type: user_data.user_type,
             user_status: user_data.user_status,
             current_action: user_data.current_action,
+            is_online: user_data.is_online, // Now correctly mapped from server
             created_at: user_data.created_at.parse().unwrap_or_default(), // Convert from string
             updated_at: user_data.updated_at.parse().unwrap_or_default(), // Convert from string
             last_login: None, // Not provided by server
@@ -172,9 +174,7 @@ impl UserProfile {
 
     /// Check if user is online (based on server data)
     pub fn is_online(&self) -> bool {
-        // For UserProfile, we need to track this separately since server provides is_online in UserReadDto
-        // This is a client-side approximation
-        matches!(self.current_action, CurrentAction::Writing | CurrentAction::Waiting)
+        self.is_online // Now uses the actual server field
     }
     
     /// Check if user is admin
@@ -212,6 +212,7 @@ mod tests {
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
             current_action: CurrentAction::Waiting,
+            is_online: true, // Added missing field
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             last_login: None,

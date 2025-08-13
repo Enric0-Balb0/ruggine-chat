@@ -1,7 +1,7 @@
-use crate::api::{client::ApiClient, error::HttpError};
+use crate::api::{client::ApiClient, http_error::HttpError};
 use crate::utils::storage::StorageService;
 use crate::error::AuthError;
-use crate::dto::{UserProfile, TokenResponse};
+use crate::types::{UserProfile, TokenResponse};
 use crate::config::{constants::{AuthConstants, AppConstants}, endpoints::ApiEndpoints};
 
 // Direct type imports
@@ -29,21 +29,16 @@ impl AuthService {
         if let Some(token) = self.storage_service.get_token() {
             // Check if token exists and is not expired
             let now = chrono::Utc::now().timestamp();
-            if let Some(expires_in) = token.expires_in {
-                // If expires_in is available, use it (assumes it was stored as timestamp)
-                let is_valid = now < expires_in as i64;
-                
-                // If token is expired, clean up storage
-                if !is_valid {
-                    leptos::logging::warn!("Token expired, cleaning up storage");
-                    let _ = self.storage_service.clear_session();
-                }
-                
-                is_valid
-            } else {
-                // If no expiry info, assume valid (backward compatibility)
-                true
+            // Use exp field for expiration check
+            let is_valid = now < token.exp;
+            
+            // If token is expired, clean up storage
+            if !is_valid {
+                leptos::logging::warn!("Token expired, cleaning up storage");
+                let _ = self.storage_service.clear_session();
             }
+            
+            is_valid
         } else {
             false
         }
@@ -58,14 +53,10 @@ impl AuthService {
     /// Check if token needs refresh (within threshold before expiry)
     pub fn needs_token_refresh(&self) -> bool {
         if let Some(token) = self.storage_service.get_token() {
-            if let Some(expires_in) = token.expires_in {
-                let now = chrono::Utc::now().timestamp();
-                let time_to_expiry = expires_in as i64 - now;
-                // Refresh if less than 5 minutes remaining
-                time_to_expiry < 300 && time_to_expiry > 0
-            } else {
-                false
-            }
+            let now = chrono::Utc::now().timestamp();
+            let time_to_expiry = token.exp - now;
+            // Refresh if less than 5 minutes remaining
+            time_to_expiry < 300 && time_to_expiry > 0
         } else {
             false
         }
@@ -99,7 +90,8 @@ impl AuthService {
         // Convert and store token
         let dto_token = TokenResponse {
             token: token_response.data.token.clone(),
-            expires_in: Some(token_response.data.exp as u64), // Store actual exp timestamp
+            iat: token_response.data.iat,
+            exp: token_response.data.exp,
         };
         
         self.storage_service.store_token(&dto_token)
@@ -114,14 +106,8 @@ impl AuthService {
             .await
             .map_err(AuthError::from)?;
 
-        // Convert and store profile
-        let user_profile = UserProfile {
-            id: profile_response.data.id.to_string(),
-            email: profile_response.data.email,
-            full_name: format!("{} {}", profile_response.data.first_name, profile_response.data.last_name),
-            created_at: Some(profile_response.data.created_at),
-            updated_at: Some(profile_response.data.updated_at),
-        };
+        // Convert using the automatic conversion from ApiSuccessResponseUserReadDto
+        let user_profile = UserProfile::from(profile_response);
 
         self.storage_service.store_user_profile(&user_profile)
             .map_err(AuthError::from)?;
@@ -160,7 +146,8 @@ impl AuthService {
 
         let dto_token = TokenResponse {
             token: token_response.data.token,
-            expires_in: Some(token_response.data.exp as u64),
+            iat: token_response.data.iat,
+            exp: token_response.data.exp,
         };
 
         self.storage_service.store_token(&dto_token)
@@ -222,13 +209,8 @@ impl AuthService {
             .await
             .map_err(AuthError::from)?;
 
-        let user_profile = UserProfile {
-            id: profile_response.data.id.to_string(),
-            email: profile_response.data.email,
-            full_name: format!("{} {}", profile_response.data.first_name, profile_response.data.last_name),
-            created_at: Some(profile_response.data.created_at),
-            updated_at: Some(profile_response.data.updated_at),
-        };
+        // Convert using the automatic conversion from ApiSuccessResponseUserReadDto
+        let user_profile = UserProfile::from(profile_response);
 
         self.storage_service.store_user_profile(&user_profile)
             .map_err(AuthError::from)?;

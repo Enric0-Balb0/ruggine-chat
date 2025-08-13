@@ -31,7 +31,8 @@ pub fn AppNavbar() -> impl IntoView {
                 {match user_profile {
                     Some(user) => {
                         // Dividi il full_name in first_name e last_name
-                        let name_parts: Vec<&str> = user.full_name.split_whitespace().collect();
+                        let full_name = user.full_name();
+                        let name_parts: Vec<&str> = full_name.split_whitespace().collect();
                         let first_name = name_parts.first().unwrap_or(&"User").to_string();
                         let last_name = name_parts.get(1).unwrap_or(&"Default").to_string();
                         // Usa l'email come username temporaneo (manca username nel DTO)

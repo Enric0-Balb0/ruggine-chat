@@ -5,6 +5,7 @@ pub mod user_avatar;
 pub mod sidebar;
 pub mod group_item;
 pub mod theme_toggle;
+pub mod create_group_modal;
 
 // Re-export components
 pub use app_navbar::AppNavbar;
@@ -13,4 +14,5 @@ pub use user_avatar::UserAvatar;
 pub use sidebar::Sidebar;
 pub use group_item::{GroupItem, CreateGroupButton};
 pub use theme_toggle::ThemeToggle;
+pub use create_group_modal::CreateGroupModal;
 

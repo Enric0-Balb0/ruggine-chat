@@ -3,7 +3,9 @@ use crate::components::{GroupItem, CreateGroupButton};
 
 /// Sidebar component for the main app layout
 #[component]
-pub fn Sidebar() -> impl IntoView {
+pub fn Sidebar(
+    #[prop(into)] on_create_group_click: Callback<()>,
+) -> impl IntoView {
     // TODO: Sostituire con dati reali dal servizio
     let groups = vec![
         ("Team Alpha", false),
@@ -12,6 +14,11 @@ pub fn Sidebar() -> impl IntoView {
         ("Sviluppo Frontend", false),
         ("Design Team", false),
     ];
+
+    // Handle create group button click
+    let handle_create_click = move |_| {
+        on_create_group_click.call(());
+    };
 
     view! {
         <div class="w-[280px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col">
@@ -33,7 +40,7 @@ pub fn Sidebar() -> impl IntoView {
                     <div class="h-px bg-border dark:bg-border-dark my-2"></div>
                     
                     // Create new group button
-                    <CreateGroupButton />
+                    <CreateGroupButton on_create_click=handle_create_click />
                 </div>
             </div>
         </div>

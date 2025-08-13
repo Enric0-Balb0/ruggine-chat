@@ -1,10 +1,12 @@
-use crate::api::error::HttpError;
+use crate::api::http_error::HttpError;
 
 /// Authentication related errors
 #[derive(Debug, Clone)]
 pub enum AuthError {
     /// Invalid input parameters
     InvalidInput(String),
+    /// Validation error
+    ValidationError(String),
     /// Invalid credentials provided
     InvalidCredentials,
     /// Network/connection error
@@ -36,6 +38,7 @@ impl std::fmt::Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AuthError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            AuthError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             AuthError::InvalidCredentials => write!(f, "Invalid credentials provided"),
             AuthError::NetworkError(msg) => write!(f, "Network error: {}", msg),
             AuthError::NotAuthenticated => write!(f, "User not authenticated"),

@@ -3,7 +3,7 @@ use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::user::{ApiSuccessResponseUserReadDto, UserReadDto};
-use crate::dto::UserProfile;
+use crate::types::UserProfile;
 use serde::{Deserialize, Serialize};
 
 /// User search and management service
@@ -61,14 +61,8 @@ impl UserService {
             .await
             .map_err(AuthError::from)?;
 
-        // Convert and store updated profile
-        let user_profile = UserProfile {
-            id: response.data.id.to_string(),
-            email: response.data.email,
-            full_name: format!("{} {}", response.data.first_name, response.data.last_name),
-            created_at: Some(response.data.created_at),
-            updated_at: Some(response.data.updated_at),
-        };
+        // Convert using the automatic conversion from ApiSuccessResponseUserReadDto
+        let user_profile = UserProfile::from(response);
 
         self.storage_service.store_user_profile(&user_profile)
             .map_err(AuthError::from)?;
