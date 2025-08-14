@@ -3,12 +3,16 @@ use crate::dto::token_dto::TokenReadDto;
 use crate::dto::group_chat_dto::{GroupChatReadDto, GroupChatCreateDto, GroupChatUpdateDto};
 use crate::dto::invitation_dto::{InvitationReadDto, InvitationCreateDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto};
 use crate::dto::group_membership_dto::{GroupMembershipReadDto, GroupMembershipCreateDto};
+use crate::dto::text_message_dto::{TextMessageReadDto, TextMessageCreateDto};
+use crate::response::{PaginatedResponse};
 
 pub mod token_dto;
 pub mod user_dto;
 pub mod group_chat_dto;
 pub mod invitation_dto;
 pub mod group_membership_dto;
+pub mod text_message_dto;
+pub mod text_message_pagination_dto;
 
 api_success_response_alias!(ApiSuccessResponseUserReadDto, UserReadDto);
 api_success_response_alias!(ApiSuccessResponseUserUpdateDto, ProfileUpdateDto);
@@ -22,3 +26,6 @@ api_success_response_alias!(ApiSuccessResponseGroupMembershipReadDto, GroupMembe
 api_success_response_alias!(ApiSuccessResponseVecGroupMembershipReadDto, Vec<GroupMembershipReadDto>);
 api_success_response_alias!(ApiSuccessResponseInvitationUpdateResponseDto, InvitationUpdateResponseDto);
 api_success_response_alias!(ApiSuccessResponseVecInvitationReadDto, Vec<InvitationReadDto>);
+api_success_response_alias!(ApiSuccessResponseTextMessageReadDto, TextMessageReadDto);
+api_success_response_alias!(ApiSuccessResponseTextMessageCreateDto, TextMessageCreateDto);
+api_success_response_alias!(ApiSuccessResponsePaginatedTextMessages, PaginatedResponse<TextMessageReadDto>);

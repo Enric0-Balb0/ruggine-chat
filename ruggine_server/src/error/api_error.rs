@@ -4,6 +4,7 @@ use thiserror::Error;
 use crate::error::group_chat_error::GroupChatError;
 use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::invitation_error::InvitationError;
+use crate::error::text_message_error::TextMessageError;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
@@ -18,7 +19,9 @@ pub enum ApiError {
     #[error(transparent)]
     InvitationError(#[from] InvitationError),
     #[error(transparent)]
-    GroupMembershipError(#[from] GroupMembershipError)
+    GroupMembershipError(#[from] GroupMembershipError),
+    #[error(transparent)]
+    TextMessageError(#[from] TextMessageError),
 }
 
 impl IntoResponse for ApiError {
@@ -30,6 +33,7 @@ impl IntoResponse for ApiError {
             ApiError::GroupChatError(error) => error.into_response(),
             ApiError::InvitationError(error) => error.into_response(),
             ApiError::GroupMembershipError(error) => error.into_response(),
+            ApiError::TextMessageError(error) => error.into_response(),
         }
     }
 }

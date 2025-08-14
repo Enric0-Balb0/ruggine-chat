@@ -1,4 +1,5 @@
 -- Drop della tabella se esiste già
+DROP TABLE IF EXISTS "text_message";
 DROP TABLE IF EXISTS "group_membership";
 DROP TABLE IF EXISTS "invitation";
 DROP TABLE IF EXISTS "group_chat";
@@ -212,3 +213,21 @@ EXECUTE FUNCTION prevent_duplicate_active_memberships();
 INSERT INTO group_membership (role, invitation_id)
 VALUES ('admin', 1);
 
+-- Creazione tabella TEXT_MESSAGE
+CREATE TABLE text_message (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    sender_id INT NOT NULL REFERENCES "user"(id),
+    group_chat_id INT NOT NULL REFERENCES group_chat(id),
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indice per migliorare la ricerca dei messaggi per chat e data
+CREATE INDEX idx_text_message_group_chat_sent_at
+    ON text_message (group_chat_id, sent_at DESC);
+
+-- Inserimento di esempio
+INSERT INTO text_message (content, sender_id, group_chat_id)
+VALUES
+('Ciao a tutti!', 1, 1),
+('Benvenuti nel gruppo!', 1, 1)

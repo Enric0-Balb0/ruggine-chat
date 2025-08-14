@@ -14,13 +14,16 @@ use ruggine_server::entity::group_membership;
 use ruggine_server::entity::group_membership::{GroupMembership, MemberRole};
 use ruggine_server::entity::user::User;
 use ruggine_server::entity::invitation::{Invitation, NewInvitation};
+use ruggine_server::entity::text_message::{TextMessage, NewTextMessage};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
+use ruggine_server::factory::text_message_factory::TextMessageFactory;
 use ruggine_server::model::group_membership_model::GroupMembershipWithInvitationRow;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
+use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
 use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route, group_membership_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
@@ -134,17 +137,6 @@ pub async fn create_test_user(prefix: &str) -> (User, String) {
     let password = "testpassword123".to_string();
     let user = create_test_user_with_password(prefix, password.clone()).await;
     (user, password)
-}
-
-/// Helper function to create multiple test users
-pub async fn create_test_users(prefix: &str, count: usize) -> Vec<(User, String)> {
-    let mut users = Vec::new();
-    for i in 0..count {
-        let user_prefix = format!("{}_{}", prefix, i);
-        let user_data = create_test_user(&user_prefix).await;
-        users.push(user_data);
-    }
-    users
 }
 
 // Helper function to log in and get token
@@ -353,6 +345,80 @@ pub async fn cleanup_group_membership_by_invitation_id(invitation_id: i32) {
 
     if let Err(e) = repository.delete_by_invitation_id(invitation_id).await {
         panic!("Cleanup failed for group membership with invitation_id {}: {:?}", invitation_id, e);
+    }
+}
+
+/// Helper function to create a test text message in the database
+pub async fn create_test_text_message(sender_id: i32, group_chat_id: i32, content: Option<String>) -> TextMessage {
+    let db = get_database().await;
+    let repository = TextMessageRepository::new(&db);
+
+    let new_message = NewTextMessage {
+        content: content.unwrap_or_else(|| "Test message content".to_string()),
+        sender_id,
+        group_chat_id,
+    };
+
+    let inserted_id = repository.insert(new_message).await.unwrap();
+
+    // Get the created message from database
+    let message = repository.find(inserted_id).await;
+    assert!(message.is_ok(), "Text message not found in database");
+    message.unwrap()
+}
+
+/// Helper function to create multiple test text messages for a group
+pub async fn create_test_text_messages_for_group(group_chat_id: i32, sender_id: i32, count: usize) -> Vec<TextMessage> {
+    let mut messages = Vec::new();
+    for i in 0..count {
+        let content = format!("Test message {} for group {}", i + 1, group_chat_id);
+        let message = create_test_text_message(sender_id, group_chat_id, Some(content)).await;
+        messages.push(message);
+        // Small delay to ensure different timestamps
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    }
+    messages
+}
+
+/// Helper function to create multiple test text messages with different senders
+pub async fn create_test_text_messages_multi_sender(group_chat_id: i32, sender_ids: Vec<i32>) -> Vec<TextMessage> {
+    let mut messages = Vec::new();
+    for (i, sender_id) in sender_ids.iter().enumerate() {
+        let content = format!("Message from user {} in group {}", sender_id, group_chat_id);
+        let message = create_test_text_message(*sender_id, group_chat_id, Some(content)).await;
+        messages.push(message);
+        // Small delay to ensure different timestamps
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    }
+    messages
+}
+
+/// Helper function to create multiple test users
+pub async fn create_test_users(prefix: &str, count: usize) -> Vec<(User, String)> {
+    let mut users = Vec::new();
+    for i in 0..count {
+        let username = format!("{}_user_{}", prefix, i + 1);
+        let user_data = create_test_user(&username).await;
+        users.push(user_data);
+    }
+    users
+}
+
+/// Helper function to cleanup a text message from database
+pub async fn cleanup_text_message(message_id: i32) {
+    let db = get_database().await;
+    if let Err(e) = sqlx::query!("DELETE FROM text_message WHERE id = $1", message_id)
+        .execute(&db.pool)
+        .await 
+    {
+        eprintln!("Failed to cleanup text message {}: {:?}", message_id, e);
+    }
+}
+
+/// Helper function to cleanup multiple text messages from database
+pub async fn cleanup_text_messages(message_ids: Vec<i32>) {
+    for message_id in message_ids {
+        cleanup_text_message(message_id).await;
     }
 }
 
