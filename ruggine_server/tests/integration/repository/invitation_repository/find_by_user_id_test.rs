@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::entity::invitation::{InvitationStatus, NewInvitation, UserInvitationFilter};
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, cleanup_invitation};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, create_test_group_chat, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_repository_find_by_user_id_integration_tests {
@@ -70,9 +70,9 @@ mod invitation_repository_find_by_user_id_integration_tests {
         cleanup_invitation(invitation_id_3).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
-        cleanup_user(other_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
+        cleanup_user_by_email(other_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -135,9 +135,9 @@ mod invitation_repository_find_by_user_id_integration_tests {
         cleanup_invitation(invitation_id_2).await;
         cleanup_invitation(invitation_id_3).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender_user.email).await;
-        cleanup_user(recipient1.email).await;
-        cleanup_user(recipient2.email).await;
+        cleanup_user_by_email(sender_user.email).await;
+        cleanup_user_by_email(recipient1.email).await;
+        cleanup_user_by_email(recipient2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -203,9 +203,9 @@ mod invitation_repository_find_by_user_id_integration_tests {
         cleanup_invitation(invitation_id_3).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(user.email).await;
-        cleanup_user(other_user1.email).await;
-        cleanup_user(other_user2.email).await;
+        cleanup_user_by_email(user.email).await;
+        cleanup_user_by_email(other_user1.email).await;
+        cleanup_user_by_email(other_user2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -234,7 +234,7 @@ mod invitation_repository_find_by_user_id_integration_tests {
         assert_eq!(result_both.unwrap().len(), 0);
 
         // Cleanup
-        cleanup_user(user_with_no_invitations.email).await;
+        cleanup_user_by_email(user_with_no_invitations.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -283,9 +283,9 @@ mod invitation_repository_find_by_user_id_integration_tests {
         cleanup_invitation(invitation_id_1).await;
         cleanup_invitation(invitation_id_2).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
-        cleanup_user(user3.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
+        cleanup_user_by_email(user3.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -351,7 +351,7 @@ mod invitation_repository_find_by_user_id_integration_tests {
         // Cleanup
         cleanup_invitation(invitation_id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(user.email).await;
-        cleanup_user(other_user.email).await;
+        cleanup_user_by_email(user.email).await;
+        cleanup_user_by_email(other_user.email).await;
     }
 }

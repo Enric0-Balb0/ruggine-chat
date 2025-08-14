@@ -4,7 +4,7 @@ use axum::{
 };
 use tower::ServiceExt;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, create_invitation_router, create_login_and_get_token, create_test_group_chat, create_test_user, create_test_invitation};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_invitation_router, create_login_and_get_token, create_test_group_chat, create_test_user, create_test_invitation};
 
 #[cfg(test)]
 mod find_by_id_and_user_id_invitation_e2e_tests {
@@ -51,8 +51,8 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -93,8 +93,8 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -121,8 +121,8 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -150,8 +150,8 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -175,7 +175,7 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -206,9 +206,9 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
-        cleanup_user(random_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
+        cleanup_user_by_email(random_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -231,7 +231,7 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -257,7 +257,7 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -323,9 +323,9 @@ mod find_by_id_and_user_id_invitation_e2e_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(admin_user1.email).await;
-        cleanup_user(target_user1.email).await;
-        cleanup_user(admin_user2.email).await;
-        cleanup_user(target_user2.email).await;
+        cleanup_user_by_email(admin_user1.email).await;
+        cleanup_user_by_email(target_user1.email).await;
+        cleanup_user_by_email(admin_user2.email).await;
+        cleanup_user_by_email(target_user2.email).await;
     }
 }

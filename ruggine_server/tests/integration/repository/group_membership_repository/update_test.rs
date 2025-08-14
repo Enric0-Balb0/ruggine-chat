@@ -1,7 +1,7 @@
 use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
 use ruggine_server::factory::group_membership_factory::GroupMembershipFactory;
 use ruggine_server::entity::group_membership::{MemberRole, MembershipStatus, UpdateGroupMembership};
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, cleanup_invitation, create_test_invitation, create_test_group_membership, cleanup_group_membership};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_test_invitation, create_test_group_membership, cleanup_group_membership};
 use chrono::Utc;
 
 #[cfg(test)]
@@ -50,8 +50,8 @@ mod group_membership_repository_update_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -95,8 +95,8 @@ mod group_membership_repository_update_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -158,8 +158,8 @@ mod group_membership_repository_update_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -204,7 +204,7 @@ mod group_membership_repository_update_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 }

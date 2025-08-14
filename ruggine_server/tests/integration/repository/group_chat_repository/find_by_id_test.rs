@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_repository_find_by_id_integration_tests {
@@ -32,7 +32,7 @@ mod group_chat_repository_find_by_id_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -103,7 +103,7 @@ mod group_chat_repository_find_by_id_integration_tests {
         // Cleanup
         cleanup_group_chat(group_id1).await;
         cleanup_group_chat(group_id2).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -140,7 +140,7 @@ mod group_chat_repository_find_by_id_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -182,7 +182,7 @@ mod group_chat_repository_find_by_id_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -209,6 +209,6 @@ mod group_chat_repository_find_by_id_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

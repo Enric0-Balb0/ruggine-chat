@@ -4,7 +4,7 @@ use axum::{
 };
 use tower::ServiceExt;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, create_invitation_router, create_login_and_get_token, create_test_group_chat, create_test_invitation};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_invitation_router, create_login_and_get_token, create_test_group_chat, create_test_invitation};
 
 #[cfg(test)]
 mod find_by_user_id_invitation_e2e_tests {
@@ -66,9 +66,9 @@ mod find_by_user_id_invitation_e2e_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(sender1.email).await;
-        cleanup_user(sender2.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender1.email).await;
+        cleanup_user_by_email(sender2.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -101,7 +101,7 @@ mod find_by_user_id_invitation_e2e_tests {
         assert_eq!(data.len(), 0, "Should return empty array for user with no invitations");
 
         // Cleanup
-        cleanup_user(user_with_no_invitations.email).await;
+        cleanup_user_by_email(user_with_no_invitations.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -145,9 +145,9 @@ mod find_by_user_id_invitation_e2e_tests {
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender_user.email).await;
-        cleanup_user(recipient1.email).await;
-        cleanup_user(recipient2.email).await;
+        cleanup_user_by_email(sender_user.email).await;
+        cleanup_user_by_email(recipient1.email).await;
+        cleanup_user_by_email(recipient2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -198,9 +198,9 @@ mod find_by_user_id_invitation_e2e_tests {
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender_user.email).await;
-        cleanup_user(recipient1.email).await;
-        cleanup_user(recipient2.email).await;
+        cleanup_user_by_email(sender_user.email).await;
+        cleanup_user_by_email(recipient1.email).await;
+        cleanup_user_by_email(recipient2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -258,12 +258,12 @@ mod find_by_user_id_invitation_e2e_tests {
         assert_eq!(data[0]["to_user_id"].as_i64().unwrap(), recipient_user.id as i64);
 
         // Cleanup (invitation status changed creates group membership, need special cleanup)
-        use crate::common::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(recipient_user.id, group_chat.id).await;
+        use crate::common::cleanup_test_user_from_a_group_chat;
+        cleanup_test_user_from_a_group_chat(recipient_user.id, group_chat.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -322,9 +322,9 @@ mod find_by_user_id_invitation_e2e_tests {
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender1.email).await;
-        cleanup_user(sender2.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender1.email).await;
+        cleanup_user_by_email(sender2.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -372,8 +372,8 @@ mod find_by_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]

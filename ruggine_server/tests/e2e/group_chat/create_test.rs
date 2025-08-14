@@ -6,11 +6,11 @@ use serde_json::json;
 use tower::ServiceExt;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, create_login_and_get_token};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, create_group_chat_router, create_login_and_get_token};
 
 #[cfg(test)]
 mod create_group_chat_e2e_tests {
-    use crate::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id;
+    use crate::cleanup_test_user_from_a_group_chat;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -58,9 +58,9 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         let group_id = data["id"].as_i64().unwrap() as i32;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
+        cleanup_test_user_from_a_group_chat(user.id, group_id).await;
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -141,7 +141,7 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -170,7 +170,7 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -202,7 +202,7 @@ mod create_group_chat_e2e_tests {
         // Assert: Should succeed with empty description
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -259,10 +259,10 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
+            cleanup_test_user_from_a_group_chat(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -321,12 +321,12 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response_json2["data"]["created_by"].as_i64().unwrap(), user2.id as i64);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user1.id, group_id1).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user2.id, group_id2).await;
+        cleanup_test_user_from_a_group_chat(user1.id, group_id1).await;
+        cleanup_test_user_from_a_group_chat(user2.id, group_id2).await;
         cleanup_group_chat(group_id1).await;
         cleanup_group_chat(group_id2).await;
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -391,10 +391,10 @@ mod create_group_chat_e2e_tests {
 
         // Cleanup
         for group_id in group_ids {
-            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
+            cleanup_test_user_from_a_group_chat(user.id, group_id).await;
             cleanup_group_chat(group_id).await;
         }
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -418,6 +418,6 @@ mod create_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

@@ -1,4 +1,5 @@
-use crate::{api_success_response_alias, dto::user_dto::{UserReadDto, ProfileUpdateDto}};
+use chrono::{DateTime, Utc};
+use crate::{api_success_response_alias, dto::user_dto::{UserReadDto, ProfileUpdateDto}, paginated_response_alias, pagination_metadata_alias};
 use crate::dto::token_dto::TokenReadDto;
 use crate::dto::group_chat_dto::{GroupChatReadDto, GroupChatCreateDto, GroupChatUpdateDto};
 use crate::dto::invitation_dto::{InvitationReadDto, InvitationCreateDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto};
@@ -28,4 +29,5 @@ api_success_response_alias!(ApiSuccessResponseInvitationUpdateResponseDto, Invit
 api_success_response_alias!(ApiSuccessResponseVecInvitationReadDto, Vec<InvitationReadDto>);
 api_success_response_alias!(ApiSuccessResponseTextMessageReadDto, TextMessageReadDto);
 api_success_response_alias!(ApiSuccessResponseTextMessageCreateDto, TextMessageCreateDto);
-api_success_response_alias!(ApiSuccessResponsePaginatedTextMessages, PaginatedResponse<TextMessageReadDto>);
+pagination_metadata_alias!(PaginationMetadataDateTime, DateTime<Utc>);
+paginated_response_alias!(PaginatedTextMessageResponse, TextMessageReadDto, PaginationMetadataDateTime);

@@ -4,11 +4,11 @@ use axum::{
 };
 use tower::ServiceExt;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group_chat, create_group_chat_router, create_login_and_get_token, create_test_group_chat};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, create_group_chat_router, create_login_and_get_token, create_test_group_chat};
 
 #[cfg(test)]
 mod find_by_id_group_chat_e2e_tests {
-    use crate::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id;
+    use crate::cleanup_test_user_from_a_group_chat;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -48,7 +48,7 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -72,7 +72,7 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -97,7 +97,7 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -124,7 +124,7 @@ mod find_by_id_group_chat_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -148,7 +148,7 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND, "Expected404, for invalid ID, got: {}", response.status());
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -188,7 +188,7 @@ mod find_by_id_group_chat_e2e_tests {
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group3.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -237,8 +237,8 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -292,9 +292,9 @@ mod find_by_id_group_chat_e2e_tests {
         assert_eq!(data["created_by"].as_i64().unwrap(), user.id as i64);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, group_id).await;
+        cleanup_test_user_from_a_group_chat(user.id, group_id).await;
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -353,7 +353,7 @@ mod find_by_id_group_chat_e2e_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -381,6 +381,6 @@ mod find_by_id_group_chat_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

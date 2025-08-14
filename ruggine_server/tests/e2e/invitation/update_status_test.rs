@@ -5,9 +5,9 @@ use axum::{
 use serde_json::json;
 use tower::ServiceExt;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, cleanup_group_membership_by_invitation_id,
-                   create_invitation_router, create_login_and_get_token, create_test_group_chat, 
-                   create_test_user, create_test_invitation, create_test_admin_invitation};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, cleanup_group_membership_by_invitation_id,
+                    create_invitation_router, create_login_and_get_token, create_test_group_chat,
+                    create_test_user, create_test_invitation, create_test_admin_invitation};
 
 #[cfg(test)]
 mod update_status_invitation_e2e_tests {
@@ -60,8 +60,8 @@ mod update_status_invitation_e2e_tests {
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -109,8 +109,8 @@ mod update_status_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -146,9 +146,9 @@ mod update_status_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(unauthorized_user.email).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(unauthorized_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -201,8 +201,8 @@ mod update_status_invitation_e2e_tests {
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -233,7 +233,7 @@ mod update_status_invitation_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -269,8 +269,8 @@ mod update_status_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -345,8 +345,8 @@ mod update_status_invitation_e2e_tests {
         cleanup_group_membership_by_invitation_id(admin_invitation.id).await;
         cleanup_invitation(admin_invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -371,7 +371,7 @@ mod update_status_invitation_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -401,6 +401,6 @@ mod update_status_invitation_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

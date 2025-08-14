@@ -7,7 +7,7 @@ use ruggine_server::repository::user_repository::{UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::state::group_chat_state::GroupChatState;
 use axum::{Extension, extract::{Path, State}};
-use crate::common::{cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_user};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, create_test_group_chat, create_test_user};
 use crate::get_database;
 use std::sync::Arc;
 
@@ -15,7 +15,7 @@ use std::sync::Arc;
 mod find_by_id_handler_integration_tests {
     use ruggine_server::service::user_service::UserService;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_group_chat_state};
+    use crate::{cleanup_test_user_from_a_group_chat, create_group_chat_state};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -52,7 +52,7 @@ mod find_by_id_handler_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -81,7 +81,7 @@ mod find_by_id_handler_integration_tests {
         assert!(result.is_err(), "Handler should return error for non-existent group");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -127,7 +127,7 @@ mod find_by_id_handler_integration_tests {
         // Cleanup
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -171,8 +171,8 @@ mod find_by_id_handler_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -201,7 +201,7 @@ mod find_by_id_handler_integration_tests {
         assert!(result.is_err(), "Handler should return error for invalid ID");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -242,9 +242,9 @@ mod find_by_id_handler_integration_tests {
         assert_eq!(data.created_by, created_group.created_by);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, created_group.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, created_group.id).await;
         cleanup_group_chat(created_group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -288,6 +288,6 @@ mod find_by_id_handler_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

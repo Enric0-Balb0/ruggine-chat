@@ -33,7 +33,7 @@ async fn test_find_by_group_chat_id_paginated_integration_first_page() {
     // Cleanup
     common::cleanup_text_messages(message_ids).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
@@ -73,7 +73,7 @@ async fn test_find_by_group_chat_id_paginated_integration_with_cursor() {
     // Cleanup
     common::cleanup_text_messages(message_ids).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
@@ -95,7 +95,7 @@ async fn test_find_by_group_chat_id_paginated_integration_empty_group() {
 
     // Cleanup
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(creator_user.id).await;
+    common::cleanup_user(creator_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
@@ -117,7 +117,7 @@ async fn test_find_by_group_chat_id_paginated_integration_invalid_cursor() {
 
     // Cleanup
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
@@ -155,6 +155,6 @@ async fn test_find_by_group_chat_id_paginated_integration_multi_sender() {
     common::cleanup_text_messages(message_ids).await;
     common::cleanup_group_chat(group_chat.id).await;
     for (user, _) in users {
-        common::cleanup_user_by_id(user.id).await;
+        common::cleanup_user(user.id).await;
     }
 }

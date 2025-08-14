@@ -6,7 +6,7 @@ use ruggine_server::error::user_error::UserError;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use chrono::NaiveDate;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod user_service_update_profile_integration_tests {
@@ -61,7 +61,7 @@ mod user_service_update_profile_integration_tests {
         assert_eq!(updated_user.email, user.email); // Email should remain unchanged
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -93,7 +93,7 @@ mod user_service_update_profile_integration_tests {
         assert_eq!(updated_user.gender, user.gender); // Should remain unchanged
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -119,7 +119,7 @@ mod user_service_update_profile_integration_tests {
 
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -178,7 +178,7 @@ mod user_service_update_profile_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -222,7 +222,7 @@ mod user_service_update_profile_integration_tests {
         assert_eq!(updated_user_old.birthday, old_birthday);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -275,7 +275,7 @@ mod user_service_update_profile_integration_tests {
         assert!(updated_user.updated_at > user.updated_at, "updated_at should be newer");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -315,6 +315,6 @@ mod user_service_update_profile_integration_tests {
         assert!(result_name.is_err(), "Should fail with validation error for long first name");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

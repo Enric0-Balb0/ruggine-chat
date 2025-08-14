@@ -18,13 +18,13 @@ use ruggine_server::factory::{
 use ruggine_server::entity::{
     invitation::InvitationStatus
 };
-use crate::common::{cleanup_user_by_id, cleanup_group_chat, cleanup_group_membership};
+use crate::common::{cleanup_user, cleanup_group_chat, cleanup_group_membership};
 use axum::body::to_bytes;
 
 #[cfg(test)]
 mod find_by_user_id_e2e_tests {
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_full_router, get_database};
+    use crate::{cleanup_test_user_from_a_group_chat, create_full_router, get_database};
     use super::*;
 
     /// Helper function to create test data with multiple group memberships and login user
@@ -197,12 +197,12 @@ mod find_by_user_id_e2e_tests {
 
         // Cleanup
         for group_chat_id in group_chat_ids {
-            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-            clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+            cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+            cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
             cleanup_group_chat(group_chat_id).await;
         }
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -237,11 +237,11 @@ mod find_by_user_id_e2e_tests {
         assert_eq!(membership["membership_status"].as_str().unwrap(), "active");
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -292,7 +292,7 @@ mod find_by_user_id_e2e_tests {
         assert_eq!(memberships.len(), 0); // Should have no memberships
 
         // Cleanup
-        cleanup_user_by_id(user.id).await;
+        cleanup_user(user.id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -355,10 +355,10 @@ mod find_by_user_id_e2e_tests {
         assert_eq!(memberships.len(), 0); // Should not retrieve the left membership record
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 }

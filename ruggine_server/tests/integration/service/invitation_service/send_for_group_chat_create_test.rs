@@ -4,13 +4,13 @@ use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::invitation_error::InvitationError;
 use ruggine_server::error::group_chat_error::GroupChatError;
 use ruggine_server::entity::invitation::InvitationStatus;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, cleanup_invitation};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_service_send_for_group_chat_create_integration_tests {
     use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_test_group_chat_with_invitation_and_membership};
+    use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -47,8 +47,8 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         // Cleanup: Delete the test data
         cleanup_invitation(invitation_read_dto.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -77,7 +77,7 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -107,7 +107,7 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -135,8 +135,8 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -168,9 +168,9 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(regular_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(regular_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -200,10 +200,10 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         }
 
         // Cleanup: Clean up membership and invitation first, then group and users
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -238,8 +238,8 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         // Cleanup
         cleanup_invitation(_existing_invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -276,8 +276,8 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         // Cleanup
         cleanup_invitation(invitation_read_dto.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -319,9 +319,9 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         assert!(invitation_read_dto.responded_at.is_none());
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_invitation(invitation_read_dto.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
     }
 }

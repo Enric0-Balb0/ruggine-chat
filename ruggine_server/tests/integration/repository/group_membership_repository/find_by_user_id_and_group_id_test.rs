@@ -7,8 +7,8 @@ use ruggine_server::model::group_membership_model::GroupMembershipWithInvitation
 mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
     use super::*;
     use crate::{
-        get_database, create_test_user, create_test_group_chat, cleanup_group_chat, 
-        cleanup_user, cleanup_group_membership, create_test_invitation, cleanup_invitation
+        get_database, create_test_user, create_test_group_chat, cleanup_group_chat,
+        cleanup_user_by_email, cleanup_group_membership, create_test_invitation, cleanup_invitation
     };
 
     #[tokio_shared_rt::test(shared)]
@@ -41,8 +41,8 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         cleanup_group_membership(membership_id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(to_user.email.clone()).await;
-        cleanup_user(from_user.email.clone()).await;
+        cleanup_user_by_email(to_user.email.clone()).await;
+        cleanup_user_by_email(from_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -73,8 +73,8 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         cleanup_group_membership(membership_id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(to_user.email.clone()).await;
-        cleanup_user(from_user.email.clone()).await;
+        cleanup_user_by_email(to_user.email.clone()).await;
+        cleanup_user_by_email(from_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -104,9 +104,9 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         cleanup_group_membership(membership_id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(wrong_user.email.clone()).await;
-        cleanup_user(to_user.email.clone()).await;
-        cleanup_user(from_user.email.clone()).await;
+        cleanup_user_by_email(wrong_user.email.clone()).await;
+        cleanup_user_by_email(to_user.email.clone()).await;
+        cleanup_user_by_email(from_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -137,8 +137,8 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(wrong_group.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(to_user.email.clone()).await;
-        cleanup_user(from_user.email.clone()).await;
+        cleanup_user_by_email(to_user.email.clone()).await;
+        cleanup_user_by_email(from_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -203,9 +203,9 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         cleanup_invitation(invitation1_u1.id).await;
         cleanup_group_chat(group2.id).await;
         cleanup_group_chat(group1.id).await;
-        cleanup_user(user2.email.clone()).await;
-        cleanup_user(user1.email.clone()).await;
-        cleanup_user(creator.email.clone()).await;
+        cleanup_user_by_email(user2.email.clone()).await;
+        cleanup_user_by_email(user1.email.clone()).await;
+        cleanup_user_by_email(creator.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]

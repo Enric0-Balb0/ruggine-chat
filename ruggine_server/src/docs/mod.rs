@@ -15,16 +15,22 @@ use crate::{dto::{
         ApiSuccessResponseGroupMembershipReadDto,
         ApiSuccessResponseVecGroupMembershipReadDto,
         ApiSuccessResponseInvitationUpdateResponseDto,
-        ApiSuccessResponseVecInvitationReadDto
+        ApiSuccessResponseVecInvitationReadDto,
+        PaginatedTextMessageResponse,
+        text_message_pagination_dto::{
+            FindTextMessagesByGroupQuery,
+            TextMessagePaginationQuery,
+        }
     },
-    entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole}}
+    entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole}},
 };
 use crate::handler::{
     auth_handler,
     user_handler,
     group_chat_handler,
     invitation_handler,
-    group_membership_handler
+    group_membership_handler,
+    text_message_handler
 };
 
 #[derive(OpenApi)]
@@ -42,7 +48,8 @@ use crate::handler::{
         invitation_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id,
-        group_membership_handler::leave_group::leave_group
+        group_membership_handler::leave_group::leave_group,
+        text_message_handler::find_by_group_chat_id::find_by_group_chat_id
     ),
     components(
         schemas(
@@ -68,7 +75,10 @@ use crate::handler::{
             ApiSuccessResponseGroupMembershipReadDto,
             ApiSuccessResponseVecGroupMembershipReadDto,
             ApiSuccessResponseInvitationUpdateResponseDto,
-            ApiSuccessResponseVecInvitationReadDto
+            ApiSuccessResponseVecInvitationReadDto,
+            PaginatedTextMessageResponse,
+            FindTextMessagesByGroupQuery,
+            TextMessagePaginationQuery,
         )
     ),
     modifiers(&SecurityAddon),
@@ -78,6 +88,7 @@ use crate::handler::{
         (name = "GroupChat", description = "Group chat management endpoints"),
         (name = "Invitation", description = "Invitation management endpoints"),
         (name = "GroupMembership", description = "Group membership management endpoints"),
+        (name = "TextMessage", description = "Text message management endpoints"),
     ),
     info(
         title = "Ruggine Server API",

@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 use chrono::{DateTime, Utc};
 
 /// Pagination query specifically for text messages (uses DateTime cursor)
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Validate)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Validate, IntoParams)]
 pub struct TextMessagePaginationQuery {
     /// Cursor for pagination (timestamp)
     #[schema(example = "2025-08-12T10:30:00Z")]
     pub cursor: Option<DateTime<Utc>>,
-    
+
     /// Number of items to return (max 100)
     #[serde(default = "default_limit")]
     #[validate(range(min = 1, max = 100))]
@@ -33,7 +33,7 @@ pub struct FindTextMessagesByGroupQuery {
     /// Group chat ID to filter by
     #[validate(range(min = 1))]
     pub group_chat_id: i32,
-    
+
     /// Pagination parameters
     #[serde(flatten)]
     pub pagination: TextMessagePaginationQuery,

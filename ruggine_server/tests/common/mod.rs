@@ -24,7 +24,7 @@ use ruggine_server::repository::group_membership_repository::{GroupMembershipRep
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
-use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route, group_membership_route};
+use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route, group_membership_route, text_message_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::group_chat_state::GroupChatState;
@@ -32,6 +32,7 @@ use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::state::invitation_state::InvitationState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
+use ruggine_server::state::text_message_state::TextMessageState;
 use ruggine_server::utils::service_initializer::ServiceInitializer;
 
 static INIT_LOG: Once = Once::new();
@@ -58,7 +59,7 @@ pub async fn get_database() -> Arc<Database> {
 }
 
 /// Helper function to clea nup user after test
-pub async fn cleanup_user(email: String) {
+pub async fn cleanup_user_by_email(email: String) {
     let db = get_database().await;
     let repository = UserRepository::new(&db);
     if let Err(e) = repository.delete_by_email(email.clone()).await {
@@ -66,7 +67,7 @@ pub async fn cleanup_user(email: String) {
     }
 }
 
-pub async fn cleanup_user_by_id(id: i32) {
+pub async fn cleanup_user(id: i32) {
     let db = get_database().await;
     let repository = UserRepository::new(&db);
     if let Err(e) = repository.delete_by_id(id).await {
@@ -106,6 +107,13 @@ pub async fn create_group_membership_router() -> Router {
     let group_membership_state = GroupMembershipState::new(&db);
     let token_state = TokenState::new(&db);
     group_membership_route::routes(group_membership_state, token_state)
+}
+
+pub async fn create_text_message_router() -> Router {
+    let db = get_database().await;
+    let text_message_state = TextMessageState::new(&db);
+    let token_state = TokenState::new(&db);
+    text_message_route::routes(text_message_state, token_state)
 }
 
 /// Helper function to create the full application router for e2e tests
@@ -208,6 +216,12 @@ pub async fn create_test_group_chat_with_invitation_and_membership(prefix: &str,
     group_chat
 }
 
+pub async fn add_test_user_to_a_group(user_id: i32, group_chat: &GroupChatReadDto) -> GroupMembershipWithInvitationRow {
+    let invitation = create_test_invitation(group_chat.created_by, user_id, group_chat.id).await;
+    let membership = create_test_group_membership(invitation.id, user_id).await;
+    return membership;
+}
+
 pub async fn cleanup_group_chat(group_id: i32) {
     let db = get_database().await;
     let group_repo = GroupChatRepository::new(&db);
@@ -231,6 +245,12 @@ pub async fn create_group_chat_state() -> GroupChatState {
 pub async fn create_invitation_state() -> InvitationState {
     let db = get_database().await;
     InvitationState::new(&db)
+}
+
+/// Helper function to create a real text message state with database connections
+pub async fn create_text_message_state() -> TextMessageState {
+    let db = get_database().await;
+    TextMessageState::new(&db)
 }
 
 
@@ -330,7 +350,7 @@ pub async fn cleanup_group_membership(membership_id: i32) {
     }
 }
 
-pub async fn clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user_id: i32, group_chat_id: i32) {
+pub async fn cleanup_test_user_from_a_group_chat(user_id: i32, group_chat_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let group_membership_service = service_init.group_membership_service();
@@ -404,14 +424,40 @@ pub async fn create_test_users(prefix: &str, count: usize) -> Vec<(User, String)
     users
 }
 
+pub async fn cleanup_test_users(user_ids: Vec<i32>) {
+    for user_id in user_ids {
+        cleanup_user(user_id).await;
+    }
+}
+
+pub async fn create_test_users_for_a_group(
+    prefix: &str,
+    count: usize,
+    group_chat: &GroupChatReadDto,
+) -> Vec<(User, String, GroupMembershipWithInvitationRow)> {
+    let users = create_test_users(prefix, count).await;
+    let mut response = Vec::new();
+
+    for user in users {
+        let membership = add_test_user_to_a_group(user.0.id, group_chat).await;
+        response.push((user.0, user.1, membership));
+    }
+
+    response
+}
+
+pub async fn cleanup_test_users_from_a_group_chat(user_ids: Vec<i32>, group_chat_id: i32) {
+    for user_id in user_ids {
+        cleanup_test_user_from_a_group_chat(user_id, group_chat_id).await;
+    }
+}
+
 /// Helper function to cleanup a text message from database
 pub async fn cleanup_text_message(message_id: i32) {
     let db = get_database().await;
-    if let Err(e) = sqlx::query!("DELETE FROM text_message WHERE id = $1", message_id)
-        .execute(&db.pool)
-        .await 
-    {
-        eprintln!("Failed to cleanup text message {}: {:?}", message_id, e);
+    let repository = TextMessageRepository::new(&db);
+    if let Err(e) = repository.delete_by_id(message_id).await {
+        panic!("Cleanup failed for {}: {:?}", message_id, e);
     }
 }
 

@@ -1,29 +1,33 @@
 use ruggine_server::repository::text_message_repository::{TextMessageRepository};
 use ruggine_server::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 use ruggine_server::dto::text_message_pagination_dto::TextMessagePaginationQuery;
-use crate::common;
+use ruggine_server::utils::service_initializer::ServiceInitializer;
+use crate::{cleanup_test_user_from_a_group_chat, cleanup_test_users_from_a_group_chat, cleanup_test_users, common, create_test_group_chat_with_invitation_and_membership, create_test_user};
 use std::sync::Arc;
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_first_page() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (sender_user, _) = common::create_test_user("paginated_sender").await;
-    let group_chat = common::create_test_group_chat("paginated_group", sender_user.id).await;
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership("paginated_group", sender_user.id).await;
+    
+    // Create membership for the sender user (automatically created when group is created)
+    // No need to manually create membership as the creator is automatically added
     
     // Create multiple messages for the group
     let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 5).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
-    // Act
+    // Act - use sender_user.id as auth_user_id since they have membership in the group
     let pagination_query = TextMessagePaginationQuery {
         cursor: None,
         limit: 10,
     };
-    let result = service.find_by_group_chat_id_paginated(group_chat.id, pagination_query).await;
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, sender_user.id, pagination_query).await;
 
     // Assert
     assert!(result.is_ok(), "Failed to find paginated messages: {:?}", result.err());
@@ -46,19 +50,20 @@ async fn test_find_by_group_chat_id_paginated_first_page() {
 
     // Cleanup
     common::cleanup_text_messages(message_ids).await;
+    cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_with_cursor() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (sender_user, _) = common::create_test_user("cursor_sender").await;
-    let group_chat = common::create_test_group_chat("cursor_group", sender_user.id).await;
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership("cursor_group", sender_user.id).await;
     
     // Create messages with some delay to ensure different timestamps
     let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 10).await;
@@ -69,7 +74,7 @@ async fn test_find_by_group_chat_id_paginated_with_cursor() {
         cursor: None,
         limit: 5,
     };
-    let first_page_result = service.find_by_group_chat_id_paginated(group_chat.id, first_page_query).await;
+    let first_page_result = service.find_by_group_chat_id_paginated(group_chat.id, sender_user.id, first_page_query).await;
     assert!(first_page_result.is_ok());
     let first_page = first_page_result.unwrap();
     
@@ -78,17 +83,14 @@ async fn test_find_by_group_chat_id_paginated_with_cursor() {
     assert!(first_page.pagination.next_cursor.is_some());
 
     // Use the next cursor for the second page
-    let cursor_string = first_page.pagination.next_cursor.unwrap();
-    let cursor_datetime = chrono::DateTime::parse_from_rfc3339(&cursor_string)
-        .unwrap()
-        .with_timezone(&chrono::Utc);
+    let cursor_datetime = first_page.pagination.next_cursor.unwrap();
 
     // Act - Get second page with cursor
     let second_page_query = TextMessagePaginationQuery {
         cursor: Some(cursor_datetime),
         limit: 5,
     };
-    let second_page_result = service.find_by_group_chat_id_paginated(group_chat.id, second_page_query).await;
+    let second_page_result = service.find_by_group_chat_id_paginated(group_chat.id, sender_user.id, second_page_query).await;
 
     // Assert
     assert!(second_page_result.is_ok(), "Failed to find paginated messages with cursor");
@@ -114,26 +116,27 @@ async fn test_find_by_group_chat_id_paginated_with_cursor() {
 
     // Cleanup
     common::cleanup_text_messages(message_ids).await;
+    cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_empty_group() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (creator_user, _) = common::create_test_user("empty_creator").await;
-    let group_chat = common::create_test_group_chat("empty_group", creator_user.id).await;
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership("empty_group", creator_user.id).await;
 
     // Act - Try to get messages from empty group
     let pagination_query = TextMessagePaginationQuery {
         cursor: None,
         limit: 10,
     };
-    let result = service.find_by_group_chat_id_paginated(group_chat.id, pagination_query).await;
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, creator_user.id, pagination_query).await;
 
     // Assert
     assert!(result.is_ok(), "Should succeed even for empty group");
@@ -144,33 +147,35 @@ async fn test_find_by_group_chat_id_paginated_empty_group() {
     assert!(paginated_response.pagination.next_cursor.is_none(), "Should not have next cursor");
 
     // Cleanup
+    cleanup_test_user_from_a_group_chat(creator_user.id, group_chat.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(creator_user.id).await;
+    common::cleanup_user(creator_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_multi_sender() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     // Create multiple users and a group
-    let users = common::create_test_users("multi_sender", 3).await;
-    let creator_id = users[0].0.id;
-    let group_chat = common::create_test_group_chat("multi_sender_group", creator_id).await;
+    let (creator_user, _) = create_test_user("multi_sender_creator").await;
+    let group_chat = create_test_group_chat_with_invitation_and_membership("multi_sender_group", creator_user.id).await;
+    let creator_id = creator_user.id;
+    let users = common::create_test_users_for_a_group("multi_sender", 3, &group_chat).await;
     
     // Create messages from different senders
-    let sender_ids: Vec<i32> = users.iter().map(|(user, _)| user.id).collect();
+    let sender_ids: Vec<i32> = users.iter().map(|(user, _, _)| user.id).collect();
     let messages = common::create_test_text_messages_multi_sender(group_chat.id, sender_ids.clone()).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
-    // Act
+    // Act - use creator_id as auth user (they have membership as creator)
     let pagination_query = TextMessagePaginationQuery {
         cursor: None,
         limit: 10,
     };
-    let result = service.find_by_group_chat_id_paginated(group_chat.id, pagination_query).await;
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, creator_id, pagination_query).await;
 
     // Assert
     assert!(result.is_ok(), "Failed to find messages from multiple senders");
@@ -191,43 +196,46 @@ async fn test_find_by_group_chat_id_paginated_multi_sender() {
 
     // Cleanup
     common::cleanup_text_messages(message_ids).await;
+    // Cleanup memberships and invitations for non-creator users
+    common::cleanup_test_users_from_a_group_chat(sender_ids.clone(), group_chat.id).await;
+    cleanup_test_user_from_a_group_chat(creator_id, group_chat.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    for (user, _) in users {
-        common::cleanup_user_by_id(user.id).await;
-    }
+    cleanup_test_users(sender_ids).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_non_existing_group() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
     
+    let (user, _) = common::create_test_user("unauthorized_user").await;
     let non_existing_group_id = 999999;
 
-    // Act
+    // Act - user tries to access messages from non-existing group (should fail due to membership check)
     let pagination_query = TextMessagePaginationQuery {
         cursor: None,
         limit: 10,
     };
-    let result = service.find_by_group_chat_id_paginated(non_existing_group_id, pagination_query).await;
+    let result = service.find_by_group_chat_id_paginated(non_existing_group_id, user.id, pagination_query).await;
 
-    // Assert - Should return empty result, not an error (group may exist but have no messages)
-    assert!(result.is_ok(), "Should succeed even for non-existing group");
-    let paginated_response = result.unwrap();
-    assert_eq!(paginated_response.data.len(), 0, "Should return empty data for non-existing group");
+    // Assert - Should return error because user has no membership in the group
+    assert!(result.is_err(), "Should fail when user has no membership in group");
+    
+    // Cleanup
+    common::cleanup_user(user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_group_chat_id_paginated_limit_handling() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (sender_user, _) = common::create_test_user("limit_sender").await;
-    let group_chat = common::create_test_group_chat("limit_group", sender_user.id).await;
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership("limit_group", sender_user.id).await;
     
     // Create 7 messages
     let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 7).await;
@@ -238,7 +246,7 @@ async fn test_find_by_group_chat_id_paginated_limit_handling() {
         cursor: None,
         limit: 3,
     };
-    let result = service.find_by_group_chat_id_paginated(group_chat.id, pagination_query).await;
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, sender_user.id, pagination_query).await;
 
     // Assert
     assert!(result.is_ok());
@@ -250,7 +258,40 @@ async fn test_find_by_group_chat_id_paginated_limit_handling() {
     assert_eq!(paginated_response.pagination.page_size, 3, "Should return correct page size");
 
     // Cleanup
+    cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
     common::cleanup_text_messages(message_ids).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
+}
+
+#[tokio_shared_rt::test(shared)]
+async fn test_find_by_group_chat_id_paginated_unauthorized_user() {
+    // Arrange
+    let db = common::get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
+
+    let (creator_user, _) = common::create_test_user("group_creator").await;
+    let (unauthorized_user, _) = common::create_test_user("unauthorized_user").await;
+    let group_chat = common::create_test_group_chat("restricted_group", creator_user.id).await;
+    
+    // Create messages in the group
+    let messages = common::create_test_text_messages_for_group(group_chat.id, creator_user.id, 3).await;
+    let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
+
+    // Act - unauthorized user tries to access messages
+    let pagination_query = TextMessagePaginationQuery {
+        cursor: None,
+        limit: 10,
+    };
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, unauthorized_user.id, pagination_query).await;
+
+    // Assert - Should return error because user has no membership in the group
+    assert!(result.is_err(), "Should fail when user has no membership in group");
+    
+    // Cleanup
+    common::cleanup_text_messages(message_ids).await;
+    common::cleanup_group_chat(group_chat.id).await;
+    common::cleanup_user(creator_user.id).await;
+    common::cleanup_user(unauthorized_user.id).await;
 }

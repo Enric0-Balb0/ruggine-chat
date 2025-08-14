@@ -1,6 +1,6 @@
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::entity::invitation::InvitationStatus;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, create_test_group_chat, create_test_invitation, cleanup_invitation};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, create_test_group_chat, create_test_invitation, cleanup_invitation};
 
 #[cfg(test)]
 mod invitation_repository_find_pending_for_user_integration_tests {
@@ -48,8 +48,8 @@ mod invitation_repository_find_pending_for_user_integration_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -69,7 +69,7 @@ mod invitation_repository_find_pending_for_user_integration_tests {
         assert_eq!(found_invitations.len(), 0, "Should find no pending invitations");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -140,8 +140,8 @@ mod invitation_repository_find_pending_for_user_integration_tests {
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
         cleanup_group_chat(group_chat3.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -182,9 +182,9 @@ mod invitation_repository_find_pending_for_user_integration_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(from_user1.email).await;
-        cleanup_user(from_user2.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user1.email).await;
+        cleanup_user_by_email(from_user2.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]

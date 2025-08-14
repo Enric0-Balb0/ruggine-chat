@@ -1,4 +1,4 @@
-use crate::common::{cleanup_user, create_user_router};
+use crate::common::{cleanup_user_by_email, create_user_router};
 use axum::http::{Method, StatusCode};
 use ruggine_server::dto::user_dto::{ProfileUpdateDto};
 use ruggine_server::entity::user::Gender;
@@ -58,7 +58,7 @@ mod update_profile_e2e_tests {
         assert_eq!(data["gender"], Gender::Other.to_string());
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -100,7 +100,7 @@ mod update_profile_e2e_tests {
         // Other fields should remain unchanged from the original user
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -139,7 +139,7 @@ mod update_profile_e2e_tests {
         assert!(response_json.get("message").is_some(), "Error response should contain message");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -179,7 +179,7 @@ mod update_profile_e2e_tests {
         assert!(response_json.get("message").is_some(), "Error response should contain message");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -212,7 +212,7 @@ mod update_profile_e2e_tests {
         assert!(response_json.get("message").is_some(), "Error response should contain message");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -312,7 +312,7 @@ mod update_profile_e2e_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -337,7 +337,7 @@ mod update_profile_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -373,7 +373,7 @@ mod update_profile_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -437,6 +437,6 @@ mod update_profile_e2e_tests {
         assert_eq!(data2["last_name"], original_last_name);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

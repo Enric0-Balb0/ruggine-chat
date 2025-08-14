@@ -4,8 +4,8 @@ use ruggine_server::state::invitation_state::InvitationState;
 use ruggine_server::error::{api_error::ApiError, request_error::ValidatedRequest, invitation_error::InvitationError};
 use ruggine_server::entity::invitation::InvitationStatus;
 use axum::{extract::State, Extension};
-use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, cleanup_group_membership_by_invitation_id, 
-                   create_test_user, create_test_group_chat, create_test_invitation};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, cleanup_group_membership_by_invitation_id,
+                    create_test_user, create_test_group_chat, create_test_invitation};
 use crate::get_database;
 
 #[cfg(test)]
@@ -52,8 +52,8 @@ mod update_status_handler_integration_tests {
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -89,8 +89,8 @@ mod update_status_handler_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -127,9 +127,9 @@ mod update_status_handler_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(wrong_user.email).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(wrong_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -160,7 +160,7 @@ mod update_status_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -211,8 +211,8 @@ mod update_status_handler_integration_tests {
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -248,7 +248,7 @@ mod update_status_handler_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(recipient_user.email).await;
-        cleanup_user(sender_user.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
+        cleanup_user_by_email(sender_user.email).await;
     }
 }

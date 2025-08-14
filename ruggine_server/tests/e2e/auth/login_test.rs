@@ -8,7 +8,7 @@ use ruggine_server::dto::user_dto::UserRegisterDto;
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
-use crate::common::{cleanup_user, create_auth_router};
+use crate::common::{cleanup_user_by_email, create_auth_router};
 use axum::body::to_bytes;
 
 #[cfg(test)]
@@ -74,7 +74,7 @@ mod login_e2e_tests {
         assert!(token.len() > 50, "Token should be substantial length");
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -148,7 +148,7 @@ mod login_e2e_tests {
         assert_eq!(response_json["code"], 401);
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -195,7 +195,7 @@ mod login_e2e_tests {
         assert_eq!(response_json["code"], 403);
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -333,7 +333,7 @@ mod login_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -391,6 +391,6 @@ mod login_e2e_tests {
         );
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 }

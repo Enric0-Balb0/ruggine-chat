@@ -4,8 +4,8 @@ use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::error::{api_error::ApiError, group_membership_error::GroupMembershipError};
 use ruggine_server::entity::group_membership::MembershipStatus;
 use axum::{extract::State, Extension};
-use crate::common::{cleanup_user_by_id, cleanup_group_chat, cleanup_invitation, cleanup_group_membership,
-                   create_test_user, create_test_group_chat, create_test_invitation, create_test_group_membership};
+use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, cleanup_group_membership,
+                    create_test_user, create_test_group_chat, create_test_invitation, create_test_group_membership};
 use crate::get_database;
 
 #[cfg(test)]
@@ -52,8 +52,8 @@ mod leave_group_handler_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user_by_id(admin_user.id).await;
-        cleanup_user_by_id(member_user.id).await;
+        cleanup_user(admin_user.id).await;
+        cleanup_user(member_user.id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -81,7 +81,7 @@ mod leave_group_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user_by_id(member_user.id).await;
+        cleanup_user(member_user.id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -119,9 +119,9 @@ mod leave_group_handler_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user_by_id(admin_user.id).await;
-        cleanup_user_by_id(member_user.id).await;
-        cleanup_user_by_id(unauthorized_user.id).await;
+        cleanup_user(admin_user.id).await;
+        cleanup_user(member_user.id).await;
+        cleanup_user(unauthorized_user.id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -166,8 +166,8 @@ mod leave_group_handler_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user_by_id(admin_user.id).await;
-        cleanup_user_by_id(member_user.id).await;
+        cleanup_user(admin_user.id).await;
+        cleanup_user(member_user.id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -188,6 +188,6 @@ mod leave_group_handler_integration_tests {
         assert!(result.is_err(), "Leave group should fail with invalid membership ID");
 
         // Cleanup
-        cleanup_user_by_id(member_user.id).await;
+        cleanup_user(member_user.id).await;
     }
 }

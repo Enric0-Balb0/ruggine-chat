@@ -4,11 +4,11 @@ use ruggine_server::factory::group_membership_factory::GroupMembershipFactory;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::group_membership_error::GroupMembershipError;
 use ruggine_server::entity::group_membership::MembershipStatus;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat, cleanup_invitation, create_test_invitation, create_test_group_membership, cleanup_group_membership};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_test_invitation, create_test_group_membership, cleanup_group_membership};
 
 #[cfg(test)]
 mod group_membership_service_leave_group_integration_tests {
-    use crate::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id;
+    use crate::cleanup_test_user_from_a_group_chat;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -47,12 +47,12 @@ mod group_membership_service_leave_group_integration_tests {
         assert!(membership_dto.left_at.is_some());
 
         // Cleanup
-        crate::common::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        crate::common::cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -81,7 +81,7 @@ mod group_membership_service_leave_group_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -116,13 +116,13 @@ mod group_membership_service_leave_group_integration_tests {
         }
 
         // Cleanup
-        crate::common::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        crate::common::cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
-        cleanup_user(unauthorized_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
+        cleanup_user_by_email(unauthorized_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -160,12 +160,12 @@ mod group_membership_service_leave_group_integration_tests {
         }
 
         // Cleanup
-        crate::common::clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        crate::common::cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(member_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -199,8 +199,8 @@ mod group_membership_service_leave_group_integration_tests {
         assert!(membership_dto.left_at.is_some());
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
     }
 }

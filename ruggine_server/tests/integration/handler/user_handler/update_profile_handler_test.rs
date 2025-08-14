@@ -9,7 +9,7 @@ use ruggine_server::error::api_error::ApiError;
 use ruggine_server::state::user_state::UserState;
 use axum::{extract::State, Extension, Json};
 use chrono::NaiveDate;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod update_profile_handler_integration_tests {
@@ -67,7 +67,7 @@ mod update_profile_handler_integration_tests {
         assert_eq!(updated_user.email, user.email); // Email should remain unchanged
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -104,7 +104,7 @@ mod update_profile_handler_integration_tests {
         assert_eq!(updated_user.gender, user.gender); // Should remain unchanged
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -133,7 +133,7 @@ mod update_profile_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -171,7 +171,7 @@ mod update_profile_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -213,6 +213,6 @@ mod update_profile_handler_integration_tests {
         assert_eq!(updated_user.user_status, original_user_status);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

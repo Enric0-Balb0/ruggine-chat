@@ -38,7 +38,7 @@ async fn test_insert_success() {
     // Cleanup
     common::cleanup_text_message(message_id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
@@ -83,5 +83,5 @@ async fn test_insert_with_long_content() {
     // Cleanup
     common::cleanup_text_message(message_id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }

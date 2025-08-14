@@ -1,6 +1,6 @@
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::entity::invitation::{InvitationStatus, UpdateInvitationStatus};
-use crate::common::{cleanup_user, create_test_user, cleanup_group_chat, create_test_group_chat, cleanup_invitation, create_test_invitation};
+use crate::common::{cleanup_user_by_email, create_test_user, cleanup_group_chat, create_test_group_chat, cleanup_invitation, create_test_invitation};
 use chrono::Utc;
 
 #[cfg(test)]
@@ -46,8 +46,8 @@ mod invitation_repository_update_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -88,8 +88,8 @@ mod invitation_repository_update_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -152,8 +152,8 @@ mod invitation_repository_update_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -199,7 +199,7 @@ mod invitation_repository_update_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 }

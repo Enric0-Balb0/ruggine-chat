@@ -4,7 +4,7 @@ use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::entity::user::UserStatus;
-use crate::common::{cleanup_user, create_test_user, cleanup_group_chat};
+use crate::common::{cleanup_user_by_email, create_test_user, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_repository_integration_tests {
@@ -29,7 +29,7 @@ mod group_chat_repository_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -59,7 +59,7 @@ mod group_chat_repository_integration_tests {
         cleanup_group_chat(first_group_id).await;
         cleanup_group_chat(second_group_id).await;
         
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -133,7 +133,7 @@ mod group_chat_repository_integration_tests {
             for group_id in group_ids {
                 cleanup_group_chat(group_id).await;
             }
-            cleanup_user(user.email).await;
+            cleanup_user_by_email(user.email).await;
         });
 
         // Wait for cleanup to finish
@@ -162,7 +162,7 @@ mod group_chat_repository_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -185,7 +185,7 @@ mod group_chat_repository_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -222,7 +222,7 @@ mod group_chat_repository_integration_tests {
         cleanup_group_chat(group_id1).await;
         cleanup_group_chat(group_id2).await;
         cleanup_group_chat(group_id3).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -259,6 +259,6 @@ mod group_chat_repository_integration_tests {
 
         // Cleanup
         cleanup_group_chat(group_id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

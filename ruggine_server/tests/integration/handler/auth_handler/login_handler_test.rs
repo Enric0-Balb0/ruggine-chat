@@ -10,7 +10,7 @@ use ruggine_server::entity::user::User;
 use ruggine_server::config::database::DatabaseTrait;
 use axum::extract::State;
 use std::sync::Arc;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 use ruggine_server::factory::token_factory::TokenFactory;
 
 #[cfg(test)]
@@ -80,7 +80,7 @@ mod login_handler_integration_tests {
         assert!(token_response.data().exp > chrono::Utc::now().timestamp(), "Token should not be expired");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -148,7 +148,7 @@ mod login_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -179,7 +179,7 @@ mod login_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -237,7 +237,7 @@ mod login_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -263,7 +263,7 @@ mod login_handler_integration_tests {
         assert!(result.is_err(), "Login should not pass with different case email");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -307,7 +307,7 @@ mod login_handler_integration_tests {
         assert_ne!(token1.data().token, token2.data().token, "Different users should get different tokens");
 
         // Cleanup
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
     }
 }

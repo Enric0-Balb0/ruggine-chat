@@ -14,7 +14,7 @@ use axum::{
 };
 use std::sync::Arc;
 use ruggine_server::config::database::DatabaseTrait;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod auth_middleware_integration_tests {
@@ -86,7 +86,7 @@ mod auth_middleware_integration_tests {
         assert_eq!(injected_user.unwrap().email, user.email, "Injected user email should match");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -166,7 +166,7 @@ mod auth_middleware_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -175,7 +175,7 @@ mod auth_middleware_integration_tests {
         let (user, token, state) = create_user_and_token("deleted_user").await;
 
         // Delete the user from database while keeping the valid token
-        cleanup_user(user.email.clone()).await;
+        cleanup_user_by_email(user.email.clone()).await;
 
         let req = Request::builder()
             .uri("/protected")
@@ -230,7 +230,7 @@ mod auth_middleware_integration_tests {
             other => panic!("Expected UserNotActive, got {:?}", other),
         }
 
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -344,7 +344,7 @@ mod auth_middleware_integration_tests {
         assert_eq!(injected_user.unwrap().user_type, UserType::Admin, "Injected user should be Admin");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -384,7 +384,7 @@ mod auth_middleware_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -406,7 +406,7 @@ mod auth_middleware_integration_tests {
         assert!(result.is_ok(), "Auth should succeed for User when both User and Admin types are allowed");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]

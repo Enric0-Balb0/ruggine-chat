@@ -2,7 +2,7 @@ use ruggine_server::repository::user_repository::{UserRepository, UserRepository
 use ruggine_server::entity::user::{UpdateUser, User};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::dto::user_dto::ProfileUpdateDto;
-use crate::common::{get_database, create_test_user, cleanup_user};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email};
 
 #[cfg(test)]
 mod update_profile_integration_tests {
@@ -47,7 +47,7 @@ mod update_profile_integration_tests {
         assert_eq!(updated_user.user_type, user.user_type);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -83,7 +83,7 @@ mod update_profile_integration_tests {
         assert_eq!(updated_user, user);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -109,7 +109,7 @@ mod update_profile_integration_tests {
         assert_eq!(updated_user, user);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -153,7 +153,7 @@ mod update_profile_integration_tests {
         assert_eq!(updated_user.gender, update_dto.gender.unwrap());
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -186,6 +186,6 @@ mod update_profile_integration_tests {
         assert_eq!(user, updated_user);
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

@@ -4,7 +4,7 @@ use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::invitation_error::InvitationError;
 use ruggine_server::entity::invitation::InvitationStatus;
 use crate::common::{
-    get_database, create_test_user, cleanup_user, cleanup_group_chat,
+    get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat,
     create_test_group_chat, cleanup_invitation, create_test_invitation
 };
 
@@ -39,8 +39,8 @@ mod invitation_service_update_status_integration_tests {
         cleanup_group_membership_by_invitation_id(invitation.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -66,8 +66,8 @@ mod invitation_service_update_status_integration_tests {
 
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -87,7 +87,7 @@ mod invitation_service_update_status_integration_tests {
             ApiError::InvitationError(InvitationError::InvitationNotFound)
         ));
 
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -115,9 +115,9 @@ mod invitation_service_update_status_integration_tests {
 
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
-        cleanup_user(unauth_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
+        cleanup_user_by_email(unauth_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -151,8 +151,8 @@ mod invitation_service_update_status_integration_tests {
 
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(admin_user.email).await;
-        cleanup_user(target_user.email).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -173,6 +173,6 @@ mod invitation_service_update_status_integration_tests {
             ApiError::InvitationError(InvitationError::InvalidStatus(_))
         ));
 
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

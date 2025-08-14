@@ -1,7 +1,7 @@
 use ruggine_server::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::group_membership_error::GroupMembershipError;
-use crate::common::{get_database, create_test_user, create_test_group_chat, create_test_group_membership, cleanup_user, cleanup_group_chat, cleanup_group_membership};
+use crate::common::{get_database, create_test_user, create_test_group_chat, create_test_group_membership, cleanup_user_by_email, cleanup_group_chat, cleanup_group_membership};
 
 #[cfg(test)]
 mod group_membership_find_by_id_and_user_id_integration_tests {
@@ -42,8 +42,8 @@ mod group_membership_find_by_id_and_user_id_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(owner_user.email.clone()).await;
-        cleanup_user(member_user.email.clone()).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(member_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -71,7 +71,7 @@ mod group_membership_find_by_id_and_user_id_integration_tests {
         }
 
         // Cleanup: Delete the test user
-        cleanup_user(user.email.clone()).await;
+        cleanup_user_by_email(user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -106,9 +106,9 @@ mod group_membership_find_by_id_and_user_id_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(owner_user.email.clone()).await;
-        cleanup_user(member_user.email.clone()).await;
-        cleanup_user(other_user.email.clone()).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(member_user.email.clone()).await;
+        cleanup_user_by_email(other_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -160,8 +160,8 @@ mod group_membership_find_by_id_and_user_id_integration_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(owner_user.email.clone()).await;
-        cleanup_user(member_user.email.clone()).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(member_user.email.clone()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -196,7 +196,7 @@ mod group_membership_find_by_id_and_user_id_integration_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(owner_user.email.clone()).await;
-        cleanup_user(admin_user.email.clone()).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(admin_user.email.clone()).await;
     }
 }

@@ -36,11 +36,14 @@ mod find_by_id_service_tests {
     use crate::service::text_message_service::text_message_service_trait::TextMessageServiceTrait;
     use mockall::predicate::*;
     use std::sync::Arc;
+    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
+    use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
 
     #[tokio::test]
     async fn test_find_by_id_success() {
         // Arrange
         let mut mock_repo = MockTextMessageRepositoryTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
         let test_message = TextMessageFactory::fake_text_message_with_id(1);
         let expected_dto = TextMessageReadDto::from(test_message.clone());
         
@@ -56,7 +59,7 @@ mod find_by_id_service_tests {
                 })
             });
 
-        let service = TextMessageService::new(Arc::new(mock_repo));
+        let service = TextMessageService::new(Arc::new(mock_repo), Arc::new(mock_group_membership_service), Arc::new(MockGroupChatServiceTrait::new()));
 
         // Act
         let result = service.find_by_id_internal(1).await;
@@ -74,6 +77,7 @@ mod find_by_id_service_tests {
     async fn test_find_by_id_not_found() {
         // Arrange
         let mut mock_repo = MockTextMessageRepositoryTrait::new();
+        let mock_group_membership_service = MockGroupMembershipServiceTrait::new();
         
         mock_repo
             .expect_find()
@@ -81,7 +85,7 @@ mod find_by_id_service_tests {
             .times(1)
             .returning(|_| Box::pin(async move { Err(sqlx::Error::RowNotFound) }));
 
-        let service = TextMessageService::new(Arc::new(mock_repo));
+        let service = TextMessageService::new(Arc::new(mock_repo), Arc::new(mock_group_membership_service), Arc::new(MockGroupChatServiceTrait::new()));
 
         // Act
         let result = service.find_by_id_internal(999).await;
@@ -100,7 +104,8 @@ mod find_by_id_service_tests {
     async fn test_find_by_id_database_error() {
         // Arrange
         let mut mock_repo = MockTextMessageRepositoryTrait::new();
-        
+        let mock_group_member_membership_service = MockGroupMembershipServiceTrait::new();
+
         mock_repo
             .expect_find()
             .with(eq(1))
@@ -109,7 +114,7 @@ mod find_by_id_service_tests {
                 Err(sqlx::Error::Configuration("Database connection failed".into())) 
             }));
 
-        let service = TextMessageService::new(Arc::new(mock_repo));
+        let service = TextMessageService::new(Arc::new(mock_repo), Arc::new(mock_group_member_membership_service), Arc::new(MockGroupChatServiceTrait::new()));
 
         // Act
         let result = service.find_by_id_internal(1).await;

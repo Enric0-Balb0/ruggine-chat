@@ -4,13 +4,13 @@ use ruggine_server::repository::group_chat_repository::{GroupChatRepositoryTrait
 use ruggine_server::service::user_service::{UserServiceTrait};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::error::api_error::ApiError;
-use crate::common::{get_database, create_test_user, cleanup_user, cleanup_group_chat};
+use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat};
 
 #[cfg(test)]
 mod group_chat_service_find_by_id_integration_tests {
     use ruggine_server::error::group_chat_error::GroupChatError;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, cleanup_group_membership, cleanup_invitation};
+    use crate::{cleanup_test_user_from_a_group_chat, cleanup_group_membership, cleanup_invitation};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -41,9 +41,9 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.created_at <= found_group.updated_at);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, found_group.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, found_group.id).await;
         cleanup_group_chat(created_group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -116,11 +116,11 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_ne!(found_group1.id, found_group2.id);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, found_group1.id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, found_group2.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, found_group1.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, found_group2.id).await;
         cleanup_group_chat(group1.id).await;
         cleanup_group_chat(group2.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -155,9 +155,9 @@ mod group_chat_service_find_by_id_integration_tests {
         assert_eq!(found_group.created_by, user.id);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, found_group.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, found_group.id).await;
         cleanup_group_chat(created_group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -200,9 +200,9 @@ mod group_chat_service_find_by_id_integration_tests {
         }
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(user.id, created_group.id).await;
+        cleanup_test_user_from_a_group_chat(user.id, created_group.id).await;
         cleanup_group_chat(created_group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -234,7 +234,7 @@ mod group_chat_service_find_by_id_integration_tests {
         cleanup_group_membership(group_membership.id).await;
         cleanup_invitation(group_membership.invitation_id).await;
         cleanup_group_chat(created_group.id).await;
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
 }

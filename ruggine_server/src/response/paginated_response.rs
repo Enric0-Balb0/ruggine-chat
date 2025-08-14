@@ -1,25 +1,28 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::dto::text_message_dto::TextMessageReadDto;
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
-pub struct PaginatedResponse<T> {
+pub struct PaginatedResponse<T, C> {
     /// The data items for this page
     #[schema(example = "[]")]
     pub data: Vec<T>,
     
     /// Pagination metadata
-    pub pagination: PaginationMetadata,
+    pub pagination: PaginationMetadata<C>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
-pub struct PaginationMetadata {
+pub struct PaginationMetadata<C> {
     /// Whether there are more items available
     #[schema(example = true)]
     pub has_more: bool,
     
     /// Cursor for the next page (timestamp or ID)
     #[schema(example = "2025-08-12T10:30:00Z")]
-    pub next_cursor: Option<String>,
+    pub next_cursor: Option<C>,
     
     /// Number of items in this page
     #[schema(example = 20)]
@@ -30,11 +33,11 @@ pub struct PaginationMetadata {
     pub total_count: Option<usize>,
 }
 
-impl<T> PaginatedResponse<T> {
+impl<T, C> PaginatedResponse<T, C> {
     pub fn new(
         data: Vec<T>,
         has_more: bool,
-        next_cursor: Option<String>,
+        next_cursor: Option<C>,
         total_count: Option<usize>,
     ) -> Self {
         let page_size = data.len();
@@ -77,6 +80,9 @@ impl<T> PaginatedResponse<T> {
     }
 }
 
+pub type PaginationMetadataDateTime = PaginationMetadata<DateTime<Utc>>;
+pub type PaginatedTextMessageResponse = PaginatedResponse<TextMessageReadDto, DateTime<Utc>>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,7 +107,7 @@ mod tests {
     #[test]
     fn test_paginated_response_last_page() {
         let data = vec!["item1", "item2"];
-        let response = PaginatedResponse::last_page(data.clone());
+        let response: PaginatedResponse<&str, String> = PaginatedResponse::last_page(data.clone());
 
         assert_eq!(response.data, data);
         assert_eq!(response.pagination.has_more, false);
@@ -111,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_paginated_response_empty() {
-        let response: PaginatedResponse<String> = PaginatedResponse::empty();
+        let response: PaginatedResponse<String, String> = PaginatedResponse::empty();
 
         assert_eq!(response.data.len(), 0);
         assert_eq!(response.pagination.has_more, false);

@@ -18,13 +18,13 @@ use ruggine_server::factory::{
 use ruggine_server::entity::{
     invitation::InvitationStatus
 };
-use crate::common::{cleanup_user_by_id, cleanup_group_chat, cleanup_group_membership};
+use crate::common::{cleanup_user, cleanup_group_chat, cleanup_group_membership};
 use axum::body::to_bytes;
 
 #[cfg(test)]
 mod leave_group_e2e_tests {
     use ruggine_server::utils::service_initializer::ServiceInitializer;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_full_router, get_database};
+    use crate::{cleanup_test_user_from_a_group_chat, create_full_router, get_database};
     use super::*;
 
     /// Helper function to create test data and login user
@@ -123,11 +123,11 @@ mod leave_group_e2e_tests {
         assert!(json["data"]["left_at"].as_str().is_some());
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -178,12 +178,12 @@ mod leave_group_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_membership(membership_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -223,12 +223,12 @@ mod leave_group_e2e_tests {
         assert_eq!(second_response.status(), StatusCode::CONFLICT);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_membership(membership_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -256,12 +256,12 @@ mod leave_group_e2e_tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_membership(membership_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -314,12 +314,12 @@ mod leave_group_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(admin_id, group_chat_id).await;
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(member_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;
+        cleanup_test_user_from_a_group_chat(member_id, group_chat_id).await;
         cleanup_group_membership(membership_id).await;
         cleanup_group_chat(group_chat_id).await;
-        cleanup_user_by_id(admin_id).await;
-        cleanup_user_by_id(member_id).await;
-        cleanup_user_by_id(other_user.id).await;
+        cleanup_user(admin_id).await;
+        cleanup_user(member_id).await;
+        cleanup_user(other_user.id).await;
     }
 }

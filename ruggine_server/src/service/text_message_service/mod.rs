@@ -8,6 +8,7 @@ use crate::dto::text_message_dto::TextMessageReadDto;
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::paginated_response::PaginatedResponse;
+use crate::response::PaginatedTextMessageResponse;
 pub use crate::service::text_message_service::text_message_service::TextMessageService;
 pub use crate::service::text_message_service::text_message_service_trait::TextMessageServiceTrait;
 
@@ -20,8 +21,9 @@ impl TextMessageServiceTrait for TextMessageService {
     async fn find_by_group_chat_id_paginated(
         &self,
         group_chat_id: i32,
+        auth_user_id: i32,
         pagination_query: TextMessagePaginationQuery,
-    ) -> Result<PaginatedResponse<TextMessageReadDto>, ApiError> {
-        self.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query).await
+    ) -> Result<PaginatedTextMessageResponse, ApiError> {
+        self.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query, auth_user_id).await
     }
 }

@@ -1,6 +1,6 @@
 use ruggine_server::handler::invitation_handler::find_by_user_id::find_by_user_id;
 use axum::{extract::State, Extension};
-use crate::common::{cleanup_user, cleanup_group_chat, cleanup_invitation, create_test_user, create_test_group_chat, create_test_invitation};
+use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_test_user, create_test_group_chat, create_test_invitation};
 
 #[cfg(test)]
 mod find_by_user_id_handler_integration_tests {
@@ -8,7 +8,7 @@ mod find_by_user_id_handler_integration_tests {
     use ruggine_server::entity::invitation::{InvitationStatus};
     use ruggine_server::error::request_error::ValidatedRequest;
     use ruggine_server::handler::invitation_handler::update_status::update_status;
-    use crate::{clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id, create_invitation_state};
+    use crate::{cleanup_test_user_from_a_group_chat, create_invitation_state};
     use super::*;
 
 
@@ -54,9 +54,9 @@ mod find_by_user_id_handler_integration_tests {
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat1.id).await;
         cleanup_group_chat(group_chat2.id).await;
-        cleanup_user(sender1.email).await;
-        cleanup_user(sender2.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender1.email).await;
+        cleanup_user_by_email(sender2.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -80,7 +80,7 @@ mod find_by_user_id_handler_integration_tests {
         assert_eq!(data.len(), 0, "Should return empty list for user with no invitations");
 
         // Cleanup
-        cleanup_user(user_with_no_invitations.email).await;
+        cleanup_user_by_email(user_with_no_invitations.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -115,9 +115,9 @@ mod find_by_user_id_handler_integration_tests {
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender_user.email).await;
-        cleanup_user(recipient1.email).await;
-        cleanup_user(recipient2.email).await;
+        cleanup_user_by_email(sender_user.email).await;
+        cleanup_user_by_email(recipient1.email).await;
+        cleanup_user_by_email(recipient2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -160,9 +160,9 @@ mod find_by_user_id_handler_integration_tests {
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender_user.email).await;
-        cleanup_user(recipient1.email).await;
-        cleanup_user(recipient2.email).await;
+        cleanup_user_by_email(sender_user.email).await;
+        cleanup_user_by_email(recipient1.email).await;
+        cleanup_user_by_email(recipient2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -206,11 +206,11 @@ mod find_by_user_id_handler_integration_tests {
         assert_eq!(data[0].to_user_id, recipient_user.id);
 
         // Cleanup
-        clean_up_group_invitation_with_membership_by_user_id_and_group_chat_id(recipient_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(recipient_user.id, group_chat.id).await;
         cleanup_invitation(invitation_id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -251,9 +251,9 @@ mod find_by_user_id_handler_integration_tests {
         cleanup_invitation(invitation_id_1).await;
         cleanup_invitation(invitation_id_2).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender1.email).await;
-        cleanup_user(sender2.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender1.email).await;
+        cleanup_user_by_email(sender2.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -291,7 +291,7 @@ mod find_by_user_id_handler_integration_tests {
         // Cleanup
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group_chat.id).await;
-        cleanup_user(sender.email).await;
-        cleanup_user(recipient_user.email).await;
+        cleanup_user_by_email(sender.email).await;
+        cleanup_user_by_email(recipient_user.email).await;
     }
 }

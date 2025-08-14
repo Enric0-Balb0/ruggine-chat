@@ -9,7 +9,7 @@ use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::config::database::DatabaseTrait;
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, create_user_router, create_auth_router};
+use crate::common::{cleanup_user_by_email, create_user_router, create_auth_router};
 
 #[cfg(test)]
 mod profile_e2e_tests {
@@ -125,7 +125,7 @@ mod profile_e2e_tests {
         assert!(data.get("password").is_none(), "User data should not contain password");
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -279,7 +279,7 @@ mod profile_e2e_tests {
         assert_eq!(response_json["code"], 403);
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -303,7 +303,7 @@ mod profile_e2e_tests {
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -368,7 +368,7 @@ mod profile_e2e_tests {
         assert!(data.get("created_at").is_some(), "Created at should be present");
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -432,7 +432,7 @@ mod profile_e2e_tests {
         assert!(!data["user_status"].as_str().unwrap().is_empty(), "user_status should not be empty");
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -480,6 +480,6 @@ mod profile_e2e_tests {
         assert_eq!(response1_json["data"]["email"], response2_json["data"]["email"]);
 
         // Cleanup
-        cleanup_user(user_dto.email).await;
+        cleanup_user_by_email(user_dto.email).await;
     }
 }

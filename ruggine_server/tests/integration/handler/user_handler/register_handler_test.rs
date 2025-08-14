@@ -7,7 +7,7 @@ use ruggine_server::state::user_state::UserState;
 use ruggine_server::error::{api_error::ApiError, user_error::UserError, request_error::ValidatedRequest};
 use axum::extract::State;
 use std::sync::Arc;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod register_handler_integration_tests {
@@ -63,7 +63,7 @@ mod register_handler_integration_tests {
                   "New user should be in Waiting state by default");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -95,7 +95,7 @@ mod register_handler_integration_tests {
         }
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -138,7 +138,7 @@ mod register_handler_integration_tests {
                   "User should be in Waiting state by default in database");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -170,7 +170,7 @@ mod register_handler_integration_tests {
         assert!(stored_user.password.starts_with("$"), "Hashed password should start with hash identifier");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -209,7 +209,7 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().gender, register_dto.gender);
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -237,8 +237,8 @@ mod register_handler_integration_tests {
         assert_ne!(user1.data().email, user2.data().email, "Users should have different emails");
 
         // Cleanup
-        cleanup_user(register_dto1.email).await;
-        cleanup_user(register_dto2.email).await;
+        cleanup_user_by_email(register_dto1.email).await;
+        cleanup_user_by_email(register_dto2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -286,7 +286,7 @@ mod register_handler_integration_tests {
         assert!(user_response.data().created_at <= chrono::Utc::now());
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -316,7 +316,7 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.unwrap().user_status, UserStatus::Active, "User should be active in database");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -366,6 +366,6 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 }

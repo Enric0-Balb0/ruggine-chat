@@ -4,3 +4,4 @@ pub mod user_route;
 pub mod group_chat_route;
 pub mod group_membership_route;
 pub mod invitation_route;
+pub mod text_message_route;

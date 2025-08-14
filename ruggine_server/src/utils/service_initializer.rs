@@ -4,6 +4,8 @@ use crate::service::group_chat_service::{GroupChatService, GroupChatServiceTrait
 use crate::service::invitation_service::{InvitationService, InvitationServiceTrait};
 use crate::service::user_service::{UserService, UserServiceTrait};
 use crate::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
+use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
+use crate::repository::text_message_repository::TextMessageRepository;
 
 /// ServiceInitializer manages the creation and initialization of all services
 /// with proper dependency injection to avoid circular dependencies.
@@ -13,6 +15,7 @@ pub struct ServiceInitializer {
     invitation_service: Arc<dyn InvitationServiceTrait>,
     user_service: Arc<dyn UserServiceTrait>,
     group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
+    text_message_service: Arc<dyn TextMessageServiceTrait>,
 }
 
 impl ServiceInitializer {
@@ -26,6 +29,13 @@ impl ServiceInitializer {
         // Create group chat service without invitation service dependency
         let group_chat_service = Arc::new(GroupChatService::new(db_conn));
         
+        // Create text message service with group membership and group chat dependencies
+        let text_message_service = Arc::new(TextMessageService::new(
+            Arc::new(TextMessageRepository::new(db_conn)),
+            group_membership_service.clone(),
+            group_chat_service.clone()
+        ));
+        
         // Create invitation service (it will create its own internal group chat service for now)
         let invitation_service = Arc::new(InvitationService::new(db_conn));
         
@@ -38,6 +48,7 @@ impl ServiceInitializer {
             invitation_service,
             user_service,
             group_membership_service,
+            text_message_service,
         }
     }
 
@@ -59,5 +70,10 @@ impl ServiceInitializer {
     /// Get the GroupMembershipService instance
     pub fn group_membership_service(&self) -> Arc<dyn GroupMembershipServiceTrait> {
         Arc::clone(&self.group_membership_service)
+    }
+
+    /// Get the TextMessageService instance
+    pub fn text_message_service(&self) -> Arc<dyn TextMessageServiceTrait> {
+        Arc::clone(&self.text_message_service)
     }
 }

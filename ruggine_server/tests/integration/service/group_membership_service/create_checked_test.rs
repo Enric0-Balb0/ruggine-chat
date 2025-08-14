@@ -3,7 +3,7 @@ mod group_membership_create_checked_tests {
     use std::sync::Arc;
     use crate::common::{
         get_database, create_test_user, create_test_group_chat,
-        create_test_invitation, cleanup_user, cleanup_group_chat,
+        create_test_invitation, cleanup_user_by_email, cleanup_group_chat,
         cleanup_group_membership
     };
     use ruggine_server::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
@@ -54,8 +54,8 @@ mod group_membership_create_checked_tests {
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group.id).await;
-        cleanup_user(from_user.email).await;
-        cleanup_user(to_user.email).await;
+        cleanup_user_by_email(from_user.email).await;
+        cleanup_user_by_email(to_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -89,7 +89,7 @@ mod group_membership_create_checked_tests {
         ));
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -131,8 +131,8 @@ mod group_membership_create_checked_tests {
         cleanup_group_membership(first_result.unwrap().id).await;
         cleanup_invitation(invitation.id).await;
         cleanup_group_chat(group.id).await;
-        cleanup_user(owner.email).await;
-        cleanup_user(member.email).await;
+        cleanup_user_by_email(owner.email).await;
+        cleanup_user_by_email(member.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -169,6 +169,6 @@ mod group_membership_create_checked_tests {
         }
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 }

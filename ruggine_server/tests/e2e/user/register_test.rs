@@ -7,7 +7,7 @@ use tower::ServiceExt;
 use ruggine_server::factory::user_factory::UserFactory;
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use axum::body::to_bytes;
-use crate::common::{cleanup_user, create_user_router};
+use crate::common::{cleanup_user_by_email, create_user_router};
 
 #[cfg(test)]
 mod register_e2e_tests {
@@ -90,7 +90,7 @@ mod register_e2e_tests {
         assert!(data["id"].as_i64().unwrap() > 0, "User ID should be positive");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -148,7 +148,7 @@ mod register_e2e_tests {
         assert_ne!(stored_user.password, register_dto.password, "Password should be hashed");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -201,7 +201,7 @@ mod register_e2e_tests {
         assert_eq!(response_json["code"], 409);
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -408,7 +408,7 @@ mod register_e2e_tests {
         assert_eq!(data["gender"], "male");
 
         // Cleanup
-        cleanup_user("special.chars+test@example.com".to_string()).await;
+        cleanup_user_by_email("special.chars+test@example.com".to_string()).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -448,7 +448,7 @@ mod register_e2e_tests {
 
         // Cleanup if registration succeeded
         if response.status() == StatusCode::OK {
-            cleanup_user(register_dto.email).await;
+            cleanup_user_by_email(register_dto.email).await;
         }
     }
 
@@ -520,8 +520,8 @@ mod register_e2e_tests {
         assert_ne!(data1["email"], data2["email"], "Users should have different emails");
 
         // Cleanup
-        cleanup_user(register_dto1.email).await;
-        cleanup_user(register_dto2.email).await;
+        cleanup_user_by_email(register_dto1.email).await;
+        cleanup_user_by_email(register_dto2.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -581,6 +581,6 @@ mod register_e2e_tests {
         assert!(data.get("password").is_none(), "password should not be in response");
 
         // Cleanup
-        cleanup_user(register_dto.email).await;
+        cleanup_user_by_email(register_dto.email).await;
     }
 }

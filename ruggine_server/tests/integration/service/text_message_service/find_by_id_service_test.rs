@@ -2,13 +2,14 @@ use ruggine_server::repository::text_message_repository::{TextMessageRepository,
 use ruggine_server::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 use crate::common;
 use std::sync::Arc;
+use ruggine_server::utils::service_initializer::ServiceInitializer;
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_id_existing_message() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init  = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (sender_user, _) = common::create_test_user("find_by_id_sender").await;
     let group_chat = common::create_test_group_chat("find_by_id_group", sender_user.id).await;
@@ -36,15 +37,15 @@ async fn test_find_by_id_existing_message() {
     // Cleanup
     common::cleanup_text_message(test_message.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_by_id_non_existing_message() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init  = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
     
     let non_existing_id = 999999;
 
@@ -68,8 +69,8 @@ async fn test_find_by_id_non_existing_message() {
 async fn test_find_by_id_multiple_messages_same_group() {
     // Arrange
     let db = common::get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    let service = TextMessageService::new(Arc::new(repository));
+    let service_init  = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
 
     let (sender_user, _) = common::create_test_user("multi_msg_sender").await;
     let group_chat = common::create_test_group_chat("multi_msg_group", sender_user.id).await;
@@ -103,5 +104,5 @@ async fn test_find_by_id_multiple_messages_same_group() {
     common::cleanup_text_message(message1.id).await;
     common::cleanup_text_message(message2.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }

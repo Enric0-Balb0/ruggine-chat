@@ -6,7 +6,7 @@ use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::config::database::DatabaseTrait;
 use axum::Extension;
-use crate::common::cleanup_user;
+use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod profile_handler_integration_tests {
@@ -48,7 +48,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.current_action, CurrentAction::Waiting, "User should be in Waiting state by default");
 
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
 
@@ -71,7 +71,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.current_action, CurrentAction::Waiting);
         
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -107,7 +107,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data.current_action, CurrentAction::Waiting, "Default action should be Waiting");
 
         // Cleanup
-        cleanup_user(updated_user.email).await;
+        cleanup_user_by_email(updated_user.email).await;
     }
 
 
@@ -124,7 +124,7 @@ mod profile_handler_integration_tests {
         
         assert_eq!(data, &UserReadDto::from(user.clone()));
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -149,7 +149,7 @@ mod profile_handler_integration_tests {
         assert!(!data.address.is_empty(), "Address should not be empty");
         
         // Cleanup
-        cleanup_user(user.email).await;
+        cleanup_user_by_email(user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -199,7 +199,7 @@ mod profile_handler_integration_tests {
         );
         
         // Cleanup
-        cleanup_user(updated_user.email).await;
+        cleanup_user_by_email(updated_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -233,7 +233,7 @@ mod profile_handler_integration_tests {
         assert_eq!(data2.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
         
         // Cleanup
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
     }
 }

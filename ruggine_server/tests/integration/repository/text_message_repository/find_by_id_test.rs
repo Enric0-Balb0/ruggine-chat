@@ -33,7 +33,7 @@ async fn test_find_success() {
     // Cleanup
     common::cleanup_text_message(test_message.id).await;
     common::cleanup_group_chat(group_chat.id).await;
-    common::cleanup_user_by_id(sender_user.id).await;
+    common::cleanup_user(sender_user.id).await;
 }
 
 #[tokio_shared_rt::test(shared)]

@@ -8,7 +8,7 @@ use std::sync::Arc;
 mod user_service_find_by_id_integration_tests {
     use ruggine_server::entity::user::UpdateUser;
     use ruggine_server::service::user_service::UserServiceTrait;
-    use crate::common::cleanup_user;
+    use crate::common::cleanup_user_by_email;
     use crate::get_database;
     use super::*;
 
@@ -40,7 +40,7 @@ mod user_service_find_by_id_integration_tests {
         assert_eq!(found_user.user_status, new_user.user_status);
 
         // Cleanup
-        cleanup_user(found_user.email).await;
+        cleanup_user_by_email(found_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -102,9 +102,9 @@ mod user_service_find_by_id_integration_tests {
         assert_eq!(found3.user_status, UserStatus::Active);
 
         // Cleanup
-        cleanup_user(user1.email).await;
-        cleanup_user(user2.email).await;
-        cleanup_user(user3.email).await;
+        cleanup_user_by_email(user1.email).await;
+        cleanup_user_by_email(user2.email).await;
+        cleanup_user_by_email(user3.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -145,7 +145,7 @@ mod user_service_find_by_id_integration_tests {
         assert_eq!(found_user.last_name, update_user.last_name.unwrap());
 
         // Cleanup
-        cleanup_user(found_user.email).await;
+        cleanup_user_by_email(found_user.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -179,8 +179,8 @@ mod user_service_find_by_id_integration_tests {
         assert_eq!(found_inactive.user_status, UserStatus::Deleted);
 
         // Cleanup
-        cleanup_user(found_active.email).await;
-        cleanup_user(found_inactive.email).await;
+        cleanup_user_by_email(found_active.email).await;
+        cleanup_user_by_email(found_inactive.email).await;
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -219,7 +219,7 @@ mod user_service_find_by_id_integration_tests {
             assert_eq!(user.email, new_user.email);
 
             // Cleanup
-            cleanup_user(user.email.clone()).await;
+            cleanup_user_by_email(user.email.clone()).await;
         }
     }
 }
