@@ -6,7 +6,6 @@ mod components;
 mod pages;
 mod utils;
 mod error;
-mod dto;
 mod config;
 mod router;
 

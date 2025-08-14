@@ -1,7 +1,7 @@
 // Storage Service - Client-side data persistence
 // Handles localStorage, sessionStorage, and caching
 
-use crate::dto::{TokenResponse, UserProfile};
+use crate::types::{TokenResponse, UserProfile};
 use crate::error::StorageError;
 use crate::config::storage::StorageKeys;
 

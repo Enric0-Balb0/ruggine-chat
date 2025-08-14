@@ -1,9 +1,11 @@
-use crate::api::error::HttpError;
+use crate::api::http_error::HttpError;
 use crate::types::common::{ApiErrorResponse, ApiResponse, ApiSuccessResponse};
 use crate::config::constants::AppConstants;
+use crate::utils::storage::StorageService;
 use reqwest::{Client, RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::{Arc, Mutex};
+use web_sys;
 
 /// Client HTTP centralizzato per tutte le chiamate API
 #[derive(Clone)]
@@ -11,6 +13,7 @@ pub struct ApiClient {
     client: Client,
     base_url: String,
     auth_token: Arc<Mutex<Option<String>>>,
+    storage_service: StorageService,
 }
 
 impl ApiClient {
@@ -24,6 +27,7 @@ impl ApiClient {
             client,
             base_url: base_url.into(),
             auth_token: Arc::new(Mutex::new(None)),
+            storage_service: StorageService::new(),
         }
     }
 
@@ -68,7 +72,8 @@ impl ApiClient {
     }
 
     /// Gestisce la risposta HTTP e deserializza
-    async fn handle_response<T: DeserializeOwned>(response: Response) -> Result<T, HttpError> {
+    /// Automaticamente gestisce il logout su 401 Unauthorized
+    async fn handle_response<T: DeserializeOwned>(&self, response: Response) -> Result<T, HttpError> {
         let status = response.status();
         let text = response.text().await?;
 
@@ -88,6 +93,11 @@ impl ApiClient {
                 })
             }
         } else {
+            // Gestione speciale per 401 Unauthorized
+            if status.as_u16() == 401 {
+                self.handle_unauthorized().await;
+            }
+            
             // Prova a parsare come errore strutturato
             if let Ok(error_response) = serde_json::from_str::<ApiErrorResponse>(&text) {
                 Err(HttpError::Http {
@@ -103,12 +113,40 @@ impl ApiClient {
         }
     }
 
+    /// Gestisce automaticamente il caso 401 Unauthorized
+    /// Pulisce la sessione e reindirizza al login
+    async fn handle_unauthorized(&self) {
+        leptos::logging::warn!("401 Unauthorized - Automatic logout and redirect");
+        
+        // Pulisci il token dal client
+        if let Ok(mut auth_token) = self.auth_token.lock() {
+            *auth_token = None;
+        }
+        
+        // Pulisci tutto il localStorage
+        if let Err(e) = self.storage_service.clear_session() {
+            leptos::logging::error!("Failed to clear session on 401: {:?}", e);
+        }
+        
+        // Reindirizza al login usando window.location (più robusto)
+        leptos::spawn_local(async {
+            if let Some(window) = web_sys::window() {
+                let location = window.location();
+                if let Err(e) = location.set_href("/login") {
+                    leptos::logging::error!("Cannot redirect to login: {:?}", e);
+                }
+            } else {
+                leptos::logging::error!("Cannot access window for redirect");
+            }
+        });
+    }
+
     /// GET request
     pub async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T, HttpError> {
         let url = self.build_url(endpoint);
         let request = self.add_common_headers(self.client.get(&url));
         let response = request.send().await?;
-        Self::handle_response(response).await
+        self.handle_response(response).await
     }
 
     /// POST request con body
@@ -120,7 +158,7 @@ impl ApiClient {
         let url = self.build_url(endpoint);
         let request = self.add_common_headers(self.client.post(&url));
         let response = request.json(body).send().await?;
-        Self::handle_response(response).await
+        self.handle_response(response).await
     }
 
     /// PUT request con body
@@ -132,7 +170,7 @@ impl ApiClient {
         let url = self.build_url(endpoint);
         let request = self.add_common_headers(self.client.put(&url));
         let response = request.json(body).send().await?;
-        Self::handle_response(response).await
+        self.handle_response(response).await
     }
 
     /// DELETE request
@@ -140,7 +178,7 @@ impl ApiClient {
         let url = self.build_url(endpoint);
         let request = self.add_common_headers(self.client.delete(&url));
         let response = request.send().await?;
-        Self::handle_response(response).await
+        self.handle_response(response).await
     }
 
     /// PATCH request con body
@@ -152,7 +190,7 @@ impl ApiClient {
         let url = self.build_url(endpoint);
         let request = self.add_common_headers(self.client.patch(&url));
         let response = request.json(body).send().await?;
-        Self::handle_response(response).await
+        self.handle_response(response).await
     }
 }
 

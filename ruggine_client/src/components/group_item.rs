@@ -37,9 +37,14 @@ pub fn GroupItem(
 }
 
 #[component]
-pub fn CreateGroupButton() -> impl IntoView {
+pub fn CreateGroupButton(
+    #[prop(into)] on_create_click: Callback<()>,
+) -> impl IntoView {
     view! {
-        <div class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-bg-main dark:hover:bg-bg-main-dark text-brand-primary-light">
+        <div 
+            class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-bg-main dark:hover:bg-bg-main-dark text-brand-primary-light"
+            on:click=move |_| on_create_click.call(())
+        >
             // Plus icon
             <div class="w-8 h-8 rounded flex items-center justify-center border-2 border-dashed border-brand-primary-light mr-3 flex-shrink-0">
                 <span class="text-sm font-bold">"+"</span>

@@ -17,6 +17,9 @@ pub mod group;
 /// Invitation types and utilities
 pub mod invitation;
 
+/// Group membership types and utilities
+pub mod membership;
+
 // =============================================================================
 // RE-EXPORTS - Public API
 // =============================================================================
@@ -37,7 +40,14 @@ pub use group::{GroupChat, GroupChatCreateRequest, ApiSuccessResponseGroupChatRe
 // Invitation types
 pub use invitation::{
     Invitation, InvitationCreateRequest, InvitationUpdateRequest, 
-    InvitationStatus, ApiSuccessResponseInvitationReadDto, InvitationReadDto, InvitationUpdateDto
+    InvitationStatus, ApiSuccessResponseInvitationReadDto, InvitationReadDto, InvitationUpdateDto,
+    MemberRole, MembershipStatus
+};
+
+// Membership types
+pub use membership::{
+    GroupMembership, ApiSuccessResponseGroupMembershipReadDto,
+    ApiSuccessResponseVecGroupMembershipReadDto, GroupMembershipReadDto
 };
 
 // Common types
