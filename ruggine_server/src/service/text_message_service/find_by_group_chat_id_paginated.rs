@@ -1,5 +1,6 @@
 use crate::dto::text_message_dto::TextMessageReadDto;
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
+use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::group_membership_error::GroupMembershipError;
@@ -28,7 +29,7 @@ impl TextMessageService {
             })?;
 
         // Check if the auth_user has membership in the group
-        self.group_membership_service
+        let membership = self.group_membership_service
             .find_by_user_id_and_group_id(auth_user_id, group_chat_id)
             .await
             .map_err(|e| match e {
@@ -37,6 +38,10 @@ impl TextMessageService {
                 }
                 _ => e,
             })?;
+
+        if membership.membership_status != MembershipStatus::Active {
+            return Err(ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages));
+        }
 
         // Il cursor è già validato automaticamente durante la deserializzazione del DTO
         let limit = pagination_query.limit;
@@ -401,5 +406,57 @@ mod find_by_group_chat_id_paginated_service_tests {
             }
             _ => panic!("Expected ForeignKeyViolation error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_find_by_group_chat_id_paginated_user_not_active_member() {
+        // Arrange
+        let mock_repo = MockTextMessageRepositoryTrait::new();
+        let mut mock_membership_service = MockGroupMembershipServiceTrait::new();
+        let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
+        let group_chat_id = 1;
+        let auth_user_id = 1;
+        let limit = 10;
+        let pagination_query = TextMessagePaginationQuery::new(None, limit);
+        
+        // Mock successful group chat lookup
+        let group_chat = GroupChatFactory::fake_group_chat_read_dto();
+        mock_group_chat_service
+            .expect_find_by_id()
+            .with(eq(group_chat_id))
+            .returning({
+                let group_chat = group_chat.clone();
+                move |_| Box::pin({
+                    let group_chat = group_chat.clone();
+                    async move { Ok(group_chat) }
+                })
+            });
+        
+        // Mock membership with Left status
+        let mut membership = GroupMembershipFactory::fake_group_membership_with_invitation_row();
+        membership.user_id = auth_user_id;
+        membership.group_chat_id = group_chat_id;
+        membership.membership_status = MembershipStatus::Left;
+        
+        mock_membership_service
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(auth_user_id), eq(group_chat_id))
+            .returning({
+                let membership = membership.clone();
+                move |_, _| Box::pin({
+                    let membership = membership.clone();
+                    async move { Ok(GroupMembershipReadDto::from(membership)) }
+                })
+            });
+
+        let service = TextMessageService::new(Arc::new(mock_repo), Arc::new(mock_membership_service), Arc::new(mock_group_chat_service));
+
+        // Act
+        let result = service.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query, auth_user_id).await;
+
+        // Assert
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(matches!(error, ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)));
     }
 }

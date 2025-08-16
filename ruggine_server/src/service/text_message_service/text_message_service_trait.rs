@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::dto::text_message_dto::{TextMessageReadDto};
+use crate::dto::text_message_dto::{TextMessageReadDto, TextMessageCreateDto};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::paginated_response::PaginatedResponse;
@@ -20,4 +20,12 @@ pub trait TextMessageServiceTrait: Send + Sync {
         auth_user_id: i32,
         pagination_query: TextMessagePaginationQuery,
     ) -> Result<PaginatedTextMessageResponse, ApiError>;
+    
+    /// Create a new text message
+    /// Verifies that the sender has active membership in the group
+    async fn create(
+        &self, 
+        payload: TextMessageCreateDto,
+        sender_id: i32,
+    ) -> Result<TextMessageReadDto, ApiError>;
 }

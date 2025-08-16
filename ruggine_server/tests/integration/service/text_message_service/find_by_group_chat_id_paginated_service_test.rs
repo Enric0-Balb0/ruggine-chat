@@ -295,3 +295,54 @@ async fn test_find_by_group_chat_id_paginated_unauthorized_user() {
     common::cleanup_user(creator_user.id).await;
     common::cleanup_user(unauthorized_user.id).await;
 }
+
+#[tokio_shared_rt::test(shared)]
+async fn test_find_by_group_chat_id_paginated_user_not_active_member() {
+    // Arrange
+    let db = common::get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
+    let group_membership_service = service_init.group_membership_service();
+
+    let (user, _) = common::create_test_user("not_active_user").await;
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership("not_active_group", user.id).await;
+    
+    // Create messages in the group
+    let messages = common::create_test_text_messages_for_group(group_chat.id, user.id, 3).await;
+    let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
+
+    // Make the user leave the group (set membership status to Left)
+    let membership_id = group_membership_service
+        .find_by_user_id_and_group_id(user.id, group_chat.id)
+        .await
+        .expect("Should find the membership")
+        .id;
+
+    group_membership_service
+        .leave_group(
+            ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto { id: membership_id }, 
+            user.id
+        )
+        .await
+        .expect("Should be able to leave group");
+
+    // Act - try to access messages as non-active member
+    let pagination_query = TextMessagePaginationQuery {
+        cursor: None,
+        limit: 10,
+    };
+    let result = service.find_by_group_chat_id_paginated(group_chat.id, user.id, pagination_query).await;
+
+    // Assert - Should return error because user is not an active member
+    assert!(result.is_err(), "Should fail when user is not an active member");
+    let error = result.unwrap_err();
+    assert!(matches!(error, ruggine_server::error::api_error::ApiError::TextMessageError(
+        ruggine_server::error::text_message_error::TextMessageError::UserCannotAccessMessages
+    )));
+    
+    // Cleanup
+    common::cleanup_text_messages(message_ids).await;
+    cleanup_test_user_from_a_group_chat(user.id, group_chat.id).await;
+    common::cleanup_group_chat(group_chat.id).await;
+    common::cleanup_user(user.id).await;
+}

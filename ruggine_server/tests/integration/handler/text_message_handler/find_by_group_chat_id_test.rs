@@ -11,7 +11,7 @@ use crate::common::{
 mod find_by_group_chat_id_handler_integration_tests {
     use ruggine_server::error::api_error::ApiError;
     use ruggine_server::error::text_message_error::TextMessageError;
-    use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership};
+    use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership, leave_user_from_a_group};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -455,6 +455,51 @@ mod find_by_group_chat_id_handler_integration_tests {
         assert_eq!(small_response.data.len(), 1);
         assert!(small_response.pagination.has_more);
         assert!(small_response.pagination.next_cursor.is_some());
+
+        // Cleanup
+        let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
+        cleanup_text_messages(message_ids).await;
+        cleanup_test_user_from_a_group_chat(user.id, group.id).await;
+        cleanup_group_chat(group.id).await;
+        cleanup_user(user.id).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_by_group_chat_id_user_left_group() {
+        // Arrange: Create user and group with membership, then user leaves
+        let (user, _) = create_test_user("find_msgs_handler_left").await;
+        let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_left", user.id).await;
+        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+        
+        let state = create_text_message_state().await;
+        
+        // User leaves the group (making membership inactive)
+        leave_user_from_a_group(user.id, group.id).await;
+        
+        let pagination_query = TextMessagePaginationQuery {
+            cursor: None,
+            limit: 10,
+        };
+
+        // Act - try to access messages after leaving group
+        let result = find_by_group_chat_id(
+            Extension(user.clone()),
+            State(state),
+            Path(group.id),
+            Query(pagination_query),
+        ).await;
+
+        // Assert
+        assert!(result.is_err(), "Handler should return error for user who left group");
+        
+        if let Err(error) = result {
+            match error {
+                ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages) => {
+                    // This is the expected error
+                }
+                _ => panic!("Expected TextMessageError::Forbidden, got: {:?}", error),
+            }
+        }
 
         // Cleanup
         let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();

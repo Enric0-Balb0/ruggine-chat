@@ -15,6 +15,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod find_by_group_chat_id_text_message_e2e_tests {
+    use crate::leave_user_from_a_group;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -370,6 +371,38 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND, "Should return error status for non-existing group, got: {}", response.status());
 
         // Cleanup
+        cleanup_user_by_email(user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_by_group_chat_id_user_left_group() {
+        // Arrange: Create router, user, group and messages
+        let app = create_text_message_router().await;
+        let (user, _password, token) = create_login_and_get_token("e2e_text_msg_left_group".to_string()).await;
+        let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_left_group", user.id).await;
+        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+
+        // Act: User leaves the group first
+        leave_user_from_a_group(user.id, group.id).await;
+
+        // Now try to access messages after leaving
+        let request = Request::builder()
+            .method("GET")
+            .uri(format!("/group/{}/messages", group.id))
+            .header("authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        // Assert: Should return 403 Forbidden since user left the group
+        assert_eq!(response.status(), StatusCode::FORBIDDEN, "Should return forbidden for user who left group");
+
+        // Cleanup
+        let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
+        cleanup_text_messages(message_ids).await;
+        cleanup_test_user_from_a_group_chat(user.id, group.id).await;
+        cleanup_group_chat(group.id).await;
         cleanup_user_by_email(user.email).await;
     }
 }

@@ -14,6 +14,7 @@ use axum::{extract::{Path, Query, State}, Extension, Json};
     ),
     responses(
         (status = 200, description = "Text messages retrieved successfully", body = PaginatedTextMessageResponse),
+        (status = 404, description = "Group chat not found"),
         (status = 403, description = "User cannot access messages"),
         (status = 401, description = "Unauthorized - Invalid or missing token"),
         (status = 400, description = "Bad request - Invalid pagination parameters"),

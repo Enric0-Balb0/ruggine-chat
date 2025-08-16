@@ -16,11 +16,16 @@ use crate::{dto::{
         ApiSuccessResponseVecGroupMembershipReadDto,
         ApiSuccessResponseInvitationUpdateResponseDto,
         ApiSuccessResponseVecInvitationReadDto,
+        ApiSuccessResponseTextMessageReadDto,
         PaginatedTextMessageResponse,
         text_message_pagination_dto::{
             FindTextMessagesByGroupQuery,
             TextMessagePaginationQuery,
-        }
+        },
+        text_message_dto::{
+            TextMessageCreateDto,
+            TextMessageReadDto,
+        },
     },
     entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole}},
 };
@@ -49,7 +54,8 @@ use crate::handler::{
         group_membership_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id,
         group_membership_handler::leave_group::leave_group,
-        text_message_handler::find_by_group_chat_id::find_by_group_chat_id
+        text_message_handler::find_by_group_chat_id::find_by_group_chat_id,
+        text_message_handler::create::create
     ),
     components(
         schemas(
@@ -79,6 +85,9 @@ use crate::handler::{
             PaginatedTextMessageResponse,
             FindTextMessagesByGroupQuery,
             TextMessagePaginationQuery,
+            TextMessageCreateDto,
+            TextMessageReadDto,
+            ApiSuccessResponseTextMessageReadDto
         )
     ),
     modifiers(&SecurityAddon),

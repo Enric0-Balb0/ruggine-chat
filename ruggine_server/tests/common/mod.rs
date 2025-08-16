@@ -9,6 +9,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
+use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::group_membership;
 use ruggine_server::entity::group_membership::{GroupMembership, MemberRole};
@@ -229,6 +230,14 @@ pub async fn cleanup_group_chat(group_id: i32) {
         eprintln!("Failed to cleanup group {}: {:?}", group_id, e);
     }
     
+}
+
+pub async fn leave_user_from_a_group(user_id: i32, group_id: i32) {
+    let db = get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let group_membership_service = service_init.group_membership_service();
+    let membership = group_membership_service.find_by_user_id_and_group_id(user_id, group_id).await.unwrap();
+    group_membership_service.leave_group(LeaveGroupMembershipDto {id: membership.id}, user_id).await.unwrap();
 }
 
 /// Helper function to create a real group chat state with database connections

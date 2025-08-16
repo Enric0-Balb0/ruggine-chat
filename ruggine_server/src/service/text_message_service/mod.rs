@@ -1,10 +1,11 @@
 mod find_by_id;
 mod find_by_group_chat_id_paginated;
+mod create;
 pub mod text_message_service;
 pub mod text_message_service_trait;
 
 use async_trait::async_trait;
-use crate::dto::text_message_dto::TextMessageReadDto;
+use crate::dto::text_message_dto::{TextMessageReadDto, TextMessageCreateDto};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::paginated_response::PaginatedResponse;
@@ -25,5 +26,13 @@ impl TextMessageServiceTrait for TextMessageService {
         pagination_query: TextMessagePaginationQuery,
     ) -> Result<PaginatedTextMessageResponse, ApiError> {
         self.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query, auth_user_id).await
+    }
+
+    async fn create(
+        &self,
+        payload: TextMessageCreateDto,
+        sender_id: i32,
+    ) -> Result<TextMessageReadDto, ApiError> {
+        self.create_internal(payload, sender_id).await
     }
 }
