@@ -39,12 +39,10 @@ pub use group::{GroupChat, GroupChatCreateRequest, ApiSuccessResponseGroupChatRe
 
 // Invitation types
 pub use invitation::{
-    Invitation, InvitationCreateRequest, InvitationUpdateRequest, 
+    Invitation, InvitationCreateRequest, InvitationUpdateRequest,
     InvitationStatus, ApiSuccessResponseInvitationReadDto, InvitationReadDto, InvitationUpdateDto,
     MemberRole, MembershipStatus
-};
-
-// Membership types
+};// Membership types
 pub use membership::{
     GroupMembership, ApiSuccessResponseGroupMembershipReadDto,
     ApiSuccessResponseVecGroupMembershipReadDto, GroupMembershipReadDto
