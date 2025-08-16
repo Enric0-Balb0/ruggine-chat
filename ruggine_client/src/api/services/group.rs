@@ -3,6 +3,7 @@ use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::group::{GroupChatCreateRequest, ApiSuccessResponseGroupChatReadDto, GroupChat};
+use crate::types::membership::{ApiSuccessResponseVecGroupMembershipReadDto, GroupMembership};
 use serde::{Deserialize, Serialize};
 
 /// Group chat management service
@@ -38,6 +39,16 @@ impl GroupChatService {
         Ok(group_chat)
     }
 
+    /// Get user's group memberships
+    pub async fn get_user_groups(&self) -> Result<Vec<GroupMembership>, AuthError> {
+        let response: ApiSuccessResponseVecGroupMembershipReadDto = self.http_client
+            .get(ApiEndpoints::GROUP_MEMBERSHIP_BY_USER)
+            .await
+            .map_err(AuthError::from)?;
+
+        Ok(Vec::from(response))
+    }
+
     /// Get group by ID
     pub async fn get_group_by_id(&self, group_id: &str) -> Result<GroupChat, AuthError> {
         let response: ApiSuccessResponseGroupChatReadDto = self.http_client
@@ -69,7 +80,7 @@ impl GroupChatService {
     }
 
     /// Validate group creation request
-    fn validate_group_create_request(&self, request: &GroupChatCreateRequest) -> Result<(), AuthError> {
+    pub fn validate_group_create_request(&self, request: &GroupChatCreateRequest) -> Result<(), AuthError> {
         if request.name.trim().is_empty() {
             return Err(AuthError::ValidationError("Group name cannot be empty".to_string()));
         }

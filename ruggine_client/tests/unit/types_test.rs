@@ -24,6 +24,7 @@ mod user_types_tests {
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
             current_action: CurrentAction::Waiting,
+            is_online: true,  // Add missing field
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             last_login: None,

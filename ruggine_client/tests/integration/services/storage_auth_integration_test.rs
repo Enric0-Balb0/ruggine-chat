@@ -1,6 +1,6 @@
 // Integration tests for storage service with authentication
 use ruggine_client_ui::utils::storage::StorageService;
-use ruggine_client_ui::dto::{UserProfile, TokenResponse};
+use ruggine_client_ui::types::{UserProfile, auth::TokenResponse};
 
 #[cfg(test)]
 mod storage_service_auth_tests {
@@ -31,9 +31,11 @@ mod storage_service_auth_tests {
         assert!(storage.get_token().is_none());
         
         // Store token
+        let now = chrono::Utc::now().timestamp();
         let token = TokenResponse {
             token: "test_token_123".to_string(),
-            expires_in: Some(3600),
+            iat: now,
+            exp: now + 3600, // 1 hour from now
         };
         
         let result = storage.store_token(&token);
@@ -57,11 +59,21 @@ mod storage_service_auth_tests {
         
         // Store profile
         let profile = UserProfile {
-            id: "test_id_123".to_string(),
+            id: 123,  // Changed to i32
             email: "test@example.com".to_string(),
-            full_name: "Test User".to_string(),
-            created_at: Some("2025-01-01T00:00:00Z".to_string()),
-            updated_at: Some("2025-01-01T00:00:00Z".to_string()),
+            first_name: "Test".to_string(),  // Changed to first_name
+            last_name: "User".to_string(),   // Changed to last_name
+            username: "testuser".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Male,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: true,
+            created_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(), // 2021-01-01
+            updated_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            last_login: None,
         };
         
         let result = storage.store_user_profile(&profile);
@@ -72,9 +84,9 @@ mod storage_service_auth_tests {
         assert!(retrieved.is_some(), "Should be able to retrieve user profile");
         
         let retrieved_profile = retrieved.unwrap();
-        assert_eq!(retrieved_profile.id, "test_id_123");
+        assert_eq!(retrieved_profile.id, 123);
         assert_eq!(retrieved_profile.email, "test@example.com");
-        assert_eq!(retrieved_profile.full_name, "Test User");
+        assert_eq!(retrieved_profile.full_name(), "Test User");  // Use method call
     }
 
     #[test]
@@ -83,16 +95,28 @@ mod storage_service_auth_tests {
         let storage = setup_storage_service();
         
         // Store some data
+        let now = chrono::Utc::now().timestamp();
         let token = TokenResponse {
             token: "test_token_123".to_string(),
-            expires_in: Some(3600),
+            iat: now,
+            exp: now + 3600,
         };
         let profile = UserProfile {
-            id: "test_id_123".to_string(),
+            id: 123,
             email: "test@example.com".to_string(),
-            full_name: "Test User".to_string(),
-            created_at: Some("2025-01-01T00:00:00Z".to_string()),
-            updated_at: Some("2025-01-01T00:00:00Z".to_string()),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            username: "testuser".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Male,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: true,
+            created_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            updated_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            last_login: None,
         };
         
         storage.store_token(&token).unwrap();
@@ -117,9 +141,11 @@ mod storage_service_auth_tests {
         let storage = setup_storage_service();
         
         // Store first token
+        let now = chrono::Utc::now().timestamp();
         let token1 = TokenResponse {
             token: "token_1".to_string(),
-            expires_in: Some(3600),
+            iat: now,
+            exp: now + 3600,
         };
         storage.store_token(&token1).unwrap();
         
@@ -129,7 +155,8 @@ mod storage_service_auth_tests {
         // Overwrite with second token
         let token2 = TokenResponse {
             token: "token_2".to_string(),
-            expires_in: Some(7200),
+            iat: now,
+            exp: now + 7200,
         };
         storage.store_token(&token2).unwrap();
         
@@ -147,34 +174,54 @@ mod storage_service_auth_tests {
         
         // Store first profile
         let profile1 = UserProfile {
-            id: "id_1".to_string(),
+            id: 1,  // Changed to i32
             email: "test1@example.com".to_string(),
-            full_name: "Test User 1".to_string(),
-            created_at: Some("2025-01-01T00:00:00Z".to_string()),
-            updated_at: Some("2025-01-01T00:00:00Z".to_string()),
+            first_name: "Test".to_string(),
+            last_name: "User 1".to_string(),
+            username: "testuser1".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Male,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: true,
+            created_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            updated_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            last_login: None,
         };
         storage.store_user_profile(&profile1).unwrap();
         
         let retrieved1 = storage.get_user_profile().unwrap();
-        assert_eq!(retrieved1.id, "id_1");
+        assert_eq!(retrieved1.id, 1);  // Changed to i32
         assert_eq!(retrieved1.email, "test1@example.com");
         
         // Overwrite with second profile
         let profile2 = UserProfile {
-            id: "id_2".to_string(),
+            id: 2,  // Changed to i32
             email: "test2@example.com".to_string(),
-            full_name: "Test User 2".to_string(),
-            created_at: Some("2025-01-01T01:00:00Z".to_string()),
-            updated_at: Some("2025-01-01T01:00:00Z".to_string()),
+            first_name: "Test".to_string(),
+            last_name: "User 2".to_string(),
+            username: "testuser2".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "456 Test Ave".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Female,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: false,
+            created_at: chrono::DateTime::from_timestamp(1609462800, 0).unwrap(), // 1 hour later
+            updated_at: chrono::DateTime::from_timestamp(1609462800, 0).unwrap(),
+            last_login: None,
         };
         storage.store_user_profile(&profile2).unwrap();
         
         let retrieved2 = storage.get_user_profile().unwrap();
-        assert_eq!(retrieved2.id, "id_2");
+        assert_eq!(retrieved2.id, 2);  // Changed to i32
         assert_eq!(retrieved2.email, "test2@example.com");
         
         // Should only have the latest profile
-        assert_ne!(retrieved2.id, "id_1");
+        assert_ne!(retrieved2.id, 1);  // Changed to i32
     }
 
     #[test]
@@ -183,9 +230,11 @@ mod storage_service_auth_tests {
         let storage1 = setup_storage_service();
         
         // Store data with first instance
+        let now = chrono::Utc::now().timestamp();
         let token = TokenResponse {
             token: "persistent_token".to_string(),
-            expires_in: Some(3600),
+            iat: now,
+            exp: now + 3600,
         };
         storage1.store_token(&token).unwrap();
         
@@ -213,9 +262,11 @@ mod storage_service_auth_tests {
         for i in 0..5 {
             let storage_clone = Arc::clone(&storage);
             let handle = thread::spawn(move || {
+                let now = chrono::Utc::now().timestamp();
                 let token = TokenResponse {
                     token: format!("token_{}", i),
-                    expires_in: Some(3600),
+                    iat: now,
+                    exp: now + 3600,
                 };
                 storage_clone.store_token(&token).unwrap();
                 

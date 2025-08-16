@@ -36,4 +36,31 @@
   .status-dot-large {
     @apply w-3 h-3 rounded-full bg-status-success;
   }
+  
+  /* ===== LOADER COMPONENTS ===== */
+  .loader-smooth {
+    animation: spin-smooth 1s linear infinite;
+  }
+  
+  @keyframes spin-smooth {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .loader-pulse {
+    animation: pulse-loader 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-loader {
+    0%, 100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 }

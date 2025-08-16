@@ -27,6 +27,10 @@ impl ApiEndpoints {
     pub const GROUP_MESSAGES: &'static str = "/group_chat"; // + /{id}/messages
     pub const GROUP_MARK_READ: &'static str = "/group_chat"; // + /{id}/mark_read
     
+    // Group membership endpoints
+    pub const GROUP_MEMBERSHIP_BY_USER: &'static str = "/group_membership/user";
+    pub const GROUP_MEMBERSHIP_BY_ID: &'static str = "/group_membership"; // + /{id}
+    
     // Invitation endpoints
     pub const INVITATION_SEND: &'static str = "/invitation/send";
     pub const INVITATION_BY_ID: &'static str = "/invitation"; // + /{id}

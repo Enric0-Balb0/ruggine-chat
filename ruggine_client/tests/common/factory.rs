@@ -70,6 +70,7 @@ impl TestFactory {
             user_type: UserType::EndUser,  // Changed from User to EndUser
             user_status: UserStatus::Active,
             current_action: CurrentAction::Waiting,  // Changed from Online to Waiting
+            is_online: true,  // Add missing field
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             last_login: Some(chrono::Utc::now()),

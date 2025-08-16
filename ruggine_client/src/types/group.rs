@@ -29,7 +29,7 @@ pub struct GroupChatReadDto {
 // =============================================================================
 
 /// Complete group chat with utility methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GroupChat {
     pub id: i32,
     pub name: String,
