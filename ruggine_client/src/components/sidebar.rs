@@ -1,14 +1,15 @@
 use leptos::*;
-use crate::components::{GroupItem, CreateGroupButton, CircleLoader};
-use crate::hooks::{use_groups, use_groups_list, use_groups_loading, use_groups_error};
+use crate::components::{GroupItem, CreateGroupButton};
+use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
 
 /// Sidebar component for the main app layout
 #[component]
 pub fn Sidebar(
     #[prop(into)] on_create_group_click: Callback<()>,
 ) -> impl IntoView {
-    // Initialize groups hook
-    let groups_hook = use_groups();
+    // Use groups context from provider
+    let groups_context = use_groups_context();
+    let groups_hook = groups_context.groups_hook;
     let groups_list = use_groups_list(&groups_hook);
     let is_loading = use_groups_loading(&groups_hook);
     let error = use_groups_error(&groups_hook);
@@ -53,17 +54,7 @@ pub fn Sidebar(
                 // Groups List
                 <div class="space-y-1">
                     {move || {
-                        if is_loading.get() {
-                            view! {
-                                <div class="flex items-center justify-center py-8">
-                                    <CircleLoader 
-                                        size="md".to_string()
-                                        text="Caricamento gruppi...".to_string()
-                                        color="primary".to_string()
-                                    />
-                                </div>
-                            }.into_view()
-                        } else if let Some(_error_msg) = error.get() {
+                        if let Some(_error_msg) = error.get() {
                             view! {
                                 <div class="flex flex-col items-center justify-center py-4 space-y-2">
                                     <div class="text-sm text-red-500">
@@ -79,7 +70,7 @@ pub fn Sidebar(
                             }.into_view()
                         } else {
                             let groups = groups_list.get();
-                            if groups.is_empty() {
+                            if groups.is_empty() && !is_loading.get() {
                                 view! {
                                     <div class="flex items-center justify-center py-4">
                                         <div class="text-sm text-text-secondary dark:text-text-secondary-dark">
@@ -90,14 +81,19 @@ pub fn Sidebar(
                             } else {
                                 view! {
                                     <div class="space-y-1">
-                                        {groups.into_iter().map(|group_data| {
+                                        {groups.into_iter().enumerate().map(|(index, group_data)| {
                                             let is_active = active_group_id.get() == Some(group_data.membership.group_chat_id);
                                             view! {
-                                                <GroupItem 
-                                                    group_data=group_data
-                                                    is_active=is_active 
-                                                    on_click=handle_group_click
-                                                />
+                                                <div 
+                                                    class="animate-fade-in-up"
+                                                    style=format!("animation-delay: {}ms", index * 100)
+                                                >
+                                                    <GroupItem 
+                                                        group_data=group_data
+                                                        is_active=is_active 
+                                                        on_click=handle_group_click
+                                                    />
+                                                </div>
                                             }
                                         }).collect::<Vec<_>>()}
                                     </div>

@@ -5,11 +5,12 @@ use crate::utils::StorageService;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::error::AuthError;
-use crate::components::ThemeToggle;
+use crate::components::{ThemeToggle, use_toast};
 
 #[component]
 pub fn RegisterPage() -> impl IntoView {
     let navigate = use_navigate();
+    let toast = use_toast();
     
     // Form signals
     let (email, set_email) = create_signal(String::new());
@@ -31,6 +32,7 @@ pub fn RegisterPage() -> impl IntoView {
 
     let handle_register = {
         let navigate = navigate.clone();
+        let toast = toast.clone();
         move |ev: leptos::ev::SubmitEvent| {
             ev.prevent_default();
             
@@ -45,6 +47,7 @@ pub fn RegisterPage() -> impl IntoView {
             let gender_val = gender.get();
             let auth_service = auth_service.clone();
             let navigate = navigate.clone();
+            let toast = toast.clone();
             
             // Validazione campi obbligatori
             if first_name_val.trim().is_empty() || last_name_val.trim().is_empty() || 
@@ -80,6 +83,7 @@ pub fn RegisterPage() -> impl IntoView {
                     gender_val
                 ).await {
                     Ok(_) => {
+                        toast.success("Registrazione completata con successo! Benvenuto/a!");
                         navigate("/", Default::default());
                     }
                     Err(AuthError::InvalidInput(msg)) => {

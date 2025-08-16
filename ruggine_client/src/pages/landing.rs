@@ -5,11 +5,12 @@ use crate::utils::StorageService;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::error::AuthError;
-use crate::components::ThemeToggle;
+use crate::components::{ThemeToggle, use_toast};
 
 #[component]
 pub fn LandingPage() -> impl IntoView {
     let navigate = use_navigate();
+    let toast = use_toast();
     
     // Form signals
     let (email, set_email) = create_signal(String::new());
@@ -24,6 +25,7 @@ pub fn LandingPage() -> impl IntoView {
 
     let handle_login = {
         let navigate = navigate.clone();
+        let toast = toast.clone();
         move |ev: leptos::ev::SubmitEvent| {
             ev.prevent_default();
             
@@ -31,6 +33,7 @@ pub fn LandingPage() -> impl IntoView {
             let password_val = password.get();
             let auth_service = auth_service.clone();
             let navigate = navigate.clone();
+            let toast = toast.clone();
             
             spawn_local(async move {
                 set_loading.set(true);
@@ -38,6 +41,7 @@ pub fn LandingPage() -> impl IntoView {
                 
                 match auth_service.login(email_val, password_val).await {
                     Ok(_user_profile) => {
+                        toast.success("Login effettuato con successo! Benvenuto/a!");
                         navigate("/", Default::default());
                     }
                     Err(AuthError::InvalidCredentials) => {
@@ -46,7 +50,7 @@ pub fn LandingPage() -> impl IntoView {
                     Err(AuthError::NetworkError(msg)) => {
                         set_error_message.set(Some(format!("Errore di connessione: {}", msg)));
                     }
-                    Err(e) => {
+                    Err(_e) => {
                         set_error_message.set(Some("Errore durante il login".to_string()));
                     }
                 }

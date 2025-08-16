@@ -1,12 +1,20 @@
 use leptos::*;
-use crate::components::{AppNavbar, Sidebar, CreateGroupModal};
+use crate::components::{AppNavbar, Sidebar, CreateGroupModal, use_toast};
 use crate::types::group::GroupChatCreateRequest;
 use crate::api::facade::RuggineApiClient;
+use crate::hooks::provide_groups_context;
 
 #[component]
 pub fn HomePage() -> impl IntoView {
+    // Provide groups context for this page and its children
+    let groups_context = provide_groups_context();
+    
     // API client instance with authentication from storage
     let api_client_instance = RuggineApiClient::new();
+    let toast = use_toast();
+    
+    // Use the groups hook from context
+    let groups_hook = groups_context.groups_hook.clone();
     
     // Recupera il token dal storage se esiste e imposta l'autenticazione
     if let Some(token_response) = api_client_instance.storage_service.get_token() {
@@ -32,29 +40,41 @@ pub fn HomePage() -> impl IntoView {
     };
 
     // Handle group creation
-    let handle_group_create = move |create_request: GroupChatCreateRequest| {
-        let api_client = api_client.get();
-        let set_is_creating_group = set_is_creating_group;
-        let set_is_modal_open = set_is_modal_open;
+    let handle_group_create = {
+        let toast = toast.clone();
+        let groups_hook = groups_hook.clone();
+        move |create_request: GroupChatCreateRequest| {
+            let api_client = api_client.get();
+            let set_is_creating_group = set_is_creating_group;
+            let set_is_modal_open = set_is_modal_open;
+            let toast = toast.clone();
+            let groups_hook = groups_hook.clone();
+            let group_name = create_request.name.clone();
 
-        spawn_local(async move {
-            set_is_creating_group.set(true);
-            
-            match api_client.group_service.create_group(create_request).await {
-                Ok(_group) => {
-                    // TODO: Aggiornare la lista dei gruppi nella sidebar
-                    // TODO: Reindirizzare al nuovo gruppo creato
-                    set_is_modal_open.set(false);
+            spawn_local(async move {
+                set_is_creating_group.set(true);
+                
+                match api_client.group_service.create_group(create_request).await {
+                    Ok(_group) => {
+                        toast.success(&format!("Gruppo '{}' creato con successo!", group_name));
+                        
+                        // ✅ Aggiorna automaticamente la lista dei gruppi nella sidebar
+                        logging::log!("Refreshing groups list after successful group creation");
+                        groups_hook.refresh_groups.dispatch(());
+                        
+                        // TODO: Reindirizzare al nuovo gruppo creato
+                        set_is_modal_open.set(false);
+                    }
+                    Err(error) => {
+                        leptos::logging::error!("Error creating group: {:?}", error);
+                        toast.error(&format!("Errore nella creazione del gruppo '{}'. Riprova.", group_name));
+                        // Keep the modal open so user can retry
+                    }
                 }
-                Err(error) => {
-                    leptos::logging::error!("Error creating group: {:?}", error);
-                    // TODO: Mostrare errore all'utente (toast, modal, etc.)
-                    // For now, keep the modal open so user can retry
-                }
-            }
-            
-            set_is_creating_group.set(false);
-        });
+                
+                set_is_creating_group.set(false);
+            });
+        }
     };
 
     view! {
