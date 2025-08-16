@@ -6,7 +6,7 @@ use crate::service::group_membership_service::GroupMembershipService;
 
 impl GroupMembershipService {
     /// Find group membership for a specific user in a specific group
-    /// Returns the active membership record for the user in the specified group
+    /// Returns the membership record for the user in the specified group
     pub async fn find_by_user_id_and_group_id_internal(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
         // Retrieve the membership from the repository
         let group_membership = self.group_membership_repo.find_by_user_id_and_group_id(user_id, group_id).await.map_err(|e| {
