@@ -8,7 +8,7 @@ pub fn HomePage() -> impl IntoView {
     // API client instance with authentication from storage
     let api_client_instance = RuggineApiClient::new();
     
-    // Recupera il token dal storage se esiste
+    // Recupera il token dal storage se esiste e imposta l'autenticazione
     if let Some(token_response) = api_client_instance.storage_service.get_token() {
         api_client_instance.http_client.set_auth_token(Some(token_response.token));
     }
@@ -46,7 +46,8 @@ pub fn HomePage() -> impl IntoView {
                     // TODO: Reindirizzare al nuovo gruppo creato
                     set_is_modal_open.set(false);
                 }
-                Err(_error) => {
+                Err(error) => {
+                    leptos::logging::error!("Error creating group: {:?}", error);
                     // TODO: Mostrare errore all'utente (toast, modal, etc.)
                     // For now, keep the modal open so user can retry
                 }

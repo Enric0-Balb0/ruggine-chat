@@ -37,7 +37,7 @@ pub fn LandingPage() -> impl IntoView {
                 set_error_message.set(None);
                 
                 match auth_service.login(email_val, password_val).await {
-                    Ok(_) => {
+                    Ok(_user_profile) => {
                         navigate("/", Default::default());
                     }
                     Err(AuthError::InvalidCredentials) => {
@@ -46,7 +46,7 @@ pub fn LandingPage() -> impl IntoView {
                     Err(AuthError::NetworkError(msg)) => {
                         set_error_message.set(Some(format!("Errore di connessione: {}", msg)));
                     }
-                    Err(_) => {
+                    Err(e) => {
                         set_error_message.set(Some("Errore durante il login".to_string()));
                     }
                 }

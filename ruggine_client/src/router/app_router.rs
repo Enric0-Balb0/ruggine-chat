@@ -11,26 +11,32 @@ pub fn AppRouter() -> impl IntoView {
         <Router>
             <Routes>
                 // Landing page with login - protetto per utenti già autenticati
-                <Route path="/login" view=|| view! {
-                    <PublicGuard>
-                        <LandingPage />
-                    </PublicGuard>
+                <Route path="/login" view=|| {
+                    view! {
+                        <PublicGuard>
+                            <LandingPage />
+                        </PublicGuard>
+                    }
                 } />
                 
                 // Registration page - protetto per utenti già autenticati
-                <Route path="/register" view=|| view! {
-                    <PublicGuard>
-                        <RegisterPage />
-                    </PublicGuard>
+                <Route path="/register" view=|| {
+                    view! {
+                        <PublicGuard>
+                            <RegisterPage />
+                        </PublicGuard>
+                    }
                 } />
                 
                 // Protected app routes
-                <Route path="/" view=|| view! { 
-                    <AuthGuard>
-                        <AppLayout>
-                            <HomePage />
-                        </AppLayout>
-                    </AuthGuard>
+                <Route path="/" view=|| {
+                    view! { 
+                        <AuthGuard>
+                            <AppLayout>
+                                <HomePage />
+                            </AppLayout>
+                        </AuthGuard>
+                    }
                 } />
                 
                 // Fallback route - redirect to home which will handle auth

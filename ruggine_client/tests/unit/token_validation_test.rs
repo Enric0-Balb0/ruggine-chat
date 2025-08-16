@@ -1,7 +1,7 @@
 use ruggine_client_ui::api::services::auth::AuthService;
 use ruggine_client_ui::utils::storage::StorageService;
 use ruggine_client_ui::api::client::ApiClient;
-use ruggine_client_ui::dto::TokenResponse;
+use ruggine_client_ui::types::auth::TokenResponse;
 use ruggine_client_ui::config::constants::AppConstants;
 use std::sync::{LazyLock, Mutex};
 
@@ -15,9 +15,11 @@ fn setup_auth_service_with_token(expires_in: Option<u64>) -> AuthService {
     
     // Store a test token if provided
     if let Some(exp) = expires_in {
+        let now = chrono::Utc::now().timestamp();
         let token = TokenResponse {
             token: "test_token_123".to_string(),
-            expires_in: Some(exp),
+            iat: now,      // Use iat instead of expires_in
+            exp: exp as i64,  // Use exp instead of expires_in
         };
         storage_service.store_token(&token).expect("Failed to store test token");
     }
@@ -112,9 +114,11 @@ mod token_validation_tests {
         storage_service.clear_all_test_data();
         
         // Store token without expiry (backwards compatibility)
+        let now = chrono::Utc::now().timestamp();
         let token = TokenResponse {
             token: "test_token_no_expiry".to_string(),
-            expires_in: None,
+            iat: now,
+            exp: now + 86400, // 24 hours from now (valid token)
         };
         storage_service.store_token(&token).expect("Failed to store test token");
         

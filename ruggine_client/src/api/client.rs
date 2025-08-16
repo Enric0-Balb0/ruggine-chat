@@ -116,8 +116,6 @@ impl ApiClient {
     /// Gestisce automaticamente il caso 401 Unauthorized
     /// Pulisce la sessione e reindirizza al login
     async fn handle_unauthorized(&self) {
-        leptos::logging::warn!("401 Unauthorized - Automatic logout and redirect");
-        
         // Pulisci il token dal client
         if let Ok(mut auth_token) = self.auth_token.lock() {
             *auth_token = None;

@@ -36,7 +36,7 @@ pub struct GroupMembershipReadDto {
 // =============================================================================
 
 /// Complete group membership with utility methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GroupMembership {
     pub id: i32,
     pub user_id: i32,

@@ -11,45 +11,69 @@ pub fn AuthGuard(children: ChildrenFn) -> impl IntoView {
     let navigate = use_navigate();
     let location = use_location();
 
-    // Crea un segnale per controllare lo stato di autenticazione
-    let (auth_check, set_auth_check) = create_signal(0u32);
+    // Stati separati per gestire meglio il flusso
+    let (auth_check_counter, set_auth_check_counter) = create_signal(0u32);
+    let (initial_check_done, set_initial_check_done) = create_signal(false);
+    let (auth_service, _) = create_signal(AuthService::new(
+        ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
+        StorageService::new(),
+    ));
+    
+    // Forza il primo controllo all'avvio
+    create_effect(move |_| {
+        if !initial_check_done.get() {
+            set_auth_check_counter.update(|n| *n += 1);
+            set_initial_check_done.set(true);
+        }
+    });
     
     let is_authenticated = create_memo(move |_| {
-        // Triggera il controllo ogni volta che auth_check cambia
-        auth_check.get();
-        let auth_service = AuthService::new(
-            ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
-            StorageService::new(),
-        );
+        // Triggera il controllo ogni volta che il counter cambia
+        let _counter = auth_check_counter.get();
+        let service = auth_service.get();
+        let current_path = location.pathname.get();
         
         // Check if authenticated with valid token
-        let authenticated = auth_service.is_authenticated();
-        
-        // If authenticated but token needs refresh, try to refresh it
-        if authenticated && auth_service.needs_token_refresh() {
-            leptos::logging::log!("Token needs refresh, attempting refresh...");
-            // Spawn async task for token refresh
-            spawn_local(async move {
-                if let Err(e) = auth_service.refresh_token().await {
-                    leptos::logging::warn!("Token refresh failed: {:?}", e);
-                    // Clear storage on refresh failure
-                    let _ = auth_service.clear_session();
-                }
-            });
-        }
+        let authenticated = service.is_authenticated();
         
         authenticated
     });
 
-    // Check authentication and redirect if needed
+    // Gestisce il refresh del token separatamente
+    create_effect(move |_| {
+        let service = auth_service.get();
+        let authenticated = is_authenticated.get();
+        
+        if authenticated && service.needs_token_refresh() {
+            let service_clone = service.clone();
+            let set_auth_check_counter_clone = set_auth_check_counter.clone();
+            
+            spawn_local(async move {
+                match service_clone.refresh_token().await {
+                    Ok(_) => {
+                        set_auth_check_counter_clone.update(|n| *n += 1);
+                    }
+                    Err(_) => {
+                        let _ = service_clone.clear_session();
+                        set_auth_check_counter_clone.update(|n| *n += 1);
+                    }
+                }
+            });
+        }
+    });
+
+    // Gestisce la navigazione
     create_effect(move |_| {
         let current_path = location.pathname.get();
         let authenticated = is_authenticated.get();
+        let initial_done = initial_check_done.get();
         
-        if !authenticated && current_path != "/login" {
-            navigate("/login", Default::default());
-        } else if authenticated && current_path == "/login" {
-            navigate("/", Default::default());
+        // Solo dopo che il controllo iniziale è stato fatto
+        if initial_done {
+            // Evita loop di navigazione
+            if !authenticated && current_path != "/login" {
+                navigate("/login", Default::default());
+            }
         }
     });
 
@@ -57,9 +81,9 @@ pub fn AuthGuard(children: ChildrenFn) -> impl IntoView {
     create_effect(move |_| {
         if let Some(window) = web_sys::window() {
             let storage_listener = {
-                let set_auth_check = set_auth_check.clone();
+                let set_auth_check_counter = set_auth_check_counter.clone();
                 move |_event: web_sys::Event| {
-                    set_auth_check.update(|n| *n += 1);
+                    set_auth_check_counter.update(|n| *n += 1);
                 }
             };
             
@@ -71,12 +95,41 @@ pub fn AuthGuard(children: ChildrenFn) -> impl IntoView {
 
     view! {
         <Show
-            when=move || is_authenticated.get()
-            fallback=|| view! { <div class="min-h-screen flex items-center justify-center">
-                <div class="text-center">
-                    <p class="text-gray-600">"Reindirizzamento al login..."</p>
-                </div>
-            </div> }
+            when=move || {
+                let initial_done = initial_check_done.get();
+                let authenticated = is_authenticated.get();
+                
+                initial_done && authenticated
+            }
+            fallback=move || {
+                let initial_done = initial_check_done.get();
+                let authenticated = is_authenticated.get();
+                
+                if !initial_done {
+                    view! { 
+                        <div class="min-h-screen flex items-center justify-center">
+                            <div class="text-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-4"></div>
+                                <p class="text-gray-600">"Controllo autenticazione..."</p>
+                            </div>
+                        </div> 
+                    }
+                } else if !authenticated {
+                    // Navigate to login
+                    let navigate = use_navigate();
+                    navigate("/login", Default::default());
+                    
+                    view! { 
+                        <div class="min-h-screen flex items-center justify-center">
+                            <div class="text-center">
+                                <p class="text-gray-600">"Reindirizzamento al login..."</p>
+                            </div>
+                        </div> 
+                    }
+                } else {
+                    view! { <div></div> }
+                }
+            }
         >
             {children()}
         </Show>

@@ -1,17 +1,22 @@
 use leptos::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use crate::hooks::GroupMembershipWithDetails;
 
 #[component]
 pub fn GroupItem(
-    #[prop(into)] name: String,
+    #[prop(into)] group_data: GroupMembershipWithDetails,
     #[prop(into, default = false)] is_active: bool,
+    #[prop(into, optional)] on_click: Option<Callback<i32>>,
 ) -> impl IntoView {
+    let group_name = group_data.group_name();
+    let membership = group_data.membership.clone();
+    
     // Genera un colore basato sul nome del gruppo
-    let bg_color = generate_group_color(&name);
+    let bg_color = generate_group_color(&group_name);
     
     // Genera le iniziali del gruppo (prime 2 lettere o prime lettere di 2 parole)
-    let initials = get_group_initials(&name);
+    let initials = get_group_initials(&group_name);
 
     let active_class = if is_active {
         "bg-bg-main dark:bg-bg-main-dark border-l-2 border-brand-primary-light"
@@ -19,8 +24,19 @@ pub fn GroupItem(
         "hover:bg-bg-main dark:hover:bg-bg-main-dark"
     };
 
+    // Handle click
+    let group_id = membership.group_chat_id;
+    let handle_click = move |_| {
+        if let Some(on_click) = on_click {
+            on_click.call(group_id);
+        }
+    };
+
     view! {
-        <div class=format!("flex items-center p-2 rounded cursor-pointer transition-colors {}", active_class)>
+        <div 
+            class=format!("flex items-center p-2 rounded cursor-pointer transition-colors {}", active_class)
+            on:click=handle_click
+        >
             // Group color indicator
             <div 
                 class=format!("w-8 h-8 rounded flex items-center justify-center text-white text-xs font-bold mr-3 flex-shrink-0 {}", bg_color)
@@ -28,10 +44,29 @@ pub fn GroupItem(
                 {initials}
             </div>
             
-            // Group name
-            <span class="text-sm text-text-primary dark:text-text-primary-dark truncate flex-1">
-                {name}
-            </span>
+            // Group name and content
+            <div class="flex-1 min-w-0">
+                <span class="text-sm text-text-primary dark:text-text-primary-dark truncate block">
+                    {group_name}
+                </span>
+            </div>
+            
+            // Role badge on the right
+            {if membership.is_admin() {
+                view! {
+                    <span class="ml-2 px-3 text-xs bg-brand-primary-light text-white  py-1 rounded-md">
+                        "Admin"
+                    </span>
+                }.into_view()
+            } else if membership.is_member() {
+                view! {
+                    <span class="ml-2 px-3 text-xs bg-brand-secondary-light text-white  py-1 rounded-md">
+                        "Member"
+                    </span>
+                }.into_view()
+            } else {
+                view! {}.into_view()
+            }}
         </div>
     }
 }

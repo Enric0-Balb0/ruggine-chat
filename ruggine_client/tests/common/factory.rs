@@ -5,6 +5,9 @@ use chrono::NaiveDate;
 use ruggine_client_ui::types::{
     user::{UserRegisterRequest, UserProfile, UserStatus, UserType, Gender, CurrentAction},
     auth::{LoginRequest, TokenResponse},
+    group::{GroupChatCreateRequest, GroupChat},
+    membership::GroupMembership,
+    invitation::{MemberRole, MembershipStatus},
 };
 
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -70,6 +73,7 @@ impl TestFactory {
             user_type: UserType::EndUser,  // Changed from User to EndUser
             user_status: UserStatus::Active,
             current_action: CurrentAction::Waiting,  // Changed from Online to Waiting
+            is_online: true,  // Add missing field
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             last_login: Some(chrono::Utc::now()),
@@ -106,5 +110,80 @@ impl TestFactory {
     /// Standard test username
     pub fn test_username(prefix: &str) -> String {
         format!("test_{}", prefix)
+    }
+
+    /// Create valid GroupChatCreateRequest for testing
+    pub fn valid_group_create_request(prefix: &str) -> GroupChatCreateRequest {
+        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        
+        GroupChatCreateRequest {
+            name: format!("Test Group {}{}", prefix, counter),
+            description: format!("Test group description for {}{}", prefix, counter),
+        }
+    }
+
+    /// Create minimal valid GroupChatCreateRequest
+    pub fn minimal_group_create_request(prefix: &str) -> GroupChatCreateRequest {
+        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        
+        GroupChatCreateRequest {
+            name: format!("Group{}", counter),
+            description: "".to_string(), // Empty description (valid)
+        }
+    }
+
+    /// Create GroupChatCreateRequest with specific parameters
+    pub fn custom_group_create_request(name: &str, description: &str) -> GroupChatCreateRequest {
+        GroupChatCreateRequest {
+            name: name.to_string(),
+            description: description.to_string(),
+        }
+    }
+
+    /// Create mock GroupChat for testing
+    pub fn mock_group_chat(prefix: &str) -> GroupChat {
+        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let now = chrono::Utc::now();
+        
+        GroupChat {
+            id: counter as i32,
+            name: format!("Mock Group {}{}", prefix, counter),
+            description: format!("Mock group description for {}{}", prefix, counter),
+            created_by: 1,
+            created_at: now,
+            updated_at: now,
+            member_count: Some(1), // Add missing field
+            is_active: true, // Add missing field
+        }
+    }
+
+    /// Create mock GroupMembership for testing
+    pub fn mock_group_membership(prefix: &str) -> GroupMembership {
+        let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let now = chrono::Utc::now();
+        
+        GroupMembership {
+            id: counter as i32,
+            user_id: 1,
+            group_chat_id: counter as i32,
+            role: MemberRole::Member, // Use proper enum
+            joined_at: now,
+            left_at: None, // Add missing field
+            membership_status: MembershipStatus::Active, // Add missing field
+            invitation_id: counter as i32, // Add missing field
+            group_name: Some(format!("Mock Group {}", counter)), // Add missing field
+            user_name: Some(format!("Test User {}", counter)), // Add missing field
+        }
+    }
+
+    /// Create multiple mock GroupMemberships
+    pub fn mock_multiple_group_memberships(count: usize, prefix: &str) -> Vec<GroupMembership> {
+        (0..count)
+            .map(|i| {
+                let mut membership = Self::mock_group_membership(&format!("{}_{}", prefix, i));
+                membership.group_chat_id = (i + 1) as i32; // Different group IDs
+                membership
+            })
+            .collect()
     }
 }

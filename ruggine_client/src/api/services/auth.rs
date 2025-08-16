@@ -27,15 +27,22 @@ impl AuthService {
     /// Check if user is currently authenticated with valid token
     pub fn is_authenticated(&self) -> bool {
         if let Some(token) = self.storage_service.get_token() {
-            // Check if token exists and is not expired
+            // Get current timestamp
             let now = chrono::Utc::now().timestamp();
-            // Use exp field for expiration check
+            
+            // Check if token exists and is not expired
             let is_valid = now < token.exp;
             
             // If token is expired, clean up storage
             if !is_valid {
-                leptos::logging::warn!("Token expired, cleaning up storage");
                 let _ = self.storage_service.clear_session();
+                return false;
+            }
+            
+            // Additional check: ensure token is not issued in the future
+            if now < token.iat {
+                let _ = self.storage_service.clear_session();
+                return false;
             }
             
             is_valid
