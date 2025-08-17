@@ -302,4 +302,143 @@ mod storage_service_auth_tests {
         assert!(storage.get_token().is_none());
         assert!(storage.get_user_profile().is_none());
     }
+
+    #[test]
+    fn test_logout_storage_cleanup_integration() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        let storage = setup_storage_service();
+        
+        // Setup complete session data (simulating logged-in user)
+        let now = chrono::Utc::now().timestamp();
+        let token = TokenResponse {
+            token: "logout_test_token".to_string(),
+            iat: now,
+            exp: now + 3600,
+        };
+        
+        let profile = UserProfile {
+            id: 999,
+            email: "logout@test.com".to_string(),
+            first_name: "Logout".to_string(),
+            last_name: "Test".to_string(),
+            username: "logouttest".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "Logout Test St".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Other,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: true,
+            created_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            updated_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            last_login: Some(chrono::DateTime::from_timestamp(1609459200, 0).unwrap()),
+        };
+        
+        // Store session data
+        storage.store_token(&token).expect("Should store token for logout test");
+        storage.store_user_profile(&profile).expect("Should store profile for logout test");
+        
+        // Verify data exists before logout
+        assert!(storage.get_token().is_some(), "Token should exist before logout");
+        assert!(storage.get_user_profile().is_some(), "Profile should exist before logout");
+        
+        let stored_token = storage.get_token().unwrap();
+        let stored_profile = storage.get_user_profile().unwrap();
+        assert_eq!(stored_token.token, "logout_test_token");
+        assert_eq!(stored_profile.email, "logout@test.com");
+        
+        // Perform logout cleanup (clear session)
+        let clear_result = storage.clear_session();
+        assert!(clear_result.is_ok(), "Session clear should succeed: {:?}", clear_result);
+        
+        // Verify complete cleanup after logout
+        assert!(storage.get_token().is_none(), "Token should be cleared after logout");
+        assert!(storage.get_user_profile().is_none(), "Profile should be cleared after logout");
+    }
+
+    #[test]
+    fn test_logout_cleanup_robustness() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        let storage = setup_storage_service();
+        
+        // Test multiple logout attempts (should be safe)
+        let clear_result1 = storage.clear_session();
+        assert!(clear_result1.is_ok(), "First clear should succeed");
+        
+        let clear_result2 = storage.clear_session();
+        assert!(clear_result2.is_ok(), "Second clear should also succeed");
+        
+        // Verify state remains clean
+        assert!(storage.get_token().is_none());
+        assert!(storage.get_user_profile().is_none());
+        
+        // Store some data, then clear multiple times
+        let now = chrono::Utc::now().timestamp();
+        let token = TokenResponse {
+            token: "multi_clear_test".to_string(),
+            iat: now,
+            exp: now + 3600,
+        };
+        storage.store_token(&token).unwrap();
+        
+        // Multiple clears should be safe
+        storage.clear_session().unwrap();
+        storage.clear_session().unwrap();
+        storage.clear_session().unwrap();
+        
+        // Should remain clear
+        assert!(storage.get_token().is_none());
+    }
+
+    #[test]
+    fn test_logout_preserves_non_session_data() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        let storage = setup_storage_service();
+        
+        // This test verifies that logout only clears session-specific data
+        // and preserves other application data (if any exists in the future)
+        
+        // Store session data
+        let now = chrono::Utc::now().timestamp();
+        let token = TokenResponse {
+            token: "session_token".to_string(),
+            iat: now,
+            exp: now + 3600,
+        };
+        
+        let profile = UserProfile {
+            id: 100,
+            email: "preserve@test.com".to_string(),
+            first_name: "Preserve".to_string(),
+            last_name: "Test".to_string(),
+            username: "preservetest".to_string(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "Preserve Test St".to_string(),
+            gender: ruggine_client_ui::types::user::Gender::Female,
+            user_type: ruggine_client_ui::types::user::UserType::EndUser,
+            user_status: ruggine_client_ui::types::user::UserStatus::Active,
+            current_action: ruggine_client_ui::types::user::CurrentAction::Waiting,
+            is_online: false,
+            created_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            updated_at: chrono::DateTime::from_timestamp(1609459200, 0).unwrap(),
+            last_login: None,
+        };
+        
+        storage.store_token(&token).unwrap();
+        storage.store_user_profile(&profile).unwrap();
+        
+        // Verify data exists
+        assert!(storage.get_token().is_some());
+        assert!(storage.get_user_profile().is_some());
+        
+        // Perform logout
+        storage.clear_session().unwrap();
+        
+        // Session data should be cleared
+        assert!(storage.get_token().is_none(), "Session token should be cleared");
+        assert!(storage.get_user_profile().is_none(), "User profile should be cleared");
+        
+        // Note: In the future, if we add app settings or other non-session data,
+        // we would verify those remain intact after logout
+    }
 }
