@@ -68,7 +68,7 @@ mod find_by_user_id_e2e_tests {
             let _ = invitation_service.update_status(update_dto, member_user.id).await.unwrap();
 
             // Find the created membership
-            let membership = group_membership_service.find_by_user_id_and_group_id(member_user.id, group_chat.id).await.unwrap();
+            let membership = group_membership_service.find_active_by_user_id_and_group_id(member_user.id, group_chat.id).await.unwrap();
             membership_ids.push(membership.id);
         }
 

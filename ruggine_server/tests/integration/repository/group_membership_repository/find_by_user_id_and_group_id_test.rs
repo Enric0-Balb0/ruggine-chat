@@ -5,6 +5,7 @@ use ruggine_server::model::group_membership_model::GroupMembershipWithInvitation
 
 #[cfg(test)]
 mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
+    use ruggine_server::entity::group_membership::all_membership_statuses;
     use super::*;
     use crate::{
         get_database, create_test_user, create_test_group_chat, cleanup_group_chat,
@@ -24,10 +25,12 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let new_membership = GroupMembershipFactory::fake_new_group_membership_with_id(invitation.id);
         let membership_id = repository.insert(new_membership.clone()).await.unwrap();
 
-        let result = repository.find_by_user_id_and_group_id(to_user.id, group_chat.id).await;
+        let result = repository.find_by_user_id_and_group_id(to_user.id, group_chat.id, all_membership_statuses()).await;
 
         assert!(result.is_ok(), "Failed to find membership by user_id and group_id");
-        let found: GroupMembershipWithInvitationRow = result.unwrap();
+        let found_vec = result.unwrap();
+        assert!(!found_vec.is_empty(), "Expected at least one membership");
+        let found: &GroupMembershipWithInvitationRow = &found_vec[0];
 
         assert_eq!(found.id, membership_id);
         assert_eq!(found.user_id, to_user.id);
@@ -58,10 +61,12 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let new_membership = GroupMembershipFactory::fake_new_admin_group_membership_with_id(invitation.id);
         let membership_id = repository.insert(new_membership.clone()).await.unwrap();
 
-        let result = repository.find_by_user_id_and_group_id(to_user.id, group_chat.id).await;
+        let result = repository.find_by_user_id_and_group_id(to_user.id, group_chat.id, all_membership_statuses()).await;
 
         assert!(result.is_ok());
-        let found = result.unwrap();
+        let found_vec = result.unwrap();
+        assert!(!found_vec.is_empty());
+        let found = &found_vec[0];
 
         assert_eq!(found.id, membership_id);
         assert_eq!(found.user_id, to_user.id);
@@ -92,14 +97,11 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let membership_id = repository.insert(new_membership.clone()).await.unwrap();
 
         // Try to find with wrong user
-        let result = repository.find_by_user_id_and_group_id(wrong_user.id, group_chat.id).await;
+        let result = repository.find_by_user_id_and_group_id(wrong_user.id, group_chat.id, all_membership_statuses()).await;
 
-        assert!(result.is_err());
-        if let Err(sqlx::Error::RowNotFound) = result {
-            // Expected error
-        } else {
-            panic!("Expected RowNotFound error");
-        }
+        assert!(result.is_ok());
+        let found_vec = result.unwrap();
+        assert!(found_vec.is_empty(), "Expected no memberships for wrong user");
 
         cleanup_group_membership(membership_id).await;
         cleanup_invitation(invitation.id).await;
@@ -124,14 +126,11 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let membership_id = repository.insert(new_membership.clone()).await.unwrap();
 
         // Try to find with wrong group
-        let result = repository.find_by_user_id_and_group_id(to_user.id, wrong_group.id).await;
+        let result = repository.find_by_user_id_and_group_id(to_user.id, wrong_group.id, all_membership_statuses()).await;
 
-        assert!(result.is_err());
-        if let Err(sqlx::Error::RowNotFound) = result {
-            // Expected error
-        } else {
-            panic!("Expected RowNotFound error");
-        }
+        assert!(result.is_ok());
+        let found_vec = result.unwrap();
+        assert!(found_vec.is_empty(), "Expected no memberships for wrong group");
 
         cleanup_group_membership(membership_id).await;
         cleanup_invitation(invitation.id).await;
@@ -149,10 +148,10 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let (creator, _) = create_test_user("find_by_uid_gid_multi_creator").await;
         let (user1, _) = create_test_user("find_by_uid_gid_multi_user1").await;
         let (user2, _) = create_test_user("find_by_uid_gid_multi_user2").await;
-        
+
         let group1 = create_test_group_chat("find_by_uid_gid_multi_group1", creator.id).await;
         let group2 = create_test_group_chat("find_by_uid_gid_multi_group2", creator.id).await;
-        
+
         let invitation1_u1 = create_test_invitation(creator.id, user1.id, group1.id).await;
         let invitation1_u2 = create_test_invitation(creator.id, user2.id, group1.id).await;
         let invitation2_u1 = create_test_invitation(creator.id, user1.id, group2.id).await;
@@ -168,31 +167,31 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         ).await.unwrap();
 
         // Test user1 in group1
-        let result1 = repository.find_by_user_id_and_group_id(user1.id, group1.id).await;
-        assert!(result1.is_ok());
-        let found1 = result1.unwrap();
+        let result1 = repository.find_by_user_id_and_group_id(user1.id, group1.id, all_membership_statuses()).await.unwrap();
+        assert_eq!(result1.len(), 1);
+        let found1 = &result1[0];
         assert_eq!(found1.user_id, user1.id);
         assert_eq!(found1.group_chat_id, group1.id);
         assert_eq!(found1.role, MemberRole::Member);
 
         // Test user2 in group1 (admin)
-        let result2 = repository.find_by_user_id_and_group_id(user2.id, group1.id).await;
-        assert!(result2.is_ok());
-        let found2 = result2.unwrap();
+        let result2 = repository.find_by_user_id_and_group_id(user2.id, group1.id, all_membership_statuses()).await.unwrap();
+        assert_eq!(result2.len(), 1);
+        let found2 = &result2[0];
         assert_eq!(found2.user_id, user2.id);
         assert_eq!(found2.group_chat_id, group1.id);
         assert_eq!(found2.role, MemberRole::Admin);
 
         // Test user1 in group2
-        let result3 = repository.find_by_user_id_and_group_id(user1.id, group2.id).await;
-        assert!(result3.is_ok());
-        let found3 = result3.unwrap();
+        let result3 = repository.find_by_user_id_and_group_id(user1.id, group2.id, all_membership_statuses()).await.unwrap();
+        assert_eq!(result3.len(), 1);
+        let found3 = &result3[0];
         assert_eq!(found3.user_id, user1.id);
         assert_eq!(found3.group_chat_id, group2.id);
 
         // Test user2 in group2 (should not exist)
-        let result4 = repository.find_by_user_id_and_group_id(user2.id, group2.id).await;
-        assert!(result4.is_err());
+        let result4 = repository.find_by_user_id_and_group_id(user2.id, group2.id, all_membership_statuses()).await.unwrap();
+        assert!(result4.is_empty(), "Expected no membership for user2 in group2");
 
         // Cleanup
         cleanup_group_membership(membership2_u1).await;
@@ -214,13 +213,7 @@ mod group_membership_repository_find_by_user_id_and_group_id_integration_tests {
         let repository = GroupMembershipRepository::new(&db);
 
         // Test with completely nonexistent IDs
-        let result = repository.find_by_user_id_and_group_id(-999, -888).await;
-        assert!(result.is_err());
-        
-        if let Err(sqlx::Error::RowNotFound) = result {
-            // Expected error
-        } else {
-            panic!("Expected RowNotFound error");
-        }
+        let result = repository.find_by_user_id_and_group_id(-999, -888, all_membership_statuses()).await.unwrap();
+        assert!(result.is_empty(), "Expected no memberships for nonexistent IDs");
     }
 }

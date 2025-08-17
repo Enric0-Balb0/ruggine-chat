@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::Error as SqlxError;
 use mockall::automock;
 
-use crate::entity::group_membership::{NewGroupMembership, UpdateGroupMembership};
+use crate::entity::group_membership::{MembershipStatus, NewGroupMembership, UpdateGroupMembership};
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 
 #[async_trait]
@@ -12,7 +12,8 @@ pub trait GroupMembershipRepositoryTrait: Send + Sync {
     async fn update(&self, update_group_membership: UpdateGroupMembership) -> Result<(), SqlxError>;
     async fn find_by_id_and_user_id(&self, id: i32, user_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError>;
     async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError>;
-    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError>;
+    async fn find_active_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError>;
+    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32, membership_statuses: Vec<MembershipStatus>) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError>;
     async fn find_by_group_id(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError>;
     /* // user_id is passed because the user can see all other memberships in the group
     // only if he is a member of the group

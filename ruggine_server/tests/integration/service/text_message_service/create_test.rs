@@ -110,7 +110,7 @@ async fn test_create_message_user_not_active_member() {
     ).await;
 
     let membership_id =group_membership_service
-        .find_by_user_id_and_group_id(sender_user.id, group_chat.id)
+        .find_active_by_user_id_and_group_id(sender_user.id, group_chat.id)
         .await
         .expect("Should find the membership")
         .id;

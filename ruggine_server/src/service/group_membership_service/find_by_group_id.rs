@@ -17,7 +17,7 @@ impl GroupMembershipService {
 
         // Check if the authenticated user has an active membership in this group
         let auth_membership = self.group_membership_repo
-            .find_by_user_id_and_group_id(auth_user_id, group_id)
+            .find_active_by_user_id_and_group_id(auth_user_id, group_id)
             .await
             .map_err(|_| {
                 ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound)
@@ -98,7 +98,7 @@ mod tests {
 
         // Mock auth user membership check
         mock_repo
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_id))
             .times(1)
             .returning(move |_, _| {
@@ -179,7 +179,7 @@ mod tests {
 
         // Mock user not in group
         mock_repo
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_id))
             .times(1)
             .returning(move |_, _| {
@@ -218,7 +218,7 @@ mod tests {
 
         // Mock user has left the group (inactive membership)
         mock_repo
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_id))
             .times(1)
             .returning(move |_, _| {
@@ -259,7 +259,7 @@ mod tests {
 
         // Mock auth user membership check
         mock_repo
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_id))
             .times(1)
             .returning(move |_, _| {
@@ -305,7 +305,7 @@ mod tests {
 
         // Mock auth user membership check
         mock_repo
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_id))
             .times(1)
             .returning(move |_, _| {

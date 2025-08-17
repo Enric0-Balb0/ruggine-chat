@@ -188,6 +188,19 @@ impl GroupMembershipFactory {
             group_chat_id: 77,
         }
     }
+
+    pub fn fake_admin_group_membership_with_invitation_row() -> GroupMembershipWithInvitationRow {
+        GroupMembershipWithInvitationRow {
+            id: 2,
+            role: MemberRole::Admin,
+            joined_at: Utc::now(),
+            left_at: None,
+            membership_status: MembershipStatus::Active,
+            invitation_id: 101,
+            user_id: 43,
+            group_chat_id: 78,
+        }
+    }
 }
 
 #[cfg(test)]

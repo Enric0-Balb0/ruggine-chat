@@ -313,7 +313,7 @@ async fn test_find_by_group_chat_id_paginated_user_not_active_member() {
 
     // Make the user leave the group (set membership status to Left)
     let membership_id = group_membership_service
-        .find_by_user_id_and_group_id(user.id, group_chat.id)
+        .find_active_by_user_id_and_group_id(user.id, group_chat.id)
         .await
         .expect("Should find the membership")
         .id;

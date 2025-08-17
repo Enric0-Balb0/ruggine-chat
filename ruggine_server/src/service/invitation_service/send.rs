@@ -28,7 +28,7 @@ impl InvitationService {
 
         //  Check if user is already in the group chat
         match self.group_membership_service
-            .find_by_user_id_and_group_id(invitation.to_user_id, group_chat.id)
+            .find_active_by_user_id_and_group_id(invitation.to_user_id, group_chat.id)
             .await
         {
             Ok(membership) => {
@@ -49,7 +49,7 @@ impl InvitationService {
 
         // TODO: Check from membership if you are admin
         match self.group_membership_service
-            .find_by_user_id_and_group_id(from_user_id, group_chat.id)
+            .find_active_by_user_id_and_group_id(from_user_id, group_chat.id)
             .await
         {
             Ok(membership) => {
@@ -196,7 +196,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -216,7 +216,7 @@ mod invitation_service_send_tests {
         };
         let admin_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(admin_membership_row);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(from_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -369,7 +369,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -389,7 +389,7 @@ mod invitation_service_send_tests {
         };
         let member_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(member_membership_row);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(from_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -472,7 +472,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -492,7 +492,7 @@ mod invitation_service_send_tests {
         };
         let admin_membership_dto2 = crate::dto::group_membership_dto::GroupMembershipReadDto::from(admin_membership_row2);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(from_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -593,7 +593,7 @@ mod invitation_service_send_tests {
         };
         let active_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(active_membership_row);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -673,7 +673,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -682,7 +682,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - sender is NOT in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(from_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -761,7 +761,7 @@ mod invitation_service_send_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -781,7 +781,7 @@ mod invitation_service_send_tests {
         };
         let inactive_admin_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(inactive_admin_membership_row);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(from_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {

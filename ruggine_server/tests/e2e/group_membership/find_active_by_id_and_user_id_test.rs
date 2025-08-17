@@ -22,7 +22,7 @@ use crate::common::{cleanup_user, cleanup_group_chat, cleanup_group_membership};
 use axum::body::to_bytes;
 
 #[cfg(test)]
-mod find_by_id_and_user_id_e2e_tests {
+mod find_active_by_id_and_user_id_e2e_tests {
     use ruggine_server::utils::service_initializer::ServiceInitializer;
     use crate::{cleanup_test_user_from_a_group_chat, create_full_router, get_database};
     use super::*;

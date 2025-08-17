@@ -40,7 +40,7 @@ impl InvitationService {
 
         // Check if user is already in the group chat
         match self.group_membership_service
-            .find_by_user_id_and_group_id(invitation.to_user_id, group_chat.id)
+            .find_active_by_user_id_and_group_id(invitation.to_user_id, group_chat.id)
             .await
         {
             Ok(membership) => {
@@ -189,7 +189,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -463,7 +463,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - recipient IS already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -544,7 +544,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -625,7 +625,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -714,7 +714,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - recipient is NOT already in the group
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -824,7 +824,7 @@ mod invitation_service_send_for_group_chat_create_tests {
         };
         let inactive_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(inactive_membership_row);
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {
@@ -929,7 +929,7 @@ mod invitation_service_send_for_group_chat_create_tests {
 
         // Mock group membership service - return a different error (e.g., database error)
         mock_group_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(to_user_id), eq(group_chat_id))
             .times(1)
             .returning(move |_, _| {

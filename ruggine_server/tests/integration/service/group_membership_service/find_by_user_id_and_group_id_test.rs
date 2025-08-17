@@ -9,6 +9,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod group_membership_find_by_user_id_and_group_id_integration_tests {
+    use ruggine_server::entity::group_membership::all_membership_statuses;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -27,18 +28,20 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Act: Find membership by user_id and group_id
-        let result = service.find_by_user_id_and_group_id(member_user.id, group_chat.id).await;
+        let result = service.find_by_user_id_and_group_id(member_user.id, group_chat.id, all_membership_statuses()).await;
 
         // Assert: Verify membership was found
         assert!(result.is_ok(), "Failed to find membership: {:?}", result);
         let membership_dto = result.unwrap();
-        
-        assert_eq!(membership_dto.id, membership.id);
-        assert_eq!(membership_dto.user_id, member_user.id);
-        assert_eq!(membership_dto.group_chat_id, group_chat.id);
-        assert_eq!(membership_dto.role, membership.role);
-        assert_eq!(membership_dto.membership_status, membership.membership_status);
-        assert!(membership_dto.left_at.is_none());
+
+        assert_eq!(membership_dto.len(), 1);
+
+        assert_eq!(membership_dto[0].id, membership.id);
+        assert_eq!(membership_dto[0].user_id, member_user.id);
+        assert_eq!(membership_dto[0].group_chat_id, group_chat.id);
+        assert_eq!(membership_dto[0].role, membership.role);
+        assert_eq!(membership_dto[0].membership_status, membership.membership_status);
+        assert!(membership_dto[0].left_at.is_none());
 
         // Cleanup: Delete the test data
         cleanup_group_membership(membership.id).await;
@@ -63,14 +66,16 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         // Note: create_test_group_membership creates a Member role by default, 
         // but we'll test with what we have since the test is about finding the membership
 
-        let result = service.find_by_user_id_and_group_id(admin_user.id, group_chat.id).await;
+        let result = service.find_by_user_id_and_group_id(admin_user.id, group_chat.id, all_membership_statuses()).await;
 
         assert!(result.is_ok());
         let membership_dto = result.unwrap();
-        
-        assert_eq!(membership_dto.user_id, admin_user.id);
-        assert_eq!(membership_dto.group_chat_id, group_chat.id);
-        assert_eq!(membership_dto.membership_status, MembershipStatus::Active);
+
+        assert_eq!(membership_dto.len(), 1);
+
+        assert_eq!(membership_dto[0].user_id, admin_user.id);
+        assert_eq!(membership_dto[0].group_chat_id, group_chat.id);
+        assert_eq!(membership_dto[0].membership_status, MembershipStatus::Active);
 
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
@@ -93,15 +98,10 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Try to find with wrong user
-        let result = service.find_by_user_id_and_group_id(wrong_user.id, group_chat.id).await;
+        let result = service.find_by_user_id_and_group_id(wrong_user.id, group_chat.id, all_membership_statuses()).await;
 
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
-                // Expected error
-            }
-            _ => panic!("Expected GroupMembershipNotFound error"),
-        }
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
 
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
@@ -125,15 +125,10 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Try to find with wrong group
-        let result = service.find_by_user_id_and_group_id(member_user.id, wrong_group.id).await;
+        let result = service.find_by_user_id_and_group_id(member_user.id, wrong_group.id, all_membership_statuses()).await;
 
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
-                // Expected error
-            }
-            _ => panic!("Expected GroupMembershipNotFound error"),
-        }
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
 
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;
@@ -164,29 +159,32 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let membership2_u1 = create_test_group_membership(invitation2_u1.id, user1.id).await;
 
         // Test user1 in group1
-        let result1 = service.find_by_user_id_and_group_id(user1.id, group1.id).await;
+        let result1 = service.find_by_user_id_and_group_id(user1.id, group1.id, all_membership_statuses()).await;
         assert!(result1.is_ok());
         let found1 = result1.unwrap();
-        assert_eq!(found1.user_id, user1.id);
-        assert_eq!(found1.group_chat_id, group1.id);
+        assert_eq!(found1.len(), 1);
+        assert_eq!(found1[0].user_id, user1.id);
+        assert_eq!(found1[0].group_chat_id, group1.id);
 
         // Test user2 in group1
-        let result2 = service.find_by_user_id_and_group_id(user2.id, group1.id).await;
+        let result2 = service.find_by_user_id_and_group_id(user2.id, group1.id, all_membership_statuses()).await;
         assert!(result2.is_ok());
         let found2 = result2.unwrap();
-        assert_eq!(found2.user_id, user2.id);
-        assert_eq!(found2.group_chat_id, group1.id);
+        assert_eq!(found2.len(), 1);
+        assert_eq!(found2[0].user_id, user2.id);
+        assert_eq!(found2[0].group_chat_id, group1.id);
 
         // Test user1 in group2
-        let result3 = service.find_by_user_id_and_group_id(user1.id, group2.id).await;
+        let result3 = service.find_by_user_id_and_group_id(user1.id, group2.id, all_membership_statuses()).await;
         assert!(result3.is_ok());
         let found3 = result3.unwrap();
-        assert_eq!(found3.user_id, user1.id);
-        assert_eq!(found3.group_chat_id, group2.id);
+        assert_eq!(found3[0].user_id, user1.id);
+        assert_eq!(found3[0].group_chat_id, group2.id);
 
         // Test user2 in group2 (should not exist)
-        let result4 = service.find_by_user_id_and_group_id(user2.id, group2.id).await;
-        assert!(result4.is_err());
+        let result4 = service.find_by_user_id_and_group_id(user2.id, group2.id, all_membership_statuses()).await;
+        assert!(result4.is_ok());
+        assert!(result4.unwrap().is_empty());
 
         // Cleanup
         cleanup_group_membership(membership2_u1.id).await;
@@ -208,15 +206,9 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let service = GroupMembershipService::new(&db);
 
         // Test with completely nonexistent IDs
-        let result = service.find_by_user_id_and_group_id(-999, -888).await;
-        assert!(result.is_err());
-        
-        match result.unwrap_err() {
-            ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
-                // Expected error
-            }
-            _ => panic!("Expected GroupMembershipNotFound error"),
-        }
+        let result = service.find_by_user_id_and_group_id(-999, -888, all_membership_statuses()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -232,8 +224,8 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Make multiple calls with same parameters
-        let result1 = service.find_by_user_id_and_group_id(member_user.id, group_chat.id).await;
-        let result2 = service.find_by_user_id_and_group_id(member_user.id, group_chat.id).await;
+        let result1 = service.find_by_user_id_and_group_id(member_user.id, group_chat.id, all_membership_statuses()).await;
+        let result2 = service.find_by_user_id_and_group_id(member_user.id, group_chat.id, all_membership_statuses()).await;
 
         assert!(result1.is_ok());
         assert!(result2.is_ok());
@@ -242,10 +234,10 @@ mod group_membership_find_by_user_id_and_group_id_integration_tests {
         let found2 = result2.unwrap();
         
         // Both calls should return the same data
-        assert_eq!(found1.id, found2.id);
-        assert_eq!(found1.user_id, found2.user_id);
-        assert_eq!(found1.group_chat_id, found2.group_chat_id);
-        assert_eq!(found1.role, found2.role);
+        assert_eq!(found1[0].id, found2[0].id);
+        assert_eq!(found1[0].user_id, found2[0].user_id);
+        assert_eq!(found1[0].group_chat_id, found2[0].group_chat_id);
+        assert_eq!(found1[0].role, found2[0].role);
 
         cleanup_group_membership(membership.id).await;
         cleanup_invitation(invitation.id).await;

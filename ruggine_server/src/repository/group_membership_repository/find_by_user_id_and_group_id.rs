@@ -1,5 +1,6 @@
 use sqlx::Error;
 use crate::config::database::DatabaseTrait;
+use crate::entity::group_membership::MembershipStatus;
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 use crate::repository::group_membership_repository::GroupMembershipRepository;
 
@@ -8,8 +9,9 @@ impl GroupMembershipRepository {
         &self,
         user_id: i32,
         group_id: i32,
-    ) -> Result<GroupMembershipWithInvitationRow, Error> {
-        let row = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
+        membership_statuses: Vec<MembershipStatus>,
+    ) -> Result<Vec<GroupMembershipWithInvitationRow>, Error> {
+        let rows = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
             r#"
             SELECT 
                 gm.id,
@@ -24,16 +26,19 @@ impl GroupMembershipRepository {
             JOIN invitation i ON gm.invitation_id = i.id
             WHERE i.to_user_id = $1
               AND i.group_chat_id = $2
+              AND gm.membership_status = ANY($3)
             "#
         )
         .bind(user_id)
         .bind(group_id)
-        .fetch_one(self.db_conn.get_pool())
-        .await;
+        .bind(&membership_statuses)
+        .fetch_all(self.db_conn.get_pool())
+        .await?;
 
-        row
+        Ok(rows)
     }
 }
+
 
 #[cfg(test)]
 mod group_membership_repository_find_by_user_id_and_group_id_tests {
@@ -41,38 +46,30 @@ mod group_membership_repository_find_by_user_id_and_group_id_tests {
     use crate::repository::group_membership_repository::group_membership_repository_trait::MockGroupMembershipRepositoryTrait;
     use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
     use crate::factory::group_membership_factory::GroupMembershipFactory;
-    use crate::entity::group_membership::{MembershipStatus, MemberRole};
-    use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
+    use crate::entity::group_membership::{MembershipStatus, MemberRole, all_membership_statuses};
     use chrono::Utc;
-    use sqlx::Error;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_find_by_user_id_and_group_id_success() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
-        let mut expected = GroupMembershipFactory::fake_group_membership_with_invitation_row();
-        expected.user_id = 1;
-        expected.group_chat_id = 10;
-        expected.membership_status = MembershipStatus::Active;
-
-        let user_id = expected.user_id;
-        let group_id = expected.group_chat_id;
+        let user_id = 1;
+        let group_id = 10;
 
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(user_id), eq(group_id))
+            .with(eq(user_id), eq(group_id), eq(all_membership_statuses()))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 let mut result = GroupMembershipFactory::fake_group_membership_with_invitation_row();
                 result.user_id = user_id;
                 result.group_chat_id = group_id;
                 result.membership_status = MembershipStatus::Active;
-                Box::pin(async move { Ok(result) })
+                Box::pin(async move { Ok(vec![result]) })
             });
 
-        let result = mock_repo.find_by_user_id_and_group_id(user_id, group_id).await;
-
-        assert!(result.is_ok());
-        let found = result.unwrap();
+        let rows = mock_repo.find_by_user_id_and_group_id(user_id, group_id, all_membership_statuses()).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        let found = &rows[0];
         assert_eq!(found.user_id, user_id);
         assert_eq!(found.group_chat_id, group_id);
         assert_eq!(found.membership_status, MembershipStatus::Active);
@@ -84,20 +81,14 @@ mod group_membership_repository_find_by_user_id_and_group_id_tests {
 
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(999), eq(888))
+            .with(eq(999), eq(888), eq(all_membership_statuses()))
             .times(1)
-            .returning(|_, _| {
-                Box::pin(async move { Err(sqlx::Error::RowNotFound) })
+            .returning(|_, _, _| {
+                Box::pin(async move { Ok(vec![]) })  // niente record
             });
 
-        let result = mock_repo.find_by_user_id_and_group_id(999, 888).await;
-        assert!(result.is_err());
-        
-        if let Err(Error::RowNotFound) = result {
-            // Expected error
-        } else {
-            panic!("Expected RowNotFound error");
-        }
+        let rows = mock_repo.find_by_user_id_and_group_id(999, 888, all_membership_statuses()).await.unwrap();
+        assert!(rows.is_empty());
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -108,22 +99,21 @@ mod group_membership_repository_find_by_user_id_and_group_id_tests {
 
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(user_id), eq(group_id))
+            .with(eq(user_id), eq(group_id), eq(all_membership_statuses()))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 let mut result = GroupMembershipFactory::fake_group_membership_with_invitation_row();
                 result.user_id = user_id;
                 result.group_chat_id = group_id;
                 result.role = MemberRole::Admin;
                 result.membership_status = MembershipStatus::Active;
                 result.joined_at = Utc::now();
-                Box::pin(async move { Ok(result) })
+                Box::pin(async move { Ok(vec![result]) })
             });
 
-        let result = mock_repo.find_by_user_id_and_group_id(user_id, group_id).await;
-
-        assert!(result.is_ok());
-        let found = result.unwrap();
+        let rows = mock_repo.find_by_user_id_and_group_id(user_id, group_id, all_membership_statuses()).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        let found = &rows[0];
         assert_eq!(found.user_id, user_id);
         assert_eq!(found.group_chat_id, group_id);
         assert_eq!(found.role, MemberRole::Admin);
@@ -137,15 +127,13 @@ mod group_membership_repository_find_by_user_id_and_group_id_tests {
 
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(1), eq(1))
+            .with(eq(1), eq(1), eq(all_membership_statuses()))
             .times(1)
-            .returning(|_, _| {
-                Box::pin(async move {
-                    Err(sqlx::Error::PoolClosed)
-                })
+            .returning(|_, _, _| {
+                Box::pin(async move { Err(sqlx::Error::PoolClosed) })
             });
 
-        let result = mock_repo.find_by_user_id_and_group_id(1, 1).await;
+        let result = mock_repo.find_by_user_id_and_group_id(1, 1, all_membership_statuses()).await;
         assert!(result.is_err());
     }
 
@@ -156,45 +144,72 @@ mod group_membership_repository_find_by_user_id_and_group_id_tests {
         let user_id_1 = 10;
         let user_id_2 = 11;
 
-        // First user
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(user_id_1), eq(group_id))
+            .with(eq(user_id_1), eq(group_id), eq(all_membership_statuses()))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 let mut result = GroupMembershipFactory::fake_group_membership_with_invitation_row();
                 result.user_id = user_id_1;
                 result.group_chat_id = group_id;
                 result.role = MemberRole::Admin;
-                Box::pin(async move { Ok(result) })
+                Box::pin(async move { Ok(vec![result]) })
             });
 
-        // Second user
         mock_repo
             .expect_find_by_user_id_and_group_id()
-            .with(eq(user_id_2), eq(group_id))
+            .with(eq(user_id_2), eq(group_id), eq(all_membership_statuses()))
             .times(1)
-            .returning(move |_, _| {
+            .returning(move |_, _, _| {
                 let mut result = GroupMembershipFactory::fake_group_membership_with_invitation_row();
                 result.user_id = user_id_2;
                 result.group_chat_id = group_id;
                 result.role = MemberRole::Member;
-                Box::pin(async move { Ok(result) })
+                Box::pin(async move { Ok(vec![result]) })
             });
 
-        let result1 = mock_repo.find_by_user_id_and_group_id(user_id_1, group_id).await;
-        let result2 = mock_repo.find_by_user_id_and_group_id(user_id_2, group_id).await;
+        let rows1 = mock_repo.find_by_user_id_and_group_id(user_id_1, group_id, all_membership_statuses()).await.unwrap();
+        let rows2 = mock_repo.find_by_user_id_and_group_id(user_id_2, group_id, all_membership_statuses()).await.unwrap();
 
-        assert!(result1.is_ok());
-        assert!(result2.is_ok());
-        
-        let found1 = result1.unwrap();
-        let found2 = result2.unwrap();
-        
-        assert_eq!(found1.user_id, user_id_1);
-        assert_eq!(found1.role, MemberRole::Admin);
-        assert_eq!(found2.user_id, user_id_2);
-        assert_eq!(found2.role, MemberRole::Member);
-        assert_eq!(found1.group_chat_id, found2.group_chat_id);
+        assert_eq!(rows1[0].user_id, user_id_1);
+        assert_eq!(rows1[0].role, MemberRole::Admin);
+        assert_eq!(rows2[0].user_id, user_id_2);
+        assert_eq!(rows2[0].role, MemberRole::Member);
+        assert_eq!(rows1[0].group_chat_id, rows2[0].group_chat_id);
+    }
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_by_user_id_and_group_id_filtered_statuses() {
+        let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
+        let user_id = 3;
+        let group_id = 30;
+        let requested_statuses = vec![MembershipStatus::Active, MembershipStatus::Banned];
+
+        mock_repo
+            .expect_find_by_user_id_and_group_id()
+            .with(eq(user_id), eq(group_id), eq(requested_statuses.clone()))
+            .times(1)
+            .returning(move |_, _, _| {
+                let mut active_member = GroupMembershipFactory::fake_group_membership_with_invitation_row();
+                active_member.user_id = user_id;
+                active_member.group_chat_id = group_id;
+                active_member.membership_status = MembershipStatus::Active;
+
+                let mut banned_member = GroupMembershipFactory::fake_group_membership_with_invitation_row();
+                banned_member.user_id = user_id;
+                banned_member.group_chat_id = group_id;
+                banned_member.membership_status = MembershipStatus::Banned;
+
+                let mut left_member = GroupMembershipFactory::fake_group_membership_with_invitation_row();
+                left_member.user_id = user_id;
+                left_member.group_chat_id = group_id;
+                left_member.membership_status = MembershipStatus::Left;
+
+                // solo Active e Banned devono tornare
+                Box::pin(async move { Ok(vec![active_member, banned_member]) })
+            });
+
+        let rows = mock_repo.find_by_user_id_and_group_id(user_id, group_id, requested_statuses.clone()).await.unwrap();
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().all(|r| matches!(r.membership_status, MembershipStatus::Active | MembershipStatus::Banned)));
     }
 }

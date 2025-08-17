@@ -180,7 +180,7 @@ mod group_membership_service_leave_group_integration_tests {
         let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_group_admin_leaves", admin_user.id).await;
         
         // Get the admin's membership
-        let admin_membership = group_membership_service.find_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+        let admin_membership = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
 
         let leave_dto = LeaveGroupMembershipDto {
             id: admin_membership.id,

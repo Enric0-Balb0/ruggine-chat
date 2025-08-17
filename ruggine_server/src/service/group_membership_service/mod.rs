@@ -6,10 +6,12 @@ mod find_by_id_and_user_id;
 mod find_by_user_id;
 mod find_by_user_id_and_group_id;
 mod find_by_group_id;
+pub mod find_active_by_user_id_and_group_id;
 
 use std::sync::Arc;
 use async_trait::async_trait;
 use crate::dto::group_membership_dto::{GroupMembershipCreateDto, GroupMembershipReadDto, LeaveGroupMembershipDto};
+use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
 pub use crate::service::group_membership_service::group_membership_service::GroupMembershipService;
 pub use crate::service::group_membership_service::group_membership_service_trait::GroupMembershipServiceTrait;
@@ -37,8 +39,12 @@ impl GroupMembershipServiceTrait for GroupMembershipService {
         self.find_by_user_id_internal(user_id).await
     }
 
-    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
-        self.find_by_user_id_and_group_id_internal(user_id, group_id).await
+    async fn find_active_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
+        self.find_active_by_user_id_and_group_id_internal(user_id, group_id).await
+    }
+
+    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32, membership_statuses: Vec<MembershipStatus>) -> Result<Vec<GroupMembershipReadDto>, ApiError> {
+        self.find_by_user_id_and_group_id_internal(user_id, group_id, membership_statuses).await
     }
 
     async fn find_by_group_id(&self, group_id: i32, auth_user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError> {

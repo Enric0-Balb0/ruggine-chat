@@ -1,6 +1,6 @@
 use std::sync::{Arc};
 use tokio::sync::OnceCell;
-use ruggine_server::{config::database::{Database}};
+use ruggine_server::{config::database::Database, entity::invitation::UpdateInvitationStatus};
 use std::sync::Once;
 use axum::body::{to_bytes, Body};
 use axum::http::{Request, StatusCode};
@@ -12,9 +12,9 @@ use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
 use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::group_membership;
-use ruggine_server::entity::group_membership::{GroupMembership, MemberRole};
+use ruggine_server::entity::group_membership::{all_membership_statuses, GroupMembership, MemberRole};
 use ruggine_server::entity::user::User;
-use ruggine_server::entity::invitation::{Invitation, NewInvitation};
+use ruggine_server::entity::invitation::{Invitation, InvitationStatus, NewInvitation};
 use ruggine_server::entity::text_message::{TextMessage, NewTextMessage};
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
@@ -219,6 +219,7 @@ pub async fn create_test_group_chat_with_invitation_and_membership(prefix: &str,
 
 pub async fn add_test_user_to_a_group(user_id: i32, group_chat: &GroupChatReadDto) -> GroupMembershipWithInvitationRow {
     let invitation = create_test_invitation(group_chat.created_by, user_id, group_chat.id).await;
+    accept_test_invitation(invitation.id).await;
     let membership = create_test_group_membership(invitation.id, user_id).await;
     return membership;
 }
@@ -236,7 +237,7 @@ pub async fn leave_user_from_a_group(user_id: i32, group_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let group_membership_service = service_init.group_membership_service();
-    let membership = group_membership_service.find_by_user_id_and_group_id(user_id, group_id).await.unwrap();
+    let membership = group_membership_service.find_active_by_user_id_and_group_id(user_id, group_id).await.unwrap();
     group_membership_service.leave_group(LeaveGroupMembershipDto {id: membership.id}, user_id).await.unwrap();
 }
 
@@ -282,6 +283,15 @@ pub async fn create_test_invitation(from_user_id: i32, to_user_id: i32, group_ch
     let invitation_result = repository.find_by_id_and_user_id(inserted_id, to_user_id).await;
     assert!(invitation_result.is_ok(), "Invitation not found in database");
     invitation_result.unwrap()
+}
+
+pub async fn accept_test_invitation(invitation_id: i32) {
+    let db = get_database().await;
+    let repository = InvitationRepository::new(&db);
+    repository.update_status(invitation_id, UpdateInvitationStatus {
+        status: InvitationStatus::Accepted,
+        invitation_id
+    }).await.unwrap();
 }
 
 /// Helper function to create a test admin invitation in the database
@@ -363,9 +373,12 @@ pub async fn cleanup_test_user_from_a_group_chat(user_id: i32, group_chat_id: i3
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let group_membership_service = service_init.group_membership_service();
-    let group_membership = group_membership_service.find_by_user_id_and_group_id(user_id, group_chat_id).await.unwrap();
-    cleanup_group_membership(group_membership.id).await;
-    cleanup_invitation(group_membership.invitation_id).await;
+
+    let rows = group_membership_service.find_by_user_id_and_group_id(user_id, group_chat_id, all_membership_statuses()).await.unwrap();
+    for group_membership in rows {
+        cleanup_group_membership(group_membership.id).await;
+        cleanup_invitation(group_membership.invitation_id).await;
+    }
 }
 
 pub async fn cleanup_group_membership_by_invitation_id(invitation_id: i32) {

@@ -1,4 +1,4 @@
-use ruggine_server::handler::group_membership_handler::find_by_id_and_user_id::find_by_id_and_user_id;
+use ruggine_server::handler::group_membership_handler::find_active_by_id_and_user_id::find_active_by_id_and_user_id;
 use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::error::{api_error::ApiError, group_membership_error::GroupMembershipError};
 use axum::{extract::{Path, State}, Extension};
@@ -7,7 +7,7 @@ use crate::common::{cleanup_user_by_email, cleanup_group_chat, cleanup_invitatio
 use crate::get_database;
 
 #[cfg(test)]
-mod find_by_id_and_user_id_handler_integration_tests {
+mod find_active_by_id_and_user_id_handler_integration_tests {
     use crate::create_test_admin_group_membership;
     use super::*;
 
@@ -29,7 +29,7 @@ mod find_by_id_and_user_id_handler_integration_tests {
         let group_membership_state = create_group_membership_state().await;
         
         // Act: Call find_by_id_and_user_id handler
-        let result = find_by_id_and_user_id(
+        let result = find_active_by_id_and_user_id(
             Extension(member_user.clone()),
             State(group_membership_state),
             Path(membership.id),
@@ -65,7 +65,7 @@ mod find_by_id_and_user_id_handler_integration_tests {
         let group_membership_state = create_group_membership_state().await;
         
         // Act: Call find_by_id_and_user_id handler with wrong user
-        let result = find_by_id_and_user_id(
+        let result = find_active_by_id_and_user_id(
             Extension(wrong_user.clone()),
             State(group_membership_state),
             Path(membership.id),
@@ -97,7 +97,7 @@ mod find_by_id_and_user_id_handler_integration_tests {
         let group_membership_state = create_group_membership_state().await;
         
         // Act: Call find_by_id_and_user_id handler with non-existent ID
-        let result = find_by_id_and_user_id(
+        let result = find_active_by_id_and_user_id(
             Extension(user.clone()),
             State(group_membership_state),
             Path(99999), // Non-existent ID
@@ -128,7 +128,7 @@ mod find_by_id_and_user_id_handler_integration_tests {
         let group_membership_state = create_group_membership_state().await;
         
         // Act: Call find_by_id_and_user_id handler
-        let result = find_by_id_and_user_id(
+        let result = find_active_by_id_and_user_id(
             Extension(member_user.clone()),
             State(group_membership_state),
             Path(admin_membership.id),
@@ -164,7 +164,7 @@ mod find_by_id_and_user_id_handler_integration_tests {
         let group_membership_state = create_group_membership_state().await;
         
         // Act: Call find_by_id_and_user_id handler
-        let result = find_by_id_and_user_id(
+        let result = find_active_by_id_and_user_id(
             Extension(member_user.clone()),
             State(group_membership_state),
             Path(membership.id),

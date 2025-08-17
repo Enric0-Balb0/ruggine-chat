@@ -23,7 +23,7 @@ use crate::service::group_membership_service::GroupMembershipServiceTrait;
         ("bearer_auth" = [])
     )
 )]
-pub async fn find_by_id_and_user_id(
+pub async fn find_active_by_id_and_user_id(
     Extension(current_user): Extension<User>,
     State(state): State<GroupMembershipState>,
     Path(id): Path<i32>,

@@ -43,7 +43,7 @@ mod group_chat_create_service_integration_tests {
         assert!(group_dto.updated_at <= chrono::Utc::now());
         
         // Find the membership with associated invitation for our group
-        let our_membership = group_membership_service.find_by_user_id_and_group_id(user.id, group_dto.id).await.unwrap();
+        let our_membership = group_membership_service.find_active_by_user_id_and_group_id(user.id, group_dto.id).await.unwrap();
 
         assert_eq!(our_membership.role, MemberRole::Admin, "Creator should be admin");
         assert_eq!(our_membership.membership_status, MembershipStatus::Active, "Membership should be active");

@@ -44,6 +44,15 @@ impl Default for MembershipStatus {
     }
 }
 
+impl sqlx::postgres::PgHasArrayType for MembershipStatus {
+    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("_membership_status")
+    }
+}
+
+pub fn all_membership_statuses() -> Vec<MembershipStatus> {
+    vec![MembershipStatus::Active, MembershipStatus::Left, MembershipStatus::Banned]
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema, Display)]
 #[sqlx(type_name = "member_role")]

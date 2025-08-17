@@ -1,6 +1,6 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
-use crate::entity::group_membership::{NewGroupMembership, UpdateGroupMembership};
+use crate::entity::group_membership::{MembershipStatus, NewGroupMembership, UpdateGroupMembership};
 use async_trait::async_trait;
 use std::sync::Arc;
 use sqlx::Error as SqlxError;
@@ -59,8 +59,12 @@ impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
         self.find_by_user_id_inner(user_id).await
     }
 
-    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError> {
-        self.find_by_user_id_and_group_id_inner(user_id, group_id).await
+    async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32, membership_statuses: Vec<MembershipStatus>) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
+        self.find_by_user_id_and_group_id_inner(user_id, group_id, membership_statuses).await
+    }
+
+    async fn find_active_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError> {
+        self.find_active_by_user_id_and_group_id_inner(user_id, group_id).await
     }
 
     async fn find_by_group_id(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {

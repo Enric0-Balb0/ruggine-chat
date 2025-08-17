@@ -230,7 +230,7 @@ mod group_chat_service_find_by_id_integration_tests {
         assert!(found_group.updated_at <= chrono::Utc::now());
 
         // Cleanup
-        let group_membership = group_membership_service.find_by_user_id_and_group_id(user.id, found_group.id).await.unwrap();
+        let group_membership = group_membership_service.find_active_by_user_id_and_group_id(user.id, found_group.id).await.unwrap();
         cleanup_group_membership(group_membership.id).await;
         cleanup_invitation(group_membership.invitation_id).await;
         cleanup_group_chat(created_group.id).await;

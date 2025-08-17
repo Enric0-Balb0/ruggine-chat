@@ -27,7 +27,7 @@ impl TextMessageService {
 
         // Check if the sender has active membership in the group
         let membership = self.group_membership_service
-            .find_by_user_id_and_group_id(sender_id, payload.group_chat_id)
+            .find_active_by_user_id_and_group_id(sender_id, payload.group_chat_id)
             .await
             .map_err(|e| match e {
                 ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
@@ -122,7 +122,7 @@ mod create_service_tests {
         membership.group_chat_id = group_chat_id;
         
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(sender_id), eq(group_chat_id))
             .returning({
                 let membership = membership.clone();
@@ -241,7 +241,7 @@ mod create_service_tests {
         
         // Mock failed membership check
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(sender_id), eq(group_chat_id))
             .times(1)
             .returning(|_, _| Box::pin(async move {
@@ -289,7 +289,7 @@ mod create_service_tests {
         membership.membership_status = MembershipStatus::Left;
 
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(sender_id), eq(group_chat_id))
             .returning({
                 let membership = membership.clone();

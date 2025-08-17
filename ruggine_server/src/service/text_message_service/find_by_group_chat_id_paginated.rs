@@ -30,7 +30,7 @@ impl TextMessageService {
 
         // Check if the auth_user has membership in the group
         let membership = self.group_membership_service
-            .find_by_user_id_and_group_id(auth_user_id, group_chat_id)
+            .find_active_by_user_id_and_group_id(auth_user_id, group_chat_id)
             .await
             .map_err(|e| match e {
                 ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
@@ -142,7 +142,7 @@ mod find_by_group_chat_id_paginated_service_tests {
             });
         
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))
             .returning({
                 let membership = membership.clone();
@@ -184,7 +184,7 @@ mod find_by_group_chat_id_paginated_service_tests {
             });
 
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))
             .times(1)
             .returning({
@@ -259,7 +259,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         
         // Mock failed membership check
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))
             .times(1)
             .returning(|_, _| Box::pin(async move {
@@ -439,7 +439,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         membership.membership_status = MembershipStatus::Left;
         
         mock_membership_service
-            .expect_find_by_user_id_and_group_id()
+            .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))
             .returning({
                 let membership = membership.clone();

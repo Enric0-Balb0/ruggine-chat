@@ -294,7 +294,7 @@ mod invitation_service_send_for_group_chat_create_integration_tests {
         let group_chat = create_test_group_chat_with_invitation_and_membership("invite_send_group_left", admin_user.id).await;
 
         // Simulate admin leaving the group by updating membership status
-        let admin_group_membership = group_membership_service.find_by_user_id_and_group_id(
+        let admin_group_membership = group_membership_service.find_active_by_user_id_and_group_id(
             admin_user.id,
             group_chat.id
         ).await.unwrap();
