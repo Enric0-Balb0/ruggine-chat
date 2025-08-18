@@ -11,6 +11,7 @@ use crate::common::{
 #[cfg(test)]
 mod invitation_service_update_status_integration_tests {
     use ruggine_server::config::database::DatabaseTrait;
+    use ruggine_server::entity::invitation::Invitation;
     use ruggine_server::service::invitation_service::InvitationServiceTrait;
     use crate::cleanup_group_membership_by_invitation_id;
     use super::*;
@@ -174,5 +175,74 @@ mod invitation_service_update_status_integration_tests {
         ));
 
         cleanup_user_by_email(user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_update_status_accept_fails_when_create_checked_fails() {
+        // Questo test simula il fallimento di create_checked durante l'accettazione di un invito
+        // per testare il rollback della transazione
+        use ruggine_server::service::invitation_service::InvitationService;
+        use ruggine_server::repository::invitation_repository::InvitationRepository;
+        use ruggine_server::service::group_chat_service::GroupChatService;
+        use ruggine_server::service::user_service::UserService;
+        use ruggine_server::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
+        use ruggine_server::error::group_membership_error::GroupMembershipError;
+        use std::sync::Arc;
+        use mockall::predicate::*;
+
+        let db = get_database().await;
+        
+        let (admin_user, _) = create_test_user("internal_mock_admin").await;
+        let (target_user, _) = create_test_user("internal_mock_target").await;
+        let group_chat = create_test_group_chat("internal_mock_group", admin_user.id).await;
+        let invitation = create_test_invitation(admin_user.id, target_user.id, group_chat.id).await;
+
+        // Creiamo un mock del GroupMembershipService che fallisce
+        let mut mock_group_membership_service = MockGroupMembershipServiceTrait::new();
+        
+        mock_group_membership_service
+            .expect_create_checked()
+            .times(1)
+            .returning(move |_, _| {
+                Box::pin(async move {
+                    Err(ApiError::DbError(ruggine_server::error::db_error::DbError::SomethingWentWrong(
+                        "Simulated database error during create_checked".to_string()
+                    )))
+                })
+            });
+
+        // Creiamo un InvitationService con il mock
+        let invitation_service = InvitationService::with(
+            Arc::new(InvitationRepository::new(&db)),
+            Arc::new(GroupChatService::new(&db)),
+            Arc::new(UserService::new(&db)),
+            Arc::new(mock_group_membership_service),
+        );
+
+        let mut payload = InvitationFactory::fake_invitation_update_status_dto();
+        payload.invitation_id = invitation.id;
+        payload.status = InvitationStatus::Accepted;
+
+        let result = invitation_service.update_status(payload, target_user.id).await;
+
+        // Il test dovrebbe fallire con l'errore simulato
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ApiError::DbError(ruggine_server::error::db_error::DbError::SomethingWentWrong(msg)) => {
+                assert!(msg.contains("Simulated database error during create_checked"));
+            }
+            e => panic!("Expected DbError::SomethingWentWrong, got: {:?}", e),
+        }
+
+        // Verifichiamo che l'invitation non sia stata aggiornata (rollback della transazione)
+        let invitation_after = invitation_service.find_by_id_and_user_id(invitation.id, target_user.id).await.unwrap();
+        
+        // L'invitation dovrebbe essere ancora pending, non accepted
+        assert_eq!(invitation_after.status, InvitationStatus::Pending);
+
+        cleanup_invitation(invitation.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(target_user.email).await;
     }
 }

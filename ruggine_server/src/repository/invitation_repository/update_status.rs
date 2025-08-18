@@ -3,16 +3,22 @@ use crate::entity::invitation::{Invitation, UpdateInvitationStatus, InvitationSt
 use crate::entity::group_membership::{MemberRole};
 use crate::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use crate::config::database::DatabaseTrait;
-use sqlx::Error as SqlxError;
+use sqlx::{Error as SqlxError, Postgres, Transaction};
+use crate::entity::user::Gender;
 
 impl InvitationRepository {
-    pub async fn update_status_internal(&self, invitation_id: i32, update_invitation_status: UpdateInvitationStatus) -> Result<Invitation, SqlxError> {
+    pub async fn update_status_internal(
+        &self,
+        invitation_id: i32,
+        update_invitation_status: UpdateInvitationStatus,
+    ) -> Result<Invitation, SqlxError> {
         let update_status = update_invitation_status.status;
         let responded_at = Utc::now();
-
-        let invitation = sqlx::query_as!(
+        // costruiamo la query UNA SOLA VOLTA
+        let query = sqlx::query_as!(
             Invitation,
-            r#" UPDATE invitation SET
+            r#"
+            UPDATE invitation SET
                 status = $1,
                 responded_at = $2
             WHERE id = $3
@@ -29,11 +35,15 @@ impl InvitationRepository {
             update_status as _,
             responded_at,
             invitation_id
-        )
-            .fetch_one(self.db_conn.get_pool())
-            .await?;
+        );
 
-        Ok(invitation)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
+
     }
 }
 

@@ -4,6 +4,7 @@ use crate::entity::group_membership::{MembershipStatus, NewGroupMembership};
 use crate::repository::group_membership_repository::GroupMembershipRepository;
 
 impl GroupMembershipRepository {
+    // This function is part of a transaction and it could need to use the transaction connection
     pub async fn insert_inner(&self, new_membership: NewGroupMembership) -> Result<i32, Error> {
         let now = chrono::Utc::now();
 
@@ -19,7 +20,18 @@ impl GroupMembershipRepository {
             .bind(MembershipStatus::Active)
             .bind(new_membership.invitation_id);
 
-        match query.fetch_one(self.db_conn.get_pool()).await {
+        // se c'è una transazione, usala; altrimenti usa la pool
+        let response;
+
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            response = query.fetch_one(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            response = query.fetch_one(self.db_conn.get_pool()).await
+        }
+
+        match response {
             Ok(id) => Ok(id),
             Err(err) => {
                 eprintln!("Failed to insert group membership: {:?}", err);

@@ -22,7 +22,7 @@ impl GroupMembershipRepository {
             set_clauses.push(format!("role = ${}", bind_index));
             bind_index += 1;
         }
-        
+
         if update_membership.membership_status.is_some() {
             set_clauses.push(format!("membership_status = ${}", bind_index));
             bind_index += 1;

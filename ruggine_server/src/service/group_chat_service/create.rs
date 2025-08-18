@@ -63,6 +63,7 @@ impl GroupChatService {
         };
 
         if let Err(e) = invitation_service.update_status(invitation_update_dto, created_by).await {
+            eprintln!("Errore durante update_status: {:?}", e); // stampa l'errore completo
             return Err(e);
         }
 

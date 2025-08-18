@@ -8,10 +8,12 @@ mod find_pending_invitations_between_users;
 mod update_status;
 mod find_by_id;
 
+use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::Error;
 pub use invitation_repository::InvitationRepository;
 pub use invitation_repository_trait::InvitationRepositoryTrait;
+use crate::config::database::Database;
 use crate::entity::invitation::{Invitation, NewInvitation, UpdateInvitationStatus, UserInvitationFilter};
 
 #[async_trait]
@@ -42,5 +44,9 @@ impl InvitationRepositoryTrait for InvitationRepository {
 
     async fn update_status(&self, invitation_id: i32, update_invitation_status: UpdateInvitationStatus) -> Result<Invitation, Error> {
         self.update_status_internal(invitation_id, update_invitation_status).await
+    }
+
+    fn db_conn(&self) -> Arc<Database> {
+        self.db_conn.clone()
     }
 }

@@ -1,4 +1,6 @@
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc};
+use dashmap::DashMap;
 use tokio::sync::OnceCell;
 use ruggine_server::{config::database::Database, entity::invitation::UpdateInvitationStatus};
 use std::sync::Once;
@@ -56,7 +58,7 @@ pub async fn get_database() -> Arc<Database> {
         })
         .await;
 
-    Arc::new(Database { pool: pool.clone() })
+    Arc::new(Database { pool: pool.clone(), tx_map: DashMap::new(), task_counter: AtomicU64::new(1) })
 }
 
 /// Helper function to clea nup user after test

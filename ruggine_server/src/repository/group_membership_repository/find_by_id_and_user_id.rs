@@ -9,7 +9,9 @@ impl GroupMembershipRepository {
         id: i32,
         user_id: i32,
     ) -> Result<GroupMembershipWithInvitationRow, Error> {
-        let row = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
+
+
+        let query = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
             r#"
             SELECT 
                 gm.id,
@@ -26,11 +28,14 @@ impl GroupMembershipRepository {
             "#
         )
         .bind(id)
-        .bind(user_id)
-        .fetch_one(self.db_conn.get_pool())
-        .await;
+        .bind(user_id);
 
-        row
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
     }
 }
 
