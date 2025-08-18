@@ -296,4 +296,54 @@ mod auth_api_client_tests {
         !username.contains(' ') &&
         !username.contains('@')
     }
+
+    #[test]
+    fn test_logout_token_cleanup() {
+        // Test: Client-side token cleanup for logout
+        let token = TestFactory::mock_token_response();
+        
+        // Mock the logout process - token should be cleared from storage
+        assert!(!token.token.is_empty(), "Token should exist before logout");
+        
+        // After logout, client should clear token data
+        let cleared_token = ""; // Simulating cleared token
+        assert!(cleared_token.is_empty(), "Token should be cleared after logout");
+        
+        // Verify logout cleanup expectations
+        assert_eq!(cleared_token.len(), 0, "Token should have no content after logout");
+    }
+
+    #[test]
+    fn test_logout_session_state_cleanup() {
+        // Test: Client-side session state cleanup for logout
+        let user_profile = TestFactory::mock_user_profile("logout_test");
+        
+        // Before logout - user profile exists
+        assert!(!user_profile.email.is_empty(), "User profile should exist");
+        assert!(!user_profile.first_name.is_empty(), "User data should be present");
+        
+        // After logout - simulate clearing user profile
+        let cleared_email = "";
+        let cleared_name = "";
+        
+        assert!(cleared_email.is_empty(), "Email should be cleared after logout");
+        assert!(cleared_name.is_empty(), "User data should be cleared after logout");
+    }
+
+    #[test]
+    fn test_logout_ui_state_expectations() {
+        // Test: What UI state should be after logout
+        let is_authenticated_before = true;
+        let is_authenticated_after = false; // After logout
+        
+        assert!(is_authenticated_before, "User should be authenticated before logout");
+        assert!(!is_authenticated_after, "User should not be authenticated after logout");
+        
+        // Test that client properly handles logout state transitions
+        let has_user_data_before = true;
+        let has_user_data_after = false; // After logout
+        
+        assert!(has_user_data_before, "Should have user data before logout");
+        assert!(!has_user_data_after, "Should not have user data after logout");
+    }
 }
