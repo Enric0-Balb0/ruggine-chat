@@ -1,10 +1,9 @@
 use leptos::*;
 use leptos_router::*;
 use crate::api::services::AuthService;
-use crate::utils::StorageService;
+use crate::utils::{StorageService, auth_error_to_register_message};
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
-use crate::error::AuthError;
 use crate::components::{ThemeToggle, use_toast};
 
 #[component]
@@ -82,22 +81,21 @@ pub fn RegisterPage() -> impl IntoView {
                     address_val,
                     gender_val
                 ).await {
-                    Ok(_) => {
-                        toast.success("Registrazione completata con successo! Benvenuto/a!");
+                    Ok(user_profile) => {
+                        let success_message = format!("Registrazione completata con successo! {}", user_profile.welcome_message_success());
+                        toast.success(&success_message);
+                        set_loading.set(false);
                         navigate("/", Default::default());
                     }
-                    Err(AuthError::InvalidInput(msg)) => {
-                        set_error_message.set(Some(msg));
-                    }
-                    Err(AuthError::NetworkError(msg)) => {
-                        set_error_message.set(Some(format!("Errore di connessione: {}", msg)));
-                    }
-                    Err(_) => {
-                        set_error_message.set(Some("Errore durante la registrazione".to_string()));
+                    Err(error) => {
+                        set_loading.set(false);
+                        let error_message = auth_error_to_register_message(&error);
+                        set_error_message.set(Some(error_message.clone()));
+                        
+                        // Also show in toast for better visibility
+                        toast.error(&error_message);
                     }
                 }
-                
-                set_loading.set(false);
             });
         }
     };

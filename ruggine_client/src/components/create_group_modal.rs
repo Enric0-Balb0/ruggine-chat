@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos::wasm_bindgen::JsCast;
 use crate::types::group::GroupChatCreateRequest;
+use crate::components::LucideIcon;
 
 #[component]
 pub fn CreateGroupModal(
@@ -170,7 +171,7 @@ pub fn CreateGroupModal(
                         // Descrizione della funzionalità
                         <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <div class="flex items-start gap-3">
-                                <span class="text-blue-500 dark:text-blue-400 text-lg mt-0.5 animate-pulse">"💡"</span>
+                                <LucideIcon name="lightbulb" size=20 class="text-blue-500 dark:text-blue-400 mt-0.5" />
                                 <div class="flex-1">
                                     <p class="m-0 text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
                                         <strong class="font-medium">"Crea il tuo spazio di collaborazione!"</strong>
@@ -188,7 +189,7 @@ pub fn CreateGroupModal(
                                 style="transform: translateY(0px); opacity: 1; animation: slideInError 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"
                             >
                                 <p class="m-0 text-sm text-red-800 dark:text-red-200 flex items-center gap-2">
-                                    <span class="animate-pulse text-base">"⚠️"</span>
+                                    <LucideIcon name="alert-triangle" size=16 class="text-red-600 dark:text-red-400" />
                                     {msg}
                                 </p>
                             </div>

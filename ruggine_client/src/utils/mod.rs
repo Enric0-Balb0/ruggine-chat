@@ -3,10 +3,12 @@
 // Client-side services
 pub mod storage;
 pub mod theme;
+pub mod error_messages;
 
 // Re-exports for services
 pub use storage::StorageService;
 pub use theme::{ThemeService, Theme, ThemeContext, ThemeProvider, use_theme};
+pub use error_messages::{auth_error_to_login_message, auth_error_to_register_message};
 
 /// Common validation utilities
 pub mod validation {

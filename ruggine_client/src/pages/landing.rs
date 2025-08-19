@@ -1,10 +1,9 @@
 use leptos::*;
 use leptos_router::*;
 use crate::api::services::AuthService;
-use crate::utils::StorageService;
+use crate::utils::{StorageService, auth_error_to_login_message};
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
-use crate::error::AuthError;
 use crate::components::{ThemeToggle, use_toast};
 
 #[component]
@@ -23,42 +22,46 @@ pub fn LandingPage() -> impl IntoView {
         StorageService::new(),
     );
 
-    let handle_login = {
+    let handle_login = create_action({
         let navigate = navigate.clone();
         let toast = toast.clone();
-        move |ev: leptos::ev::SubmitEvent| {
-            ev.prevent_default();
-            
+        move |_: &()| {
             let email_val = email.get();
             let password_val = password.get();
+            
             let auth_service = auth_service.clone();
             let navigate = navigate.clone();
             let toast = toast.clone();
             
-            spawn_local(async move {
+            async move {
+                // Validation
+                if email_val.is_empty() || password_val.is_empty() {
+                    set_error_message.set(Some("Email e password sono obbligatori".to_string()));
+                    return;
+                }
+                
                 set_loading.set(true);
                 set_error_message.set(None);
                 
                 match auth_service.login(email_val, password_val).await {
-                    Ok(_user_profile) => {
-                        toast.success("Login effettuato con successo! Benvenuto/a!");
+                    Ok(user_profile) => {
+                        let success_message = format!("Login effettuato con successo! {}", user_profile.welcome_message_success());
+                        toast.success(&success_message);
+                        set_loading.set(false);
                         navigate("/", Default::default());
                     }
-                    Err(AuthError::InvalidCredentials) => {
-                        set_error_message.set(Some("Email o password non validi".to_string()));
-                    }
-                    Err(AuthError::NetworkError(msg)) => {
-                        set_error_message.set(Some(format!("Errore di connessione: {}", msg)));
-                    }
-                    Err(_e) => {
-                        set_error_message.set(Some("Errore durante il login".to_string()));
+                    Err(error) => {
+                        set_loading.set(false);
+                        let error_message = auth_error_to_login_message(&error);
+                        set_error_message.set(Some(error_message.clone()));
+                        
+                        // Also show in toast for better visibility
+                        toast.error(&error_message);
                     }
                 }
-                
-                set_loading.set(false);
-            });
+            }
         }
-    };
+    });
 
     view! {
         <div class="h-screen w-screen overflow-hidden bg-cover bg-center bg-no-repeat transition-colors" 
@@ -95,7 +98,10 @@ pub fn LandingPage() -> impl IntoView {
                             "Accedi Ora"
                         </h2>
                         
-                        <form on:submit=handle_login class="space-y-4">
+                        <form on:submit=move |ev| {
+                            ev.prevent_default();
+                            handle_login.dispatch(());
+                        } class="space-y-4">
                             <div>
                                 <label for="email" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">
                                     "Email"
@@ -134,10 +140,10 @@ pub fn LandingPage() -> impl IntoView {
 
                             <button
                                 type="submit"
-                                disabled=loading
+                                disabled=move || loading.get() || handle_login.pending().get()
                                 class="w-full bg-brand-primary dark:bg-brand-primary-dark hover:bg-brand-primary-light dark:hover:bg-brand-primary disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors text-sm"
                             >
-                                {move || if loading.get() { "Accesso in corso..." } else { "Accedi" }}
+                                {move || if loading.get() || handle_login.pending().get() { "Accesso in corso..." } else { "Accedi" }}
                             </button>
                         </form>
 
