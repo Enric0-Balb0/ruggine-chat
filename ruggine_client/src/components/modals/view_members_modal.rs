@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos::wasm_bindgen::JsCast;
 use crate::types::user::{UserProfile, UserStatus, UserType, Gender, CurrentAction};
-use crate::components::{invite_member_modal::MemberRole, UserAvatar, LucideIcon};
+use crate::components::{modals::invite_member_modal::MemberRole, ui::{UserAvatar, LucideIcon}};
 use chrono::{DateTime, Utc, NaiveDate};
 
 #[derive(Debug, Clone, PartialEq)]
