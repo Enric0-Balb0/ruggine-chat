@@ -15,7 +15,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod find_by_group_chat_id_text_message_e2e_tests {
-    use crate::leave_user_from_a_group;
+    use crate::test_user_leave_from_a_group;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -383,7 +383,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
 
         // Act: User leaves the group first
-        leave_user_from_a_group(user.id, group.id).await;
+        test_user_leave_from_a_group(user.id, group.id).await;
 
         // Now try to access messages after leaving
         let request = Request::builder()

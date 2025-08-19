@@ -11,7 +11,7 @@ use crate::common::{
 mod find_by_group_chat_id_handler_integration_tests {
     use ruggine_server::error::api_error::ApiError;
     use ruggine_server::error::text_message_error::TextMessageError;
-    use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership, leave_user_from_a_group};
+    use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership, test_user_leave_from_a_group};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -474,7 +474,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         let state = create_text_message_state().await;
         
         // User leaves the group (making membership inactive)
-        leave_user_from_a_group(user.id, group.id).await;
+        test_user_leave_from_a_group(user.id, group.id).await;
         
         let pagination_query = TextMessagePaginationQuery {
             cursor: None,

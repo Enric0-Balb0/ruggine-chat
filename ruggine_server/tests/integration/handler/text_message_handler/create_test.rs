@@ -8,7 +8,7 @@ use crate::common::{create_test_user, cleanup_user, cleanup_text_message, cleanu
 mod text_message_create_handler_integration_tests {
     use ruggine_server::error::api_error::ApiError;
     use ruggine_server::error::text_message_error::TextMessageError;
-    use crate::leave_user_from_a_group;
+    use crate::test_user_leave_from_a_group;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -139,7 +139,7 @@ mod text_message_create_handler_integration_tests {
         ).await;
 
         // Leave group
-        leave_user_from_a_group(user.id, group_chat.id).await;
+        test_user_leave_from_a_group(user.id, group_chat.id).await;
 
         // Create unique text message data using factory
         let create_dto = TextMessageFactory::fake_text_message_create_dto_with_group_id(group_chat.id);

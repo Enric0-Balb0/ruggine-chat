@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Groups Test - Ruggine Server</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .danger-btn {
+            background-color: #f44336;
+        }
+        .danger-btn:hover {
+            background-color: #da190b;
+        }
+        .secondary-btn {
+            background-color: #2196F3;
+        }
+        .secondary-btn:hover {
+            background-color: #0b7dda;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #fafafa;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        .sent {
+            background-color: #e8f5e8;
+            border-left-color: #4CAF50;
+        }
+        .received {
+            background-color: #e8f4fd;
+            border-left-color: #2196F3;
+        }
+        .websocket-msg {
+            background-color: #fff3e0;
+            border-left-color: #ff9800;
+        }
+        .new-message {
+            background-color: #f3e5f5;
+            border-left-color: #9c27b0;
+            font-weight: bold;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        .info {
+            background-color: #e3f2fd;
+            border-left-color: #2196F3;
+            color: #1565c0;
+        }
+        .success {
+            background-color: #e8f5e8;
+            border-left-color: #4CAF50;
+            color: #2e7d32;
+        }
+        input, select, textarea {
+            padding: 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .auth-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .auth-section input {
+            background-color: white;
+            color: #333;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connected {
+            background-color: #4CAF50;
+        }
+        .status-disconnected {
+            background-color: #f44336;
+        }
+        .group-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .message-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .message-form input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+        .timestamp {
+            font-size: 11px;
+            color: #666;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 WebSocket Groups Test - Ruggine Server</h1>
+    
+    <!-- Sezione Autenticazione -->
+    <div class="auth-section">
+        <h3>🔐 Autenticazione</h3>
+        <p>Per testare il WebSocket dei gruppi, devi prima ottenere un token JWT tramite login:</p>
+        <div style="margin: 15px 0;">
+            <input type="email" id="email" placeholder="Email" value="test@example.com">
+            <input type="password" id="password" placeholder="Password" value="password123">
+            <button onclick="login()">🔑 Login</button>
+        </div>
+        <div style="margin: 15px 0;">
+            <strong>Token JWT:</strong><br>
+            <input type="text" id="jwtToken" placeholder="Inserisci il token JWT qui" style="width: 90%; margin-top: 10px;">
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Sezione Connessione WebSocket Groups -->
+        <div class="container">
+            <h3>📡 Connessione WebSocket Gruppo</h3>
+            <div class="group-section">
+                <label for="groupId"><strong>Group ID:</strong></label>
+                <input type="number" id="groupId" placeholder="ID del gruppo" value="1" min="1">
+                <div style="margin: 10px 0;">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="status">Disconnesso</span>
+                </div>
+            </div>
+            <div>
+                <button id="connectBtn" onclick="connectGroupWebSocket()" class="secondary-btn">
+                    🔗 Connetti al Gruppo
+                </button>
+                <button id="disconnectBtn" onclick="disconnectWebSocket()" class="danger-btn" disabled>
+                    ❌ Disconnetti
+                </button>
+            </div>
+        </div>
+
+        <!-- Sezione Test Messaggi -->
+        <div class="container">
+            <h3>💬 Crea Nuovo Messaggio</h3>
+            <div class="group-section">
+                <div class="message-form">
+                    <input type="number" id="messageGroupId" placeholder="Group ID" value="1" min="1" style="width: 100px;">
+                    <input type="text" id="messageContent" placeholder="Contenuto del messaggio" value="Ciao a tutti!">
+                    <button onclick="createMessage()" id="createMessageBtn">📤 Invia Messaggio</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sezione WebSocket Actions -->
+    <div class="container">
+        <h3>🎮 Azioni WebSocket</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="joinGroup()" id="joinGroupBtn" disabled>➕ Unisciti al Gruppo</button>
+            <button onclick="leaveGroup()" id="leaveGroupBtn" disabled>➖ Lascia il Gruppo</button>
+            <button onclick="sendPing()" id="pingBtn" disabled>🏓 Ping</button>
+            <button onclick="debugWebSocketState()" class="secondary-btn">🔍 Debug State</button>
+            <select id="testMessageType">
+                <option value="test">Test Message</option>
+                <option value="custom">Custom Message</option>
+            </select>
+            <input type="text" id="customMessage" placeholder="Messaggio personalizzato" value="Hello WebSocket!">
+            <button onclick="sendTestMessage()" id="sendTestBtn" disabled>🚀 Invia Test</button>
+        </div>
+    </div>
+
+    <!-- Sezione API Test -->
+    <div class="container">
+        <h3>🔧 Test API</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="number" id="apiGroupId" placeholder="Group ID" value="1" min="1" style="width: 100px;">
+            <button onclick="getGroupMessages()" class="secondary-btn">📋 Carica Messaggi</button>
+            <button onclick="getGroupMembers()" class="secondary-btn">👥 Membri Gruppo</button>
+            <button onclick="getWebSocketStats()" class="secondary-btn">📊 Statistiche WS</button>
+        </div>
+    </div>
+
+    <!-- Sezione Messaggi -->
+    <div class="container">
+        <h3>📨 Log Messaggi e Notifiche</h3>
+        <div style="margin-bottom: 10px;">
+            <button onclick="clearMessages()" class="danger-btn">🗑️ Pulisci Log</button>
+            <button onclick="toggleAutoScroll()" id="autoScrollBtn" class="secondary-btn">📜 Auto-scroll: ON</button>
+        </div>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let jwtToken = '';
+        let currentGroupId = null;
+        let autoScroll = true;
+        let userId = null;
+
+        function addMessage(message, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            
+            messagesDiv.appendChild(messageDiv);
+            
+            if (autoScroll) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            addMessage('📝 Log messaggi pulito', 'info');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('autoScrollBtn');
+            btn.textContent = `📜 Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+            if (autoScroll) {
+                document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                addMessage(`🔐 Tentativo di login con email: ${email}`, 'info');
+                const response = await fetch('http://127.0.0.1:8002/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    jwtToken = result.data.token;
+                    userId = result.data.user_id; // Assumendo che venga restituito
+                    document.getElementById('jwtToken').value = jwtToken;
+                    addMessage(`✅ Login riuscito! User ID: ${userId}`, 'success');
+                } else {
+                    const error = await response.text();
+                    addMessage(`❌ Errore login: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`🚫 Errore di rete: ${error.message}`, 'error');
+            }
+        }
+
+        function updateConnectionStatus(connected, groupId = null) {
+            const status = document.getElementById('status');
+            const indicator = document.getElementById('statusIndicator');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const wsButtons = ['joinGroupBtn', 'leaveGroupBtn', 'pingBtn', 'sendTestBtn'];
+            
+            if (connected) {
+                status.textContent = groupId ? `Connesso al Gruppo ${groupId}` : 'Connesso';
+                indicator.className = 'status-indicator status-connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                wsButtons.forEach(btnId => {
+                    document.getElementById(btnId).disabled = false;
+                });
+            } else {
+                status.textContent = 'Disconnesso';
+                indicator.className = 'status-indicator status-disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                wsButtons.forEach(btnId => {
+                    document.getElementById(btnId).disabled = true;
+                });
+            }
+        }
+
+        function connectGroupWebSocket() {
+            const token = document.getElementById('jwtToken').value || jwtToken;
+            const groupId = document.getElementById('groupId').value;
+            
+            if (!token) {
+                addMessage('❌ Devi prima inserire un token JWT!', 'error');
+                return;
+            }
+            
+            if (!groupId) {
+                addMessage('❌ Devi inserire un Group ID!', 'error');
+                return;
+            }
+
+            // Chiudi connessione esistente se presente
+            if (ws) {
+                ws.close();
+            }
+
+            currentGroupId = parseInt(groupId);
+            
+            // Crea nuova connessione WebSocket per il gruppo
+            const wsUrl = `ws://127.0.0.1:8002/api/ws/group/${groupId}?token=${encodeURIComponent(token)}`;
+            
+            addMessage(`🔗 Connessione al gruppo ${groupId}...`, 'info');
+            addMessage(`📡 URL: ${wsUrl}`, 'info');
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function(event) {
+                addMessage(`✅ WebSocket connesso al gruppo ${groupId}!`, 'success');
+                updateConnectionStatus(true, groupId);
+                
+                // Invia automaticamente JoinGroup al momento della connessione
+                setTimeout(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const joinMessage = { type: "join_group", group_id: currentGroupId };
+                        ws.send(JSON.stringify(joinMessage));
+                        addMessage(`📤 Auto-join al gruppo ${currentGroupId}`, 'sent');
+                    }
+                }, 100);
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (e) {
+                    addMessage(`📩 Messaggio ricevuto (raw): ${event.data}`, 'received');
+                }
+            };
+
+            ws.onclose = function(event) {
+                addMessage(`🔌 WebSocket chiuso. Code: ${event.code}, Reason: ${event.reason || 'Nessun motivo'}`, 'info');
+                updateConnectionStatus(false);
+                currentGroupId = null;
+            };
+
+            ws.onerror = function(error) {
+                addMessage(`❌ Errore WebSocket: ${error}`, 'error');
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            console.log('WebSocket message received:', data); // Debug log
+            
+            switch(data.type) {
+                case 'group_joined':
+                    addMessage(`✅ Ti sei unito al gruppo ${data.group_id}`, 'websocket-msg');
+                    break;
+                case 'group_left':
+                    addMessage(`👋 Hai lasciato il gruppo ${data.group_id}`, 'websocket-msg');
+                    break;
+                case 'new_message':
+                    const msg = data.message;
+                    addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${msg.group_chat_id}:<br>
+                              👤 <strong>${msg.sender_name || `User ${msg.sender_id}`}</strong>: "${msg.content}"<br>
+                              🕒 <span class="timestamp">${new Date(msg.sent_at).toLocaleString()}</span>`, 'new-message');
+                    
+                    // Suona un beep per avvisare del nuovo messaggio
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmcTl2CY');
+                        audio.play().catch(e => console.log('Audio play failed:', e));
+                    } catch (e) {}
+                    break;
+                case 'pong':
+                    addMessage(`🏓 Pong ricevuto`, 'websocket-msg');
+                    break;
+                case 'error':
+                    addMessage(`❌ Errore WebSocket: ${data.message}`, 'error');
+                    break;
+                default:
+                    addMessage(`📩 Messaggio WebSocket sconosciuto: ${JSON.stringify(data)}`, 'websocket-msg');
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function joinGroup() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ WebSocket non connesso!', 'error');
+                return;
+            }
+
+            const message = { type: "join_group", group_id: currentGroupId };
+            ws.send(JSON.stringify(message));
+            addMessage(`📤 Richiesta di unirsi al gruppo ${currentGroupId}`, 'sent');
+        }
+
+        function leaveGroup() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ WebSocket non connesso!', 'error');
+                return;
+            }
+
+            const message = { type: "leave_group", group_id: currentGroupId };
+            ws.send(JSON.stringify(message));
+            addMessage(`📤 Richiesta di lasciare il gruppo ${currentGroupId}`, 'sent');
+        }
+
+        function sendPing() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ WebSocket non connesso!', 'error');
+                return;
+            }
+
+            const message = { type: "ping" };
+            ws.send(JSON.stringify(message));
+            addMessage(`📤 Ping inviato`, 'sent');
+        }
+
+        function sendTestMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ WebSocket non connesso!', 'error');
+                return;
+            }
+
+            const messageType = document.getElementById('testMessageType').value;
+            let message;
+
+            if (messageType === 'test') {
+                message = { 
+                    type: "Test", 
+                    message: document.getElementById('customMessage').value 
+                };
+            } else {
+                message = JSON.parse(document.getElementById('customMessage').value);
+            }
+
+            ws.send(JSON.stringify(message));
+            addMessage(`📤 Messaggio test inviato: ${JSON.stringify(message)}`, 'sent');
+        }
+
+        async function createMessage() {
+            const token = document.getElementById('jwtToken').value || jwtToken;
+            const groupId = document.getElementById('messageGroupId').value;
+            const content = document.getElementById('messageContent').value;
+            
+            if (!token) {
+                addMessage('❌ Token JWT mancante!', 'error');
+                return;
+            }
+            
+            if (!groupId || !content) {
+                addMessage('❌ Group ID e contenuto sono obbligatori!', 'error');
+                return;
+            }
+
+            try {
+                addMessage(`📤 Creazione messaggio per gruppo ${groupId}...`, 'info');
+                const response = await fetch('http://127.0.0.1:8002/api/text_message/create', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        group_chat_id: parseInt(groupId)
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(`✅ Messaggio creato con successo! ID: ${result.data.id}`, 'success');
+                    document.getElementById('messageContent').value = '';
+                } else {
+                    const error = await response.text();
+                    addMessage(`❌ Errore creazione messaggio: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`🚫 Errore di rete: ${error.message}`, 'error');
+            }
+        }
+
+        async function getGroupMessages() {
+            const token = document.getElementById('jwtToken').value || jwtToken;
+            const groupId = document.getElementById('apiGroupId').value;
+            
+            if (!token || !groupId) {
+                addMessage('❌ Token e Group ID sono necessari!', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8002/api/text_message/group/${groupId}/messages`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(`📋 Messaggi del gruppo ${groupId}: ${result.data.length} messaggi trovati`, 'info');
+                    result.data.slice(0, 3).forEach(msg => {
+                        addMessage(`💬 "${msg.content}" - da User ${msg.sender_id} (${new Date(msg.sent_at).toLocaleString()})`, 'info');
+                    });
+                } else {
+                    const error = await response.text();
+                    addMessage(`❌ Errore caricamento messaggi: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`🚫 Errore di rete: ${error.message}`, 'error');
+            }
+        }
+
+        async function getGroupMembers() {
+            const token = document.getElementById('jwtToken').value || jwtToken;
+            const groupId = document.getElementById('apiGroupId').value;
+            
+            if (!token || !groupId) {
+                addMessage('❌ Token e Group ID sono necessari!', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8002/api/group_membership/group/${groupId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(`👥 Membri del gruppo ${groupId}: ${result.data.length} membri`, 'info');
+                } else {
+                    const error = await response.text();
+                    addMessage(`❌ Errore caricamento membri: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`🚫 Errore di rete: ${error.message}`, 'error');
+            }
+        }
+
+        async function getWebSocketStats() {
+            const token = document.getElementById('jwtToken').value || jwtToken;
+            
+            if (!token) {
+                addMessage('❌ Token JWT necessario!', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8002/api/ws/stats', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addMessage(`📊 Statistiche WebSocket: ${JSON.stringify(result, null, 2)}`, 'info');
+                } else {
+                    const error = await response.text();
+                    addMessage(`❌ Errore stats: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`🚫 Errore di rete: ${error.message}`, 'error');
+            }
+        }
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConnectionStatus(false);
+            addMessage('🚀 Test WebSocket Groups inizializzato!', 'info');
+            addMessage('📝 1. Fai login per ottenere il token JWT', 'info');
+            addMessage('📝 2. Inserisci un Group ID e connettiti', 'info');
+            addMessage('📝 3. Il sistema si unirà automaticamente al gruppo', 'info');
+            addMessage('📝 4. Crea messaggi e osserva le notifiche in tempo reale!', 'info');
+            
+            // Test periodico della connessione WebSocket
+            setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN && currentGroupId) {
+                    // Invia un ping ogni 30 secondi per mantenere viva la connessione
+                    sendPing();
+                }
+            }, 30000);
+        });
+        
+        // Gestione della riconnessione automatica
+        function attemptReconnect() {
+            if (currentGroupId && !ws) {
+                addMessage('🔄 Tentativo di riconnessione automatica...', 'info');
+                setTimeout(() => {
+                    const groupIdField = document.getElementById('groupId');
+                    if (groupIdField.value) {
+                        connectGroupWebSocket();
+                    }
+                }, 3000);
+            }
+        }
+        
+        // Debug function
+        function debugWebSocketState() {
+            if (ws) {
+                addMessage(`🔍 WebSocket State: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`, 'info');
+                addMessage(`🔍 Current Group: ${currentGroupId || 'None'}`, 'info');
+                addMessage(`🔍 User ID: ${userId || 'Unknown'}`, 'info');
+            } else {
+                addMessage(`🔍 WebSocket: Not initialized`, 'info');
+            }
+        }
+    </script>
+</body>
+</html>

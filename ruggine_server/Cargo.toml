@@ -8,7 +8,7 @@ name = "ruggine_server"
 path = "src/lib.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.7", features = ["macros", "ws"] }
 headers = "0.4"
 hyper = { version = "1.0", features = ["http1", "http2", "server", "client"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
@@ -43,6 +43,8 @@ utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 strum = "0.25"
 strum_macros = "0.25"
 futures = "0.3"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+tokio-util = "0.7"
 
 [dev-dependencies]
 # Test-specific dependencies

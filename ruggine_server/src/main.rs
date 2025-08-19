@@ -21,6 +21,7 @@ mod handler;
 mod factory;
 mod model;
 mod utils;
+mod websocket;
 
 #[tokio::main]
 async fn main() {

@@ -1,11 +1,15 @@
 use crate::config::database::Database;
 use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
+use crate::service::websocket::WebSocketGroupService;
+use crate::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
+use crate::websocket::WebSocketManager;
 use std::sync::Arc;
 use crate::utils::service_initializer::ServiceInitializer;
 
 #[derive(Clone)]
 pub struct TextMessageState {
     pub text_message_service: Arc<dyn TextMessageServiceTrait>,
+    pub websocket_group_service: Option<Arc<WebSocketGroupService>>,
 }
 
 impl TextMessageState {
@@ -15,7 +19,13 @@ impl TextMessageState {
 
         Self {
             text_message_service,
+            websocket_group_service: None, // Sarà impostato quando necessario
         }
+    }
+
+    pub fn with_websocket_service(mut self, websocket_group_service: Arc<WebSocketGroupService>) -> Self {
+        self.websocket_group_service = Some(websocket_group_service);
+        self
     }
 
     pub fn with_dependencies(
@@ -23,6 +33,7 @@ impl TextMessageState {
     ) -> Self {
         Self {
             text_message_service,
+            websocket_group_service: None,
         }
     }
 }

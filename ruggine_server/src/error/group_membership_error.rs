@@ -27,7 +27,7 @@ impl IntoResponse for GroupMembershipError {
             GroupMembershipError::GroupMembershipNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::InvitationNotOwnedByUser => StatusCode::FORBIDDEN,
             GroupMembershipError::InvitationNotFound => StatusCode::NOT_FOUND,
-            GroupMembershipError::GroupNotFound => StatusCode::UNPROCESSABLE_ENTITY,
+            GroupMembershipError::GroupNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::UserAlreadyInGroup => StatusCode::CONFLICT,
             GroupMembershipError::UserAlreadyLeftGroup => StatusCode::CONFLICT,
         };

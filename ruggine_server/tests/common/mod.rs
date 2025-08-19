@@ -235,7 +235,7 @@ pub async fn cleanup_group_chat(group_id: i32) {
     
 }
 
-pub async fn leave_user_from_a_group(user_id: i32, group_id: i32) {
+pub async fn test_user_leave_from_a_group(user_id: i32, group_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let group_membership_service = service_init.group_membership_service();
@@ -452,6 +452,12 @@ pub async fn cleanup_test_users(user_ids: Vec<i32>) {
     for user_id in user_ids {
         cleanup_user(user_id).await;
     }
+}
+
+/// Helper function to create a real group membership state with database connections
+pub async fn create_group_membership_state() -> GroupMembershipState {
+    let db = get_database().await;
+    GroupMembershipState::new(&db)
 }
 
 pub async fn create_test_users_for_a_group(

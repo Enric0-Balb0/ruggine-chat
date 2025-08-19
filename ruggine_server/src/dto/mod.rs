@@ -14,6 +14,7 @@ pub mod invitation_dto;
 pub mod group_membership_dto;
 pub mod text_message_dto;
 pub mod text_message_pagination_dto;
+pub mod websocket;
 
 api_success_response_alias!(ApiSuccessResponseUserReadDto, UserReadDto);
 api_success_response_alias!(ApiSuccessResponseUserUpdateDto, ProfileUpdateDto);

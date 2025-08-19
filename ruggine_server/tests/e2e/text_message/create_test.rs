@@ -14,7 +14,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod create_text_message_e2e_tests {
-    use crate::leave_user_from_a_group;
+    use crate::test_user_leave_from_a_group;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -222,7 +222,7 @@ mod create_text_message_e2e_tests {
         let group = create_test_group_chat_with_invitation_and_membership("e2e_create_left_group", user.id).await;
         
         // Make the user leave the group (set membership status to Left)
-        leave_user_from_a_group(user.id, group.id).await;
+        test_user_leave_from_a_group(user.id, group.id).await;
         
         let payload = json!({
             "content": "Test message from non-active member",
