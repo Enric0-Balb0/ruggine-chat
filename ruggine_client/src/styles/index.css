@@ -6,8 +6,115 @@
 @import './base.css';
 @import './components.css';
 
-
 /* Form Controls - Select and Date inputs */
+html.dark select {
+  color: #c8c6c4 !important;
+  background-color: #333333 !important;
+  color-scheme: light !important;
+}
+
+html.dark select option {
+  color: #c8c6c4 !important;
+  background-color: #333333 !important;
+}
+
+html.dark input[type="date"] {
+  color: #c8c6c4 !important;
+  background-color: #333333 !important;
+  color-scheme: light !important;
+}
+
+html.dark input[type="date"]::-webkit-datetime-edit,
+html.dark input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+html.dark input[type="date"]::-webkit-datetime-edit-text,
+html.dark input[type="date"]::-webkit-datetime-edit-month-field,
+html.dark input[type="date"]::-webkit-datetime-edit-day-field,
+html.dark input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #c8c6c4 !important;
+  background: transparent !important;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) !important;
+}
+
+/* Placeholder Styles */
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #c8c6c4 !important;
+  opacity: 0.8;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8a8886;
+  opacity: 0.7;
+}
+
+/* ===== DARK MODE GLOBAL STYLES ===== */
+
+/* Text Input Controls */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"] {
+  color: #ffffff !important;
+}
+
+.dark textarea {
+  color: #ffffff !important;
+}
+
+/* ===== GLOBAL SCROLLBAR STYLES ===== */
+
+/* Light Mode Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(243, 242, 241, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(138, 136, 134, 0.6);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 136, 134, 0.8);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(138, 136, 134, 1);
+  background-clip: content-box;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+.dark ::-webkit-scrollbar-thumb:active {
+  background: #666666;
+}
 html.dark select {
   color: #c8c6c4 !important;
   background-color: #333333 !important;

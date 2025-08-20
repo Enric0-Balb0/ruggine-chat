@@ -167,6 +167,24 @@ impl UserProfile {
         format!("{} {}", self.first_name, self.last_name)
     }
 
+    /// Get personalized welcome message based on gender
+    pub fn welcome_message(&self) -> String {
+        match self.gender {
+            Gender::Male => format!("Benvenuto, {}!", self.first_name),
+            Gender::Female => format!("Benvenuta, {}!", self.first_name),
+            Gender::Other => format!("Benvenuto/a, {}!", self.first_name),
+        }
+    }
+
+    /// Get personalized welcome message for successful login/registration
+    pub fn welcome_message_success(&self) -> String {
+        match self.gender {
+            Gender::Male => format!("Benvenuto {}!", self.first_name),
+            Gender::Female => format!("Benvenuta {}!", self.first_name),
+            Gender::Other => format!("Benvenuto/a {}!", self.first_name),
+        }
+    }
+
     /// Check if user is active
     pub fn is_active(&self) -> bool {
         self.user_status == UserStatus::Active
@@ -225,6 +243,75 @@ mod tests {
         assert!(!user.is_admin());
         assert!(!user.is_developer());
         assert!(user.is_end_user());
+    }
+
+    #[test]
+    fn test_user_profile_welcome_messages() {
+        // Test male user
+        let male_user = UserProfile {
+            id: 1,
+            email: "john@example.com".to_string(),
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
+            username: "johndoe".to_string(),
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "123 Test St".to_string(),
+            gender: Gender::Male,
+            user_type: UserType::EndUser,
+            user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
+            is_online: true,
+            created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            last_login: None,
+        };
+        
+        assert_eq!(male_user.welcome_message(), "Benvenuto, John!");
+        assert_eq!(male_user.welcome_message_success(), "Benvenuto John!");
+
+        // Test female user
+        let female_user = UserProfile {
+            id: 2,
+            email: "jane@example.com".to_string(),
+            first_name: "Jane".to_string(),
+            last_name: "Doe".to_string(),
+            username: "janedoe".to_string(),
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "456 Test St".to_string(),
+            gender: Gender::Female,
+            user_type: UserType::EndUser,
+            user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
+            is_online: true,
+            created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            last_login: None,
+        };
+        
+        assert_eq!(female_user.welcome_message(), "Benvenuta, Jane!");
+        assert_eq!(female_user.welcome_message_success(), "Benvenuta Jane!");
+
+        // Test other gender user
+        let other_user = UserProfile {
+            id: 3,
+            email: "alex@example.com".to_string(),
+            first_name: "Alex".to_string(),
+            last_name: "Smith".to_string(),
+            username: "alexsmith".to_string(),
+            birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
+            address: "789 Test St".to_string(),
+            gender: Gender::Other,
+            user_type: UserType::EndUser,
+            user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
+            is_online: true,
+            created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
+            last_login: None,
+        };
+        
+        assert_eq!(other_user.welcome_message(), "Benvenuto/a, Alex!");
+        assert_eq!(other_user.welcome_message_success(), "Benvenuto/a Alex!");
     }
 
     #[test]

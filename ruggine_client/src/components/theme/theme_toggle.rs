@@ -1,5 +1,6 @@
 use leptos::*;
 use crate::utils::{use_theme, Theme};
+use crate::components::LucideIcon;
 
 /// Theme toggle button component
 #[component]
@@ -13,11 +14,11 @@ pub fn ThemeToggle() -> impl IntoView {
         }
     };
 
-    let icon = {
+    let icon_name = {
         let theme = theme_ctx.theme;
         move || match theme.get() {
-            Theme::Light => "🌙", // Moon for switching to dark
-            Theme::Dark => "☀️",  // Sun for switching to light
+            Theme::Light => "moon", // Moon for switching to dark
+            Theme::Dark => "sun",  // Sun for switching to light
         }
     };
 
@@ -35,9 +36,7 @@ pub fn ThemeToggle() -> impl IntoView {
             on:click=toggle_theme
             title=tooltip
         >
-            <span class="text-lg">
-                {icon}
-            </span>
+            <LucideIcon name=icon_name() size=20 class="text-white" />
         </button>
     }
 }

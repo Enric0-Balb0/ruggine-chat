@@ -1,8 +1,8 @@
 use leptos::*;
-use crate::components::{AppNavbar, Sidebar, CreateGroupModal, use_toast};
+use crate::components::{AppNavbar, Sidebar, CreateGroupModal, ChatView, use_toast};
 use crate::types::group::GroupChatCreateRequest;
 use crate::api::facade::RuggineApiClient;
-use crate::hooks::provide_groups_context;
+use crate::hooks::{provide_groups_context, use_groups_list};
 
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -15,6 +15,16 @@ pub fn HomePage() -> impl IntoView {
     
     // Use the groups hook from context
     let groups_hook = groups_context.groups_hook.clone();
+    let groups_list = use_groups_list(&groups_hook);
+    let active_group_id = groups_hook.active_group_id;
+    
+    // Get current user for personalized welcome message
+    let current_user = api_client_instance.auth_service.get_current_user();
+    let welcome_title = if let Some(user) = &current_user {
+        user.welcome_message()
+    } else {
+        "Benvenuto/a in Ruggine".to_string()
+    };
     
     // Recupera il token dal storage se esiste e imposta l'autenticazione
     if let Some(token_response) = api_client_instance.storage_service.get_token() {
@@ -58,17 +68,13 @@ pub fn HomePage() -> impl IntoView {
                     Ok(_group) => {
                         toast.success(&format!("Gruppo '{}' creato con successo!", group_name));
                         
-                        // ✅ Aggiorna automaticamente la lista dei gruppi nella sidebar
-                        logging::log!("Refreshing groups list after successful group creation");
                         groups_hook.refresh_groups.dispatch(());
                         
                         // TODO: Reindirizzare al nuovo gruppo creato
                         set_is_modal_open.set(false);
                     }
-                    Err(error) => {
-                        leptos::logging::error!("Error creating group: {:?}", error);
+                    Err(_error) => {
                         toast.error(&format!("Errore nella creazione del gruppo '{}'. Riprova.", group_name));
-                        // Keep the modal open so user can retry
                     }
                 }
                 
@@ -89,18 +95,46 @@ pub fn HomePage() -> impl IntoView {
                     <AppNavbar />
 
                     // Main Content Area
-                    <div class="flex-1 bg-white dark:bg-bg-main-dark flex items-center justify-center">
-                        <div class="text-center max-w-md">
-                            <div class="w-16 h-16 bg-brand-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span class="text-white text-xl font-bold">"💬"</span>
-                            </div>
-                            <h1 class="text-2xl font-bold text-text-primary dark:text-text-primary-dark mb-4">
-                                "Benvenuto in Ruggine"
-                            </h1>
-                            <p class="text-text-secondary dark:text-text-secondary-dark mb-6">
-                                "Seleziona un team dalla sidebar per iniziare una conversazione, oppure crea un nuovo team."
-                            </p>
-                        </div>
+                    <div class="flex-1 bg-white dark:bg-bg-main-dark">
+                        {move || {
+                            if let Some(active_id) = active_group_id.get() {
+                                // Find the selected group in the groups list
+                                let groups = groups_list.get();
+                                if let Some(selected_group) = groups.iter().find(|g| g.membership.group_chat_id == active_id) {
+                                    view! {
+                                        <ChatView group_data=selected_group.clone() />
+                                    }.into_view()
+                                } else {
+                                    // Group is selected but not found in list (shouldn't happen)
+                                    view! {
+                                        <div class="flex items-center justify-center h-full">
+                                            <div class="text-center">
+                                                <p class="text-text-secondary dark:text-text-secondary-dark">
+                                                    "Gruppo non trovato. Seleziona un altro gruppo."
+                                                </p>
+                                            </div>
+                                        </div>
+                                    }.into_view()
+                                }
+                            } else {
+                                // No group selected - show welcome screen
+                                view! {
+                                    <div class="flex items-center justify-center h-full">
+                                        <div class="text-center max-w-md">
+                                            <div class="w-16 h-16 bg-brand-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <span class="text-white text-xl font-bold">"💬"</span>
+                                            </div>
+                                            <h1 class="text-2xl font-bold text-text-primary dark:text-text-primary-dark mb-4">
+                                                {welcome_title.clone()}
+                                            </h1>
+                                            <p class="text-text-secondary dark:text-text-secondary-dark mb-6">
+                                                "Seleziona un team dalla sidebar per iniziare una conversazione, oppure crea un nuovo team."
+                                            </p>
+                                        </div>
+                                    </div>
+                                }.into_view()
+                            }
+                        }}
                     </div>
                 </div>
             </div>
