@@ -30,7 +30,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Act: Find all memberships for the group (authenticated as member)
-        let result = service.find_by_group_id(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Verify single membership was found
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -73,7 +73,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let membership3 = create_test_group_membership(invitation3.id, member3_user.id).await;
 
         // Act: Find all memberships for the group (authenticated as first member)
-        let result = service.find_by_group_id(group_chat.id, member1_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, member1_user.id).await;
 
         // Assert: Verify all memberships were found
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -118,7 +118,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let non_existent_group_id = 999999;
 
         // Act: Try to find memberships for non-existent group
-        let result = service.find_by_group_id(non_existent_group_id, user.id).await;
+        let result = service.find_by_group_id_checked(non_existent_group_id, user.id).await;
 
         // Assert: Should return group not found error
         assert!(result.is_err());
@@ -143,7 +143,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_no_member", owner_user.id).await;
 
         // Act: Try to access group memberships as non-member
-        let result = service.find_by_group_id(group_chat.id, unauthorized_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, unauthorized_user.id).await;
 
         // Assert: Should return user not in group error
         assert!(result.is_err());
@@ -175,7 +175,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Act: Find memberships in group with only one member
-        let result = service.find_by_group_id(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Should return one membership (the auth user)
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -220,7 +220,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let _leave_result = service.leave_group(leave_dto, left_user.id).await;
 
         // Act: Find memberships as active user
-        let result = service.find_by_group_id(group_chat.id, active_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, active_user.id).await;
 
         // Assert: Should only return active memberships
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -269,7 +269,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let _leave_result = service.leave_group(leave_dto, member_user.id).await;
 
         // Act: Try to access group memberships as user who left
-        let result = service.find_by_group_id(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Should return error because user has left the group
         assert!(result.is_err());

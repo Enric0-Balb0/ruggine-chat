@@ -28,6 +28,6 @@ pub async fn find_by_group_id(
     State(state): State<GroupMembershipState>,
     Path(group_id): Path<i32>,
 ) -> Result<Json<ApiSuccessResponseVecGroupMembershipReadDto>, ApiError> {
-    let group_memberships = state.group_membership_service.find_by_group_id(group_id, current_user.id).await?;
+    let group_memberships = state.group_membership_service.find_by_group_id_checked(group_id, current_user.id).await?;
     Ok(Json(ApiSuccessResponseVecGroupMembershipReadDto { data: group_memberships }))
 }

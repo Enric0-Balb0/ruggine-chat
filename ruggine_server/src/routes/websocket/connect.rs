@@ -1,4 +1,4 @@
-use axum::{
+/*use axum::{
     extract::{State, WebSocketUpgrade, Query},
     response::Response,
     routing::get,
@@ -12,7 +12,7 @@ use tracing::{info, warn};
 use crate::{
     dto::websocket::WebSocketQuery, 
     state::websocket::WebSocketState,
-    websocket::core::{connection::handle_websocket_connection, manager::WebSocketManager}
+    websocket::core::{connection::WebSocketConnection, manager::WebSocketManager}
 };
 
 /// Routes per la connessione WebSocket
@@ -73,3 +73,4 @@ async fn handle_websocket_upgrade(
     
     info!("WebSocket connection closed for user {}", user_id);
 }
+*/

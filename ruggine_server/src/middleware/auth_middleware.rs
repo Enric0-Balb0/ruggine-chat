@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::entity::user::{UserStatus, UserType};
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
@@ -31,21 +32,37 @@ pub async fn auth_inner(
     mut req: Request<Body>,
     allowed_user_types: Vec<UserType>,
 ) -> Result<Request<Body>, ApiError> {
-    let auth_header = req
+    let token_opt = req
         .headers()
         .get(http::header::AUTHORIZATION)
-        .ok_or(TokenError::MissingToken)?;
+        .and_then(|h| h.to_str().ok())
+        .map(|h| {
+            if h.to_lowercase().starts_with("bearer ") {
+                Some(h[7..].to_string())
+            } else {
+                None
+            }
+        })
+        .flatten();
 
-    // Decode the header into Authorization<Bearer>
-    let header = Authorization::<Bearer>::decode(&mut std::iter::once(auth_header))
-        .map_err(|_| TokenError::MissingToken)?;
-
-    let token = header.token();
+    let token = if let Some(token) = token_opt {
+        token
+    } else if let Some(query) = req.uri().query() {
+        let params: HashMap<_, _> = form_urlencoded::parse(query.as_bytes())
+            .into_owned()
+            .collect();
+        params
+            .get("token")
+            .ok_or(TokenError::MissingToken)?
+            .to_string()
+    } else {
+        return Err(TokenError::MissingToken.into());
+    };
 
     // Validate the token and retrieve claims
     let token_data = state
         .token_service
-        .retrieve_token_claims(token)
+        .retrieve_token_claims(&token)
         .map_err(|err| match err.kind() {
             ErrorKind::ExpiredSignature => TokenError::TokenExpired,
             _ => TokenError::InvalidToken(token.to_string()),
@@ -455,6 +472,70 @@ mod tests {
             // Expected error
         } else {
             panic!("Expected UserError::InsufficientPermissions");
+        }
+    }
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_token_in_query_success() {
+        let mut mock_token_service = MockTokenServiceTrait::new();
+        mock_token_service
+            .expect_retrieve_token_claims()
+            .returning(|_| Ok(TokenFactory::fake_token_data()));
+
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        mock_user_repo.expect_find_by_email().returning(|_| {
+            Box::pin(async {
+                let mut user = UserFactory::fake_user();
+                user.user_status = UserStatus::Active;
+                Some(user)
+            })
+        });
+
+        let state = TokenState {
+            token_service: Arc::new(mock_token_service),
+            user_repo: Arc::new(mock_user_repo),
+        };
+
+        // Qui il token non è nell'header, ma nella query
+        let req = Request::builder()
+            .uri("/?token=validtoken")
+            .body(Body::empty())
+            .unwrap();
+
+        let req_with_user = auth_inner(&state, req, all_user_types()).await.expect("Auth failed");
+
+        // Verifica che l'user sia stato inserito nelle extensions
+        assert!(req_with_user.extensions().get::<User>().is_some());
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_token_in_query_invalid_token() {
+        let mut mock_token_service = MockTokenServiceTrait::new();
+        mock_token_service
+            .expect_retrieve_token_claims()
+            .returning(|_| {
+                let error = jsonwebtoken::errors::Error::from(ErrorKind::InvalidToken);
+                Err(error)
+            });
+
+        let mock_user_repo = MockUserRepositoryTrait::new();
+
+        let state = TokenState {
+            token_service: Arc::new(mock_token_service),
+            user_repo: Arc::new(mock_user_repo),
+        };
+
+        let req = Request::builder()
+            .uri("/?token=invalidtoken")
+            .body(Body::empty())
+            .unwrap();
+
+        let result = auth_inner(&state, req, all_user_types()).await;
+        assert!(result.is_err());
+
+        if let Err(ApiError::TokenError(TokenError::InvalidToken(_))) = result {
+            // Expected error
+        } else {
+            panic!("Expected TokenError::InvalidToken");
         }
     }
 

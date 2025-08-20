@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Groups Test - Ruggine Server</title>
+    <title>WebSocket Universal Groups Test - Ruggine Server</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -158,12 +158,12 @@
     </style>
 </head>
 <body>
-    <h1>🚀 WebSocket Groups Test - Ruggine Server</h1>
+    <h1>🚀 WebSocket Universal Groups Test - Ruggine Server</h1>
     
     <!-- Sezione Autenticazione -->
     <div class="auth-section">
         <h3>🔐 Autenticazione</h3>
-        <p>Per testare il WebSocket dei gruppi, devi prima ottenere un token JWT tramite login:</p>
+        <p>Per testare il WebSocket universale, devi prima ottenere un token JWT tramite login:</p>
         <div style="margin: 15px 0;">
             <input type="email" id="email" placeholder="Email" value="test@example.com">
             <input type="password" id="password" placeholder="Password" value="password123">
@@ -178,10 +178,10 @@
     <div class="grid">
         <!-- Sezione Connessione WebSocket Groups -->
         <div class="container">
-            <h3>📡 Connessione WebSocket Gruppo</h3>
+            <h3>📡 Connessione WebSocket Gruppi</h3>
             <div class="group-section">
-                <label for="groupId"><strong>Group ID:</strong></label>
-                <input type="number" id="groupId" placeholder="ID del gruppo" value="1" min="1">
+                <p><strong>Modalità:</strong> Connessione universale a tutti i gruppi</p>
+                <p><small>💡 Una volta connesso, riceverai notifiche da tutti i gruppi di cui fai parte</small></p>
                 <div style="margin: 10px 0;">
                     <span class="status-indicator" id="statusIndicator"></span>
                     <span id="status">Disconnesso</span>
@@ -189,7 +189,7 @@
             </div>
             <div>
                 <button id="connectBtn" onclick="connectGroupWebSocket()" class="secondary-btn">
-                    🔗 Connetti al Gruppo
+                    🔗 Connetti ai Gruppi
                 </button>
                 <button id="disconnectBtn" onclick="disconnectWebSocket()" class="danger-btn" disabled>
                     ❌ Disconnetti
@@ -206,6 +206,9 @@
                     <input type="text" id="messageContent" placeholder="Contenuto del messaggio" value="Ciao a tutti!">
                     <button onclick="createMessage()" id="createMessageBtn">📤 Invia Messaggio</button>
                 </div>
+                <div style="margin-top: 10px;">
+                    <small>💡 I messaggi vengono inviati tramite API REST. Una volta inviati, verranno notificati via WebSocket a tutti i membri connessi del gruppo specificato.</small>
+                </div>
             </div>
         </div>
     </div>
@@ -214,15 +217,18 @@
     <div class="container">
         <h3>🎮 Azioni WebSocket</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="joinGroup()" id="joinGroupBtn" disabled>➕ Unisciti al Gruppo</button>
-            <button onclick="leaveGroup()" id="leaveGroupBtn" disabled>➖ Lascia il Gruppo</button>
+            <button onclick="joinGroup()" id="joinGroupBtn" disabled>➕ Unisciti ai Gruppi</button>
+            <button onclick="leaveGroup()" id="leaveGroupBtn" disabled>➖ Lascia i Gruppi</button>
             <button onclick="sendPing()" id="pingBtn" disabled>🏓 Ping</button>
             <button onclick="debugWebSocketState()" class="secondary-btn">🔍 Debug State</button>
             <select id="testMessageType">
                 <option value="test">Test Message</option>
-                <option value="custom">Custom Message</option>
+                <option value="ping">Ping</option>
+                <option value="join_group">Join Group</option>
+                <option value="leave_group">Leave Group</option>
+                <option value="custom">Custom JSON</option>
             </select>
-            <input type="text" id="customMessage" placeholder="Messaggio personalizzato" value="Hello WebSocket!">
+            <input type="text" id="customMessage" placeholder='{"type":"request","request_id":"test_123","action":"join_group"}' value="Hello WebSocket!" style="width: 300px;">
             <button onclick="sendTestMessage()" id="sendTestBtn" disabled>🚀 Invia Test</button>
         </div>
     </div>
@@ -313,7 +319,7 @@
             }
         }
 
-        function updateConnectionStatus(connected, groupId = null) {
+        function updateConnectionStatus(connected) {
             const status = document.getElementById('status');
             const indicator = document.getElementById('statusIndicator');
             const connectBtn = document.getElementById('connectBtn');
@@ -321,12 +327,13 @@
             const wsButtons = ['joinGroupBtn', 'leaveGroupBtn', 'pingBtn', 'sendTestBtn'];
             
             if (connected) {
-                status.textContent = groupId ? `Connesso al Gruppo ${groupId}` : 'Connesso';
+                status.textContent = 'Connesso a tutti i gruppi';
                 indicator.className = 'status-indicator status-connected';
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
                 wsButtons.forEach(btnId => {
-                    document.getElementById(btnId).disabled = false;
+                    const btn = document.getElementById(btnId);
+                    if (btn) btn.disabled = false;
                 });
             } else {
                 status.textContent = 'Disconnesso';
@@ -334,22 +341,17 @@
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
                 wsButtons.forEach(btnId => {
-                    document.getElementById(btnId).disabled = true;
+                    const btn = document.getElementById(btnId);
+                    if (btn) btn.disabled = true;
                 });
             }
         }
 
         function connectGroupWebSocket() {
             const token = document.getElementById('jwtToken').value || jwtToken;
-            const groupId = document.getElementById('groupId').value;
             
             if (!token) {
                 addMessage('❌ Devi prima inserire un token JWT!', 'error');
-                return;
-            }
-            
-            if (!groupId) {
-                addMessage('❌ Devi inserire un Group ID!', 'error');
                 return;
             }
 
@@ -358,28 +360,21 @@
                 ws.close();
             }
 
-            currentGroupId = parseInt(groupId);
+            currentGroupId = null; // Non più legato a un gruppo specifico
             
-            // Crea nuova connessione WebSocket per il gruppo
-            const wsUrl = `ws://127.0.0.1:8002/api/ws/group/${groupId}?token=${encodeURIComponent(token)}`;
+            // Crea nuova connessione WebSocket per tutti i gruppi
+            const wsUrl = `ws://127.0.0.1:8002/api/ws/group?token=${encodeURIComponent(token)}`;
             
-            addMessage(`🔗 Connessione al gruppo ${groupId}...`, 'info');
+            addMessage(`🔗 Connessione a tutti i gruppi...`, 'info');
             addMessage(`📡 URL: ${wsUrl}`, 'info');
             
             ws = new WebSocket(wsUrl);
 
             ws.onopen = function(event) {
-                addMessage(`✅ WebSocket connesso al gruppo ${groupId}!`, 'success');
-                updateConnectionStatus(true, groupId);
+                addMessage(`✅ WebSocket connesso a tutti i gruppi!`, 'success');
+                updateConnectionStatus(true);
                 
-                // Invia automaticamente JoinGroup al momento della connessione
-                setTimeout(() => {
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        const joinMessage = { type: "join_group", group_id: currentGroupId };
-                        ws.send(JSON.stringify(joinMessage));
-                        addMessage(`📤 Auto-join al gruppo ${currentGroupId}`, 'sent');
-                    }
-                }, 100);
+                addMessage(`🔗 Connessione WebSocket stabilita. Ora puoi inviare messaggi.`, 'info');
             };
 
             ws.onmessage = function(event) {
@@ -407,33 +402,89 @@
             console.log('WebSocket message received:', data); // Debug log
             
             switch(data.type) {
+                case 'response':
+                    if (data.ok) {
+                        addMessage(`✅ Risposta positiva (ID: ${data.request_id}): ${JSON.stringify(data.data || {})}`, 'websocket-msg');
+                    } else {
+                        addMessage(`❌ Risposta errore (ID: ${data.request_id}): ${data.error?.message || 'Errore sconosciuto'}`, 'error');
+                    }
+                    break;
+                case 'event':
+                    handleServerEvent(data);
+                    break;
+                case 'control':
+                    handleControlMessage(data);
+                    break;
+                // Manteniamo la compatibilità con i vecchi formati
                 case 'group_joined':
-                    addMessage(`✅ Ti sei unito al gruppo ${data.group_id}`, 'websocket-msg');
+                    addMessage(`✅ Ti sei unito ai gruppi con successo!`, 'websocket-msg');
                     break;
                 case 'group_left':
-                    addMessage(`👋 Hai lasciato il gruppo ${data.group_id}`, 'websocket-msg');
+                    addMessage(`👋 Hai lasciato i gruppi con successo!`, 'websocket-msg');
                     break;
                 case 'new_message':
-                    const msg = data.message;
-                    addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${msg.group_chat_id}:<br>
-                              👤 <strong>${msg.sender_name || `User ${msg.sender_id}`}</strong>: "${msg.content}"<br>
-                              🕒 <span class="timestamp">${new Date(msg.sent_at).toLocaleString()}</span>`, 'new-message');
-                    
-                    // Suona un beep per avvisare del nuovo messaggio
-                    try {
-                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmcTl2CY');
-                        audio.play().catch(e => console.log('Audio play failed:', e));
-                    } catch (e) {}
+                    addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${data.group_id}:<br>
+                              👤 <strong>${data.sender_username || `User ${data.sender_id}`}</strong>: "${data.content}"<br>
+                              🕒 <span class="timestamp">${new Date(data.sent_at).toLocaleString()}</span>`, 'new-message');
+                    playNotificationSound();
                     break;
                 case 'pong':
                     addMessage(`🏓 Pong ricevuto`, 'websocket-msg');
                     break;
+                case 'test':
+                    addMessage(`🧪 Test ricevuto: "${data.message}"`, 'websocket-msg');
+                    break;
                 case 'error':
-                    addMessage(`❌ Errore WebSocket: ${data.message}`, 'error');
+                    if (data.message) {
+                        addMessage(`❌ Errore WebSocket: ${data.message}`, 'error');
+                    } else {
+                        addMessage(`❌ Errore WebSocket: ${JSON.stringify(data)}`, 'error');
+                    }
                     break;
                 default:
-                    addMessage(`📩 Messaggio WebSocket sconosciuto: ${JSON.stringify(data)}`, 'websocket-msg');
+                    addMessage(`📩 Messaggio WebSocket: ${JSON.stringify(data)}`, 'websocket-msg');
             }
+        }
+
+        function handleServerEvent(data) {
+            const timestamp = new Date(data.timestamp).toLocaleString();
+            
+            switch(data.event?.type || data.event) {
+                case 'group_joined':
+                    addMessage(`✅ Ti sei unito ai gruppi con successo! (${timestamp})`, 'websocket-msg');
+                    break;
+                case 'group_left':
+                    addMessage(`👋 Hai lasciato i gruppi con successo! (${timestamp})`, 'websocket-msg');
+                    break;
+                case 'new_message':
+                    const event = data.event;
+                    addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${event.group_id}:<br>
+                              👤 <strong>${event.sender_username || `User ${event.sender_id}`}</strong>: "${event.content}"<br>
+                              🕒 <span class="timestamp">${new Date(event.sent_at).toLocaleString()}</span>`, 'new-message');
+                    playNotificationSound();
+                    break;
+                default:
+                    addMessage(`📨 Evento: ${JSON.stringify(data.event)} (${timestamp})`, 'websocket-msg');
+            }
+        }
+
+        function handleControlMessage(data) {
+            if (data.pong !== undefined) {
+                addMessage(`🏓 Pong ricevuto`, 'websocket-msg');
+            } else if (data.ack) {
+                addMessage(`✅ ACK ricevuto: ${data.ack.message_id || 'senza ID'}`, 'websocket-msg');
+            } else if (data.error) {
+                addMessage(`❌ Errore di controllo: ${data.error.message} (Codice: ${data.error.code})`, 'error');
+            } else {
+                addMessage(`� Messaggio di controllo: ${JSON.stringify(data)}`, 'websocket-msg');
+            }
+        }
+
+        function playNotificationSound() {
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmcTl2CY');
+                audio.play().catch(e => console.log('Audio play failed:', e));
+            } catch (e) {}
         }
 
         function disconnectWebSocket() {
@@ -449,9 +500,17 @@
                 return;
             }
 
-            const message = { type: "join_group", group_id: currentGroupId };
+            const message = { 
+                type: "request",
+                request_id: `req_${Date.now()}`,
+                "action": {
+                    "groups": {
+                        "join": {}
+                    }
+                }
+            };
             ws.send(JSON.stringify(message));
-            addMessage(`📤 Richiesta di unirsi al gruppo ${currentGroupId}`, 'sent');
+            addMessage(`📤 Richiesta di unirsi ai gruppi: ${JSON.stringify(message)}`, 'sent');
         }
 
         function leaveGroup() {
@@ -460,9 +519,17 @@
                 return;
             }
 
-            const message = { type: "leave_group", group_id: currentGroupId };
+            const message = { 
+                type: "request",
+                request_id: `req_${Date.now()}`,
+                "action": {
+                    "groups": {
+                        "leave": {}
+                    }
+                }
+            };
             ws.send(JSON.stringify(message));
-            addMessage(`📤 Richiesta di lasciare il gruppo ${currentGroupId}`, 'sent');
+            addMessage(`📤 Richiesta di lasciare i gruppi: ${JSON.stringify(message)}`, 'sent');
         }
 
         function sendPing() {
@@ -471,9 +538,12 @@
                 return;
             }
 
-            const message = { type: "ping" };
+            const message = {
+                "type": "control",
+                "ping": {}
+            };
             ws.send(JSON.stringify(message));
-            addMessage(`📤 Ping inviato`, 'sent');
+            addMessage(`📤 Ping inviato: ${JSON.stringify(message)}`, 'sent');
         }
 
         function sendTestMessage() {
@@ -485,13 +555,49 @@
             const messageType = document.getElementById('testMessageType').value;
             let message;
 
-            if (messageType === 'test') {
-                message = { 
-                    type: "Test", 
-                    message: document.getElementById('customMessage').value 
-                };
-            } else {
-                message = JSON.parse(document.getElementById('customMessage').value);
+            switch (messageType) {
+                case 'test':
+                    message = { 
+                        type: "request",
+                        request_id: `req_${Date.now()}`,
+                        action: {
+                            test: {
+                                message: document.getElementById('customMessage').value
+                            }
+                        }
+                    };
+                    break;
+                case 'ping':
+                    message = { 
+                        type: "control",
+                        ping: {}
+                    };
+                    break;
+                case 'join_group':
+                    message = { 
+                        type: "request",
+                        request_id: `req_${Date.now()}`,
+                        action: "join_group"
+                    };
+                    break;
+                case 'leave_group':
+                    message = { 
+                        type: "request",
+                        request_id: `req_${Date.now()}`,
+                        action: "leave_group"
+                    };
+                    break;
+                case 'custom':
+                    try {
+                        message = JSON.parse(document.getElementById('customMessage').value);
+                    } catch (e) {
+                        addMessage(`❌ JSON non valido: ${e.message}`, 'error');
+                        return;
+                    }
+                    break;
+                default:
+                    addMessage(`❌ Tipo messaggio sconosciuto: ${messageType}`, 'error');
+                    return;
             }
 
             ws.send(JSON.stringify(message));
@@ -637,9 +743,10 @@
             updateConnectionStatus(false);
             addMessage('🚀 Test WebSocket Groups inizializzato!', 'info');
             addMessage('📝 1. Fai login per ottenere il token JWT', 'info');
-            addMessage('📝 2. Inserisci un Group ID e connettiti', 'info');
-            addMessage('📝 3. Il sistema si unirà automaticamente al gruppo', 'info');
+            addMessage('📝 2. Connettiti al WebSocket universale', 'info');
+            addMessage('📝 3. Usa "Unisciti ai Gruppi" per ricevere notifiche', 'info');
             addMessage('📝 4. Crea messaggi e osserva le notifiche in tempo reale!', 'info');
+            addMessage('💡 Formato messaggi: Request/Response/Event/Control', 'info');
             
             // Test periodico della connessione WebSocket
             setInterval(() => {

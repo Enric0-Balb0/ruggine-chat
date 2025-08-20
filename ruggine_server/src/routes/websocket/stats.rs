@@ -1,3 +1,4 @@
+/*
 use axum::{
     extract::State,
     routing::get,
@@ -18,6 +19,7 @@ pub fn routes() -> Router<WebSocketState> {
         .route("/stats", get(get_stats_handler))
 }
 
+
 /// Handler per ottenere le statistiche delle connessioni WebSocket
 async fn get_stats_handler(
     State(state): State<WebSocketState>,
@@ -35,3 +37,4 @@ async fn get_stats_handler(
     
     Json(response)
 }
+*/

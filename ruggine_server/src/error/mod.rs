@@ -7,3 +7,5 @@ pub mod group_chat_error;
 pub mod invitation_error;
 pub mod group_membership_error;
 pub mod text_message_error;
+pub mod web_socket_error;
+pub mod connection_error;

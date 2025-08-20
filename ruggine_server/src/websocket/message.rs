@@ -1,88 +1,111 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde_json::Value;
+use crate::websocket::{GroupAction, GroupEvent, NotificationEvent};
 
-/// Enum per i messaggi WebSocket scambiati tra client e server
+/// Messaggi WebSocket scambiati tra client e server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum WebSocketMessage {
-    // Messaggi di controllo della connessione
-    Connect,  // Rimosso user_id poiché il server lo conosce già dall'autenticazione
+    /// Richieste client → server
+    Request {
+        request_id: String,
+        action: ClientAction,
+    },
+
+    /// Risposte server → client
+    Response {
+        request_id: String,
+        ok: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        data: Option<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<WsError>,
+    },
+
+    /// Eventi push inviati dal server
+    Event {
+        event: ServerEvent,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Messaggi di controllo / keep-alive
+    Control(ControlMessage),
+}
+
+/// Azioni inviate dal client, divise per dominio
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientAction {
+    Groups(GroupAction),
+    // in futuro: Machines(MachineAction), ecc.
+    Test { message: String },
+}
+
+/// Eventi inviati dal server, divisi per dominio
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ServerEvent {
+    Groups(GroupEvent),
+    Notifications(NotificationEvent),
+    // in futuro: Machines(MachineEvent), ecc.
+}
+
+/// Messaggi di controllo connessione
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlMessage {
+    Connect,
     Disconnect,
-    Ack { message_id: Option<String> },
-    Error { message: String },
-    
-    // Messaggi di ping/pong per keep-alive
     Ping,
     Pong,
-    
-    // Messaggi di test
-    Test { message: String },
-    
-    // Messaggi di gruppo
-    JoinGroup { group_id: i32 },
-    LeaveGroup { group_id: i32 },
-    GroupJoined { group_id: i32 },
-    GroupLeft { group_id: i32 },
-    
-    // Nuovi messaggi di testo nel gruppo
-    NewMessage {
-        message_id: i32,
-        group_id: i32,
-        sender_id: i32,
-        sender_username: String,
-        content: String,
-        sent_at: DateTime<Utc>,
+    Ack { message_id: Option<String> },
+    Error {
+        code: u16,
+        message: String,
+        message_id: Option<String>,
+    },
+    ValidationError {
+        code: u16,
+        message: String,
+        message_id: Option<String>,
     },
 }
 
+/// Errori standardizzati inviati al client
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum GroupAction {
-    Created,
-    Updated,
-    Deleted,
-    MemberAdded,
-    MemberRemoved,
-    MemberRoleChanged,
+pub struct WsError {
+    pub code: u16,
+    pub message: String,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum InvitationAction {
-    Created,
-    Accepted,
-    Rejected,
-    Cancelled,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum NotificationLevel {
-    Info,
-    Success,
-    Warning,
-    Error,
-}
-
-/// Tipo per messaggi dal client (subset di WebSocketMessage)
-pub type ClientMessage = WebSocketMessage;
 
 impl WebSocketMessage {
-    /// Serializza il messaggio in JSON
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
-    
-    /// Deserializza un messaggio da JSON
+
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
-    
-    /// Crea un messaggio di errore
-    pub fn error(message: impl Into<String>) -> Self {
-        Self::Error { 
-            message: message.into() 
+
+    pub fn error(request_id: String, code: u16, message: impl Into<String>) -> Self {
+        WebSocketMessage::Response {
+            request_id,
+            ok: false,
+            data: None,
+            error: Some(WsError {
+                code,
+                message: message.into(),
+            }),
         }
     }
 
+    pub fn success(request_id: String, data: impl Serialize) -> Self {
+        WebSocketMessage::Response {
+            request_id,
+            ok: true,
+            data: Some(serde_json::to_value(data).unwrap()),
+            error: None,
+        }
+    }
 }

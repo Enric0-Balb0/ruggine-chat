@@ -1,3 +1,5 @@
+pub mod text_message_dto;
+
 use serde::{Deserialize, Serialize};
 
 /// Parametri della query per la connessione WebSocket

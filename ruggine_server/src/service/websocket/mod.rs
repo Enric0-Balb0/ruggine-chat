@@ -1,3 +1,3 @@
 pub mod group_service;
 
-pub use group_service::{WebSocketGroupService, GroupSubscriptionStats};
+pub use group_service::{WebSocketGroupService};

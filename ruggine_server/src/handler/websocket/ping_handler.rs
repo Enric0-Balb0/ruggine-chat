@@ -4,6 +4,7 @@ use tracing::info;
 use crate::dto::websocket::PingResponse;
 use crate::entity::user::User;
 use crate::state::websocket::WebSocketState;
+use crate::websocket::message::ControlMessage;
 use crate::websocket::WebSocketMessage;
 
 /// Handler per inviare un ping a un utente specifico
@@ -14,7 +15,7 @@ pub async fn ping_user_handler(
 ) -> Json<PingResponse> {
     info!("Sending ping to user {}", user_id);
 
-    let ping_message = WebSocketMessage::Ping;
+    let ping_message = WebSocketMessage::Control(ControlMessage::Ping);
     let connections_pinged = state.manager.send_to_user(user_id, ping_message).await;
 
     let response = PingResponse {

@@ -1,4 +1,4 @@
-use crate::response::api_response::ApiErrorResponse;
+use crate::{response::api_response::ApiErrorResponse, websocket::message::WsError};
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -24,5 +24,15 @@ impl IntoResponse for GroupChatError {
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))
+    }
+}
+
+impl From<GroupChatError> for WsError {
+    fn from(err: GroupChatError) -> Self {
+        match err {
+            GroupChatError::GroupChatNotFound => WsError { code: 404, message: err.to_string() },
+            GroupChatError::UserNotAuthorized => WsError { code: 403, message: err.to_string() },
+            _ => WsError { code: 500, message: "Unexpected group chat error".into() },
+        }
     }
 }

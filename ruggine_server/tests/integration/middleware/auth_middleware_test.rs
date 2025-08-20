@@ -421,4 +421,73 @@ mod auth_middleware_integration_tests {
         assert!(all_types.contains(&UserType::EndUser), "Should contain EndUser type");
     }
 
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_inner_success_with_token_in_query() {
+        // Arrange: Create a real user and valid token
+        let (user, token, state) = create_user_and_token("query_token_success").await;
+
+        let req = Request::builder()
+            .uri(&format!("/protected?token={}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner with token in query
+        let result = auth_inner(&state, req, all_user_types()).await;
+
+        // Assert: Should succeed and inject user into request
+        assert!(result.is_ok(), "Auth should succeed with valid token in query");
+        let req_with_user = result.unwrap();
+
+        let injected_user = req_with_user.extensions().get::<User>();
+        assert!(injected_user.is_some(), "User should be injected into request");
+        assert_eq!(injected_user.unwrap().id, user.id, "Injected user should match original user");
+
+        // Cleanup
+        cleanup_user_by_email(user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_inner_invalid_token_in_query() {
+        // Arrange: Token state without creating a real user
+        let jwt_secret = TokenFactory::get_unique_jwt_secret("query_invalid_token");
+        let state = create_token_state(&jwt_secret).await;
+
+        let invalid_token = "this.is.not.a.valid.token";
+        let req = Request::builder()
+            .uri(&format!("/protected?token={}", invalid_token))
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner with invalid token in query
+        let result = auth_inner(&state, req, all_user_types()).await;
+
+        // Assert: Should fail with InvalidToken error
+        assert!(result.is_err(), "Auth should fail with invalid token in query");
+        match result.unwrap_err() {
+            ApiError::TokenError(TokenError::InvalidToken(_)) => {}
+            other => panic!("Expected TokenError::InvalidToken, got {:?}", other),
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_inner_missing_token_in_query() {
+        // Arrange: Create token state but no token in query
+        let jwt_secret = TokenFactory::get_unique_jwt_secret("query_missing_token");
+        let state = create_token_state(&jwt_secret).await;
+
+        let req = Request::builder()
+            .uri("/protected")
+            .body(Body::empty())
+            .unwrap();
+
+        // Act: Call auth_inner without token in query
+        let result = auth_inner(&state, req, all_user_types()).await;
+
+        // Assert: Should fail with MissingToken error
+        assert!(result.is_err(), "Auth should fail without token in query");
+        match result.unwrap_err() {
+            ApiError::TokenError(TokenError::MissingToken) => {}
+            other => panic!("Expected TokenError::MissingToken, got {:?}", other),
+        }
+    }
 }
