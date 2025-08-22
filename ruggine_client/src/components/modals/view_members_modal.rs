@@ -1,7 +1,8 @@
 use leptos::*;
 use leptos::wasm_bindgen::JsCast;
-use crate::types::user::{UserProfile, UserStatus, UserType, Gender, CurrentAction};
-use crate::components::{modals::invite_member_modal::MemberRole, ui::{UserAvatar, LucideIcon}};
+use crate::types::user::{UserProfile, UserStatus, UserType, Gender};
+use crate::components::{ UserAvatar, LucideIcon};
+use crate::components::modals::invite_member_modal::{MemberRole};
 use chrono::{DateTime, Utc, NaiveDate};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +49,6 @@ fn create_mock_members() -> Vec<GroupMember> {
                 gender: Gender::Male,
                 user_type: UserType::EndUser,
                 user_status: UserStatus::Active,
-                current_action: CurrentAction::Waiting,
                 is_online: true,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -70,7 +70,6 @@ fn create_mock_members() -> Vec<GroupMember> {
                 gender: Gender::Female,
                 user_type: UserType::EndUser,
                 user_status: UserStatus::Active,
-                current_action: CurrentAction::Writing,
                 is_online: true,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -92,7 +91,6 @@ fn create_mock_members() -> Vec<GroupMember> {
                 gender: Gender::Male,
                 user_type: UserType::EndUser,
                 user_status: UserStatus::Active,
-                current_action: CurrentAction::Waiting,
                 is_online: false,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -114,7 +112,6 @@ fn create_mock_members() -> Vec<GroupMember> {
                 gender: Gender::Female,
                 user_type: UserType::EndUser,
                 user_status: UserStatus::Active,
-                current_action: CurrentAction::Writing,
                 is_online: true,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -136,7 +133,6 @@ fn create_mock_members() -> Vec<GroupMember> {
                 gender: Gender::Male,
                 user_type: UserType::EndUser,
                 user_status: UserStatus::Suspended,
-                current_action: CurrentAction::Waiting,
                 is_online: false,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -230,7 +226,7 @@ pub fn ViewMembersModal(
                         on:click=handle_backdrop_click
                     >
                         <div 
-                            class="bg-white dark:bg-surface-dark shadow-2xl dark:shadow-black/50 border border-border dark:border-border-dark rounded-lg modal-container overflow-hidden"
+                            class="bg-white dark:bg-surface-dark shadow-2xl pb-8 dark:shadow-black/50 border border-border dark:border-border-dark rounded-lg modal-container overflow-hidden"
                             style=move || {
                                 let base_style = "width: 100%; max-width: 600px; margin: 0 20px; padding: 24px; display: flex; flex-direction: column; max-height: 80vh;";
                                 if is_animating_in.get() {
@@ -291,7 +287,7 @@ pub fn ViewMembersModal(
 
                             // Members List - scrollable con pattern di registration.rs
                             <div class="mb-6">
-                                <div class="max-h-96 overflow-y-auto custom-scrollbar pr-2">
+                                <div class="max-h-96 overflow-y-auto custom-scrollbar mb-8 pr-2">
                                     <div class="space-y-3">
                                         {move || {
                                             members_signal.get().into_iter().map(|member| {

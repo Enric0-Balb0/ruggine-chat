@@ -30,7 +30,7 @@ pub use auth::{LoginRequest, TokenResponse, TokenClaims, ApiSuccessResponseToken
 // User types  
 pub use user::{
     UserProfile, UserRegisterRequest, UserUpdateRequest, 
-    ChangePasswordRequest, UserStatus, UserType, Gender, CurrentAction,
+    ChangePasswordRequest, UserStatus, UserType, Gender,
     ApiSuccessResponseUserReadDto, UserReadDto
 };
 
@@ -40,9 +40,11 @@ pub use group::{GroupChat, GroupChatCreateRequest, ApiSuccessResponseGroupChatRe
 // Invitation types
 pub use invitation::{
     Invitation, InvitationCreateRequest, InvitationUpdateRequest,
-    InvitationStatus, ApiSuccessResponseInvitationReadDto, InvitationReadDto, InvitationUpdateDto,
+    InvitationStatus, ApiSuccessResponseInvitationReadDto, ApiSuccessResponseVecInvitationReadDto, InvitationReadDto, InvitationUpdateDto,
     MemberRole, MembershipStatus
-};// Membership types
+};
+
+// Membership types
 pub use membership::{
     GroupMembership, ApiSuccessResponseGroupMembershipReadDto,
     ApiSuccessResponseVecGroupMembershipReadDto, GroupMembershipReadDto

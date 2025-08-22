@@ -2,4 +2,4 @@
 
 pub mod group_item;
 
-pub use group_item::{GroupItem, CreateGroupButton};
+pub use group_item::{GroupItem, CreateGroupButton, ShowInvitesButton};

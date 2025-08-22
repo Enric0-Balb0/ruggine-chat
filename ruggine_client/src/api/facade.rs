@@ -1,5 +1,5 @@
 use crate::api::client::ApiClient;
-use crate::api::services::{AuthService, UserService, GroupChatService};
+use crate::api::services::{AuthService, UserService, GroupChatService, InvitationService};
 use crate::utils::storage::StorageService;
 use crate::types::UserProfile;
 use crate::config::constants::AppConstants;
@@ -10,6 +10,7 @@ pub struct RuggineApiClient {
     pub auth_service: AuthService,
     pub user_service: UserService,
     pub group_service: GroupChatService,
+    pub invitation_service: InvitationService,
     pub http_client: ApiClient,
     pub storage_service: StorageService,
 }
@@ -22,11 +23,13 @@ impl RuggineApiClient {
         let auth_service = AuthService::new(http_client.clone(), storage_service.clone());
         let user_service = UserService::new(http_client.clone(), storage_service.clone());
         let group_service = GroupChatService::new(http_client.clone(), storage_service.clone());
+        let invitation_service = InvitationService::new(http_client.clone(), storage_service.clone());
 
         Self {
             auth_service,
             user_service,
             group_service,
+            invitation_service,
             http_client,
             storage_service,
         }

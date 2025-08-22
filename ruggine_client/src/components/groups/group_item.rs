@@ -1,3 +1,4 @@
+
 use leptos::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -89,6 +90,33 @@ pub fn CreateGroupButton(
             <span class="text-sm font-medium">
                 "Crea nuovo gruppo"
             </span>
+        </div>
+    }
+}
+
+#[component]
+pub fn ShowInvitesButton(
+    #[prop(into)] on_show_invites_click: Callback<()>,
+    #[prop(into, default = 0)] pending_count: usize,
+) -> impl IntoView {
+    view! {
+        <div
+            class="flex items-center p-2 rounded cursor-pointer transition-colors hover:bg-bg-main dark:hover:bg-bg-main-dark text-brand-primary-light"
+            on:click=move |_| on_show_invites_click.call(())
+        >
+            <div class="w-8 h-8 rounded flex items-center justify-center mr-3 flex-shrink-0">
+                <span class="text-sm font-bold">{"📮"}</span>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">
+                "Inviti Ricevuti"
+            </span>
+            {if pending_count > 0 {
+                view! {
+                    <span class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending_count}</span>
+                }.into_view()
+            } else {
+                view! {}.into_view()
+            }}
         </div>
     }
 }

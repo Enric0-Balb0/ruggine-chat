@@ -2,7 +2,8 @@ use leptos::*;
 use leptos::html::Div;
 use wasm_bindgen::JsCast;
 use crate::hooks::GroupMembershipWithDetails;
-use crate::components::{InviteMemberModal, InviteMemberRequest, ViewMembersModal, LucideIcon};
+use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, ViewMembersModal, LucideIcon};
+
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ChatHeaderAction {
@@ -12,11 +13,19 @@ pub enum ChatHeaderAction {
     LeaveGroup,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DropdownState {
+    Closed,
+    Opening,
+    Open,
+    Closing,
+}
+
 #[component]
 pub fn ChatView(
     #[prop(into)] group_data: GroupMembershipWithDetails,
 ) -> impl IntoView {
-    let (dropdown_open, set_dropdown_open) = create_signal(false);
+    let (dropdown_state, set_dropdown_state) = create_signal(DropdownState::Closed);
     let (invite_modal_open, set_invite_modal_open) = create_signal(false);
     let (view_members_modal_open, set_view_members_modal_open) = create_signal(false);
     
@@ -24,14 +33,19 @@ pub fn ChatView(
     
     // Effect per chiudere il dropdown quando si clicca fuori
     create_effect(move |_| {
-        let dropdown_is_open = dropdown_open.get();
-        if dropdown_is_open {
+        let current_state = dropdown_state.get();
+        if matches!(current_state, DropdownState::Open | DropdownState::Opening) {
             let handle_click_outside = move |event: web_sys::Event| {
-                if let Some(dropdown_element) = dropdown_ref.get() {
+                if let Some(dropdown_element) = dropdown_ref.get_untracked() {
                     if let Some(target) = event.target() {
                         if let Ok(element) = target.dyn_into::<web_sys::Element>() {
                             if !dropdown_element.contains(Some(&element)) {
-                                set_dropdown_open.set(false);
+                                set_dropdown_state.set(DropdownState::Closing);
+                                // Dopo l'animazione di chiusura, imposta lo stato a Closed
+                                set_timeout(
+                                    move || set_dropdown_state.set(DropdownState::Closed),
+                                    std::time::Duration::from_millis(150)
+                                );
                             }
                         }
                     }
@@ -54,7 +68,11 @@ pub fn ChatView(
     
     // Handle header actions
     let handle_header_action = move |action: ChatHeaderAction| {
-        set_dropdown_open.set(false);
+        set_dropdown_state.set(DropdownState::Closing);
+        set_timeout(
+            move || set_dropdown_state.set(DropdownState::Closed),
+            std::time::Duration::from_millis(150)
+        );
         match action {
             ChatHeaderAction::InviteMembers => {
                 set_invite_modal_open.set(true);
@@ -69,6 +87,29 @@ pub fn ChatView(
             }
             ChatHeaderAction::LeaveGroup => {
                 logging::log!("Showing leave confirmation");
+            }
+        }
+    };
+
+    // Handle dropdown toggle
+    let handle_dropdown_toggle = move |_| {
+        match dropdown_state.get_untracked() {
+            DropdownState::Closed => {
+                set_dropdown_state.set(DropdownState::Opening);
+                set_timeout(
+                    move || set_dropdown_state.set(DropdownState::Open),
+                    std::time::Duration::from_millis(200)
+                );
+            }
+            DropdownState::Open | DropdownState::Opening => {
+                set_dropdown_state.set(DropdownState::Closing);
+                set_timeout(
+                    move || set_dropdown_state.set(DropdownState::Closed),
+                    std::time::Duration::from_millis(150)
+                );
+            }
+            DropdownState::Closing => {
+                // Se già in chiusura, non fare nulla
             }
         }
     };
@@ -115,20 +156,22 @@ pub fn ChatView(
                 <div class="flex items-center gap-2 relative" node_ref=dropdown_ref>
                     <button 
                         class="bg-white dark:bg-surface-dark border border-gray-300 dark:border-gray-400 text-gray-700 dark:text-text-primary-dark px-3 py-1.5 rounded text-xs flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm dark:shadow-gray-800/20"
-                        on:click=move |_| set_dropdown_open.update(|open| *open = !*open)
+                        on:click=handle_dropdown_toggle
                     >
                         <span>"Opzioni gruppo"</span>
                         <span>"⋮"</span>
                     </button>
-                    <div 
+                    <div
                         class=move || {
-                            let base_classes = "absolute top-full right-0 mt-1 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded shadow-lg dark:shadow-black/50 z-50 min-w-48";
-                            if dropdown_open.get() {
-                                format!("{} block", base_classes)
-                            } else {
-                                format!("{} hidden", base_classes)
+                            let base_classes = "absolute top-full right-0 mt-1 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded shadow-lg dark:shadow-black/50 z-50 min-w-48 transition-opacity duration-200";
+                            match dropdown_state.get() {
+                                DropdownState::Closed => format!("{} opacity-0 pointer-events-none", base_classes),
+                                DropdownState::Opening => format!("{} opacity-100 animate-dropdown-open pointer-events-auto", base_classes),
+                                DropdownState::Open => format!("{} opacity-100 pointer-events-auto", base_classes),
+                                DropdownState::Closing => format!("{} opacity-0 animate-dropdown-close pointer-events-none", base_classes),
                             }
                         }
+                        style="will-change: opacity, transform;"
                     >
                         <div 
                             class="px-4 py-2 text-sm text-gray-700 dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 border-b border-gray-100 dark:border-border-dark"
@@ -162,9 +205,18 @@ pub fn ChatView(
                 </div>
             </div>
 
-            // Content area - per ora vuoto
-            <div class="flex-1 bg-white dark:bg-surface-dark">
-                // Area vuota per ora - in futuro conterrà i messaggi
+            // Content area - struttura base chat
+            <div class="flex-1 bg-white dark:bg-surface-dark flex flex-col">
+                {/* Qui andranno i messaggi */}
+                <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                    {/* Esempio messaggio di sistema */}
+                    <div class="text-center text-gray-500 text-xs italic py-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 mx-auto max-w-[80%] shadow-sm">
+                        Benvenuto nella chat di gruppo!
+                    </div>
+                </div>
+
+                <MessageInputArea />
+
             </div>
 
             // Invite Member Modal
