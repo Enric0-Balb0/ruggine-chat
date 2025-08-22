@@ -45,6 +45,7 @@ use crate::handler::{
         user_handler::profile_handler::profile,
         user_handler::update_profile_handler::update_profile,
         user_handler::register_handler::register,
+        user_handler::find_by_id_handler::find_by_id,
         group_chat_handler::create::create,
         group_chat_handler::find_by_id::find_by_id,
         invitation_handler::send::send,
