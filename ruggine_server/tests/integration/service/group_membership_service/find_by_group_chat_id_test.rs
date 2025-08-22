@@ -9,28 +9,28 @@ use crate::common::{
 };
 
 #[cfg(test)]
-mod group_membership_find_by_group_id_integration_tests {
+mod group_membership_find_by_group_chat_id_integration_tests {
     use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership};
 
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_success_single_membership() {
+    async fn test_find_by_group_chat_id_success_single_membership() {
         // Arrange: Create real user, group chat, and membership in the database
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
         // Create test entities
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_single").await;
-        let (member_user, _) = create_test_user("find_by_group_id_member_single").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_single", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_single").await;
+        let (member_user, _) = create_test_user("find_by_group_chat_id_member_single").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_single", owner_user.id).await;
         let invitation = create_test_invitation(owner_user.id, member_user.id, group_chat.id).await;
         
         // Create membership using common helper
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Act: Find all memberships for the group (authenticated as member)
-        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Verify single membership was found
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -52,16 +52,16 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_success_multiple_memberships() {
+    async fn test_find_by_group_chat_id_success_multiple_memberships() {
         // Arrange: Create multiple users and memberships in a group
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_multi").await;
-        let (member1_user, _) = create_test_user("find_by_group_id_member1_multi").await;
-        let (member2_user, _) = create_test_user("find_by_group_id_member2_multi").await;
-        let (member3_user, _) = create_test_user("find_by_group_id_member3_multi").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_multi", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_multi").await;
+        let (member1_user, _) = create_test_user("find_by_group_chat_id_member1_multi").await;
+        let (member2_user, _) = create_test_user("find_by_group_chat_id_member2_multi").await;
+        let (member3_user, _) = create_test_user("find_by_group_chat_id_member3_multi").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_multi", owner_user.id).await;
 
         // Create invitations and memberships
         let invitation1 = create_test_invitation(owner_user.id, member1_user.id, group_chat.id).await;
@@ -73,7 +73,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let membership3 = create_test_group_membership(invitation3.id, member3_user.id).await;
 
         // Act: Find all memberships for the group (authenticated as first member)
-        let result = service.find_by_group_id_checked(group_chat.id, member1_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, member1_user.id).await;
 
         // Assert: Verify all memberships were found
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -109,16 +109,16 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_group_not_found() {
+    async fn test_find_by_group_chat_id_group_not_found() {
         // Arrange: Create user but use non-existent group
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (user, _) = create_test_user("find_by_group_id_no_group").await;
+        let (user, _) = create_test_user("find_by_group_chat_id_no_group").await;
         let non_existent_group_id = 999999;
 
         // Act: Try to find memberships for non-existent group
-        let result = service.find_by_group_id_checked(non_existent_group_id, user.id).await;
+        let result = service.find_by_group_chat_id_checked(non_existent_group_id, user.id).await;
 
         // Assert: Should return group not found error
         assert!(result.is_err());
@@ -133,17 +133,17 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_user_not_in_group() {
+    async fn test_find_by_group_chat_id_user_not_in_group() {
         // Arrange: Create group and user, but no membership
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_no_member").await;
-        let (unauthorized_user, _) = create_test_user("find_by_group_id_unauthorized").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_no_member", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_no_member").await;
+        let (unauthorized_user, _) = create_test_user("find_by_group_chat_id_unauthorized").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_no_member", owner_user.id).await;
 
         // Act: Try to access group memberships as non-member
-        let result = service.find_by_group_id_checked(group_chat.id, unauthorized_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, unauthorized_user.id).await;
 
         // Assert: Should return user not in group error
         assert!(result.is_err());
@@ -161,21 +161,21 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_empty_group() {
+    async fn test_find_by_group_chat_id_empty_group() {
         // Arrange: Create group with owner but no other members
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_empty").await;
-        let (member_user, _) = create_test_user("find_by_group_id_member_empty").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_empty", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_empty").await;
+        let (member_user, _) = create_test_user("find_by_group_chat_id_member_empty").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_empty", owner_user.id).await;
         
         // Create a membership so the auth user can access the group, but it's the only one
         let invitation = create_test_invitation(owner_user.id, member_user.id, group_chat.id).await;
         let membership = create_test_group_membership(invitation.id, member_user.id).await;
 
         // Act: Find memberships in group with only one member
-        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Should return one membership (the auth user)
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -196,15 +196,15 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_only_active_memberships() {
+    async fn test_find_by_group_chat_id_only_active_memberships() {
         // Arrange: Create group with both active and left memberships
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_active").await;
-        let (active_user, _) = create_test_user("find_by_group_id_active").await;
-        let (left_user, _) = create_test_user("find_by_group_id_left").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_active", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_active").await;
+        let (active_user, _) = create_test_user("find_by_group_chat_id_active").await;
+        let (left_user, _) = create_test_user("find_by_group_chat_id_left").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_active", owner_user.id).await;
         
         // Create invitations and memberships
         let invitation1 = create_test_invitation(owner_user.id, active_user.id, group_chat.id).await;
@@ -220,7 +220,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let _leave_result = service.leave_group(leave_dto, left_user.id).await;
 
         // Act: Find memberships as active user
-        let result = service.find_by_group_id_checked(group_chat.id, active_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, active_user.id).await;
 
         // Assert: Should only return active memberships
         assert!(result.is_ok(), "Failed to find group memberships: {:?}", result);
@@ -245,15 +245,15 @@ mod group_membership_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_user_left_group_cannot_access() {
+    async fn test_find_by_group_chat_id_user_left_group_cannot_access() {
         // Arrange: Create group with user who then leaves
         let db = get_database().await;
         let service = GroupMembershipService::new(&db);
         
-        let (owner_user, _) = create_test_user("find_by_group_id_owner_left_access").await;
-        let (member_user, _) = create_test_user("find_by_group_id_member_left_access").await;
-        let (other_user, _) = create_test_user("find_by_group_id_other_left_access").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_left_access", owner_user.id).await;
+        let (owner_user, _) = create_test_user("find_by_group_chat_id_owner_left_access").await;
+        let (member_user, _) = create_test_user("find_by_group_chat_id_member_left_access").await;
+        let (other_user, _) = create_test_user("find_by_group_chat_id_other_left_access").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_left_access", owner_user.id).await;
         
         // Create invitations and memberships
         let invitation1 = create_test_invitation(owner_user.id, member_user.id, group_chat.id).await;
@@ -269,7 +269,7 @@ mod group_membership_find_by_group_id_integration_tests {
         let _leave_result = service.leave_group(leave_dto, member_user.id).await;
 
         // Act: Try to access group memberships as user who left
-        let result = service.find_by_group_id_checked(group_chat.id, member_user.id).await;
+        let result = service.find_by_group_chat_id_checked(group_chat.id, member_user.id).await;
 
         // Assert: Should return error because user has left the group
         assert!(result.is_err());

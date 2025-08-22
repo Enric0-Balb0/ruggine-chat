@@ -8,7 +8,7 @@ use crate::dto::ApiSuccessResponseVecGroupMembershipReadDto;
 
 #[utoipa::path(
     get,
-    path = "/api/group_membership/group/{group_id}",
+    path = "/api/group_membership/group_chat/{group_id}",
     params(
         ("group_id" = i32, Path, description = "Group ID to retrieve memberships for")
     ),
@@ -23,11 +23,11 @@ use crate::dto::ApiSuccessResponseVecGroupMembershipReadDto;
         ("bearer_auth" = [])
     )
 )]
-pub async fn find_by_group_id(
+pub async fn find_by_group_chat_id(
     Extension(current_user): Extension<User>,
     State(state): State<GroupMembershipState>,
     Path(group_id): Path<i32>,
 ) -> Result<Json<ApiSuccessResponseVecGroupMembershipReadDto>, ApiError> {
-    let group_memberships = state.group_membership_service.find_by_group_id_checked(group_id, current_user.id).await?;
+    let group_memberships = state.group_membership_service.find_by_group_chat_id_checked(group_id, current_user.id).await?;
     Ok(Json(ApiSuccessResponseVecGroupMembershipReadDto { data: group_memberships }))
 }

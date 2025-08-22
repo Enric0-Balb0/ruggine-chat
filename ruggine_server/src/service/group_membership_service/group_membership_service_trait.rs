@@ -16,7 +16,7 @@ pub trait GroupMembershipServiceTrait: Send + Sync {
     async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
     async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32, membership_statuses: Vec<MembershipStatus>) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
     async fn find_active_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipReadDto, ApiError>;
-    async fn find_by_group_id_checked(&self, group_id: i32, auth_user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
-    async fn find_by_group_id(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
+    async fn find_by_group_chat_id_checked(&self, group_id: i32, auth_user_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
+    async fn find_by_group_chat_id(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
 
 }

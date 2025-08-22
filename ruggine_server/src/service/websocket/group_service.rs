@@ -60,7 +60,7 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     ) -> Result<Vec<String>, WebSocketError> {
         let members = self
             .group_membership_service
-            .find_by_group_id(group_id)
+            .find_by_group_chat_id(group_id)
             .await
             .map_err(|_| WebSocketError::GroupChatError(GroupChatError::GroupChatNotFound))?;
 
@@ -262,7 +262,7 @@ mod tests {
         ];
 
         mock_service
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -302,7 +302,7 @@ mod tests {
 
         // Setup mock to return group members
         mock_service
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -334,7 +334,7 @@ mod tests {
 
         // Setup mock to return error
         mock_service
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(|_| {
@@ -366,7 +366,7 @@ mod tests {
 
         // Setup mock to return empty group
         mock_service
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(|_| Box::pin(async move { Ok(vec![]) }));

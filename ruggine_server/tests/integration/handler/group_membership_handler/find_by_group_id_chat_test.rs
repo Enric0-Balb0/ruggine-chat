@@ -1,5 +1,5 @@
 
-use ruggine_server::handler::group_membership_handler::find_by_group_id::find_by_group_id;
+use ruggine_server::handler::group_membership_handler::find_by_group_chat_id::find_by_group_chat_id;
 use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::error::{api_error::ApiError, group_membership_error::GroupMembershipError};
 use axum::{extract::{Path, State}, Extension};
@@ -11,18 +11,18 @@ use crate::common::{
 use crate::{add_test_user_to_a_group, cleanup_test_user_from_a_group_chat, cleanup_test_users, create_test_group_chat_with_invitation_and_membership, get_database, test_user_leave_from_a_group};
 
 #[cfg(test)]
-mod find_by_group_id_handler_integration_tests {
+mod find_by_group_chat_id_handler_integration_tests {
     use crate::cleanup_test_users_from_a_group_chat;
 
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_handler_finds_memberships_successfully() {
+    async fn test_find_by_group_chat_id_handler_finds_memberships_successfully() {
         // Arrange: Create users, group chat, invitations, and memberships
-        let (admin_user, _) = create_test_user("find_by_group_id_admin").await;
-        let (member_user1, _) = create_test_user("find_by_group_id_member1").await;
-        let (member_user2, _) = create_test_user("find_by_group_id_member2").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_group", admin_user.id).await;
+        let (admin_user, _) = create_test_user("find_by_group_chat_id_admin").await;
+        let (member_user1, _) = create_test_user("find_by_group_chat_id_member1").await;
+        let (member_user2, _) = create_test_user("find_by_group_chat_id_member2").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_group", admin_user.id).await;
 
         // Create member memberships
         let invitation1 = create_test_invitation(admin_user.id, member_user1.id, group_chat.id).await;
@@ -32,8 +32,8 @@ mod find_by_group_id_handler_integration_tests {
         
         let group_membership_state = create_group_membership_state().await;
         
-        // Act: Call find_by_group_id handler as admin user
-        let result = find_by_group_id(
+        // Act: Call find_by_group_chat_id handler as admin user
+        let result = find_by_group_chat_id(
             Extension(admin_user.clone()),
             State(group_membership_state),
             Path(group_chat.id),
@@ -65,11 +65,11 @@ mod find_by_group_id_handler_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_handler_fails_when_user_not_member() {
+    async fn test_find_by_group_chat_id_handler_fails_when_user_not_member() {
         // Arrange: Create users and group, but don't add non_member to group
-        let (admin_user, _) = create_test_user("find_by_group_id_admin_fail").await;
-        let (non_member_user, _) = create_test_user("find_by_group_id_non_member").await;
-        let group_chat = create_test_group_chat("find_by_group_id_group_fail", admin_user.id).await;
+        let (admin_user, _) = create_test_user("find_by_group_chat_id_admin_fail").await;
+        let (non_member_user, _) = create_test_user("find_by_group_chat_id_non_member").await;
+        let group_chat = create_test_group_chat("find_by_group_chat_id_group_fail", admin_user.id).await;
         
         // Create admin membership only
         let admin_invitation = create_test_invitation(admin_user.id, admin_user.id, group_chat.id).await;
@@ -77,8 +77,8 @@ mod find_by_group_id_handler_integration_tests {
         
         let group_membership_state = create_group_membership_state().await;
         
-        // Act: Call find_by_group_id handler as non-member user
-        let result = find_by_group_id(
+        // Act: Call find_by_group_chat_id handler as non-member user
+        let result = find_by_group_chat_id(
             Extension(non_member_user.clone()),
             State(group_membership_state),
             Path(group_chat.id),
@@ -104,14 +104,14 @@ mod find_by_group_id_handler_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_handler_fails_when_group_not_found() {
+    async fn test_find_by_group_chat_id_handler_fails_when_group_not_found() {
         // Arrange: Create user
-        let (user, _) = create_test_user("find_by_group_id_no_group").await;
+        let (user, _) = create_test_user("find_by_group_chat_id_no_group").await;
         let group_membership_state = create_group_membership_state().await;
         let non_existent_group_id = 999999;
         
-        // Act: Call find_by_group_id handler with non-existent group
-        let result = find_by_group_id(
+        // Act: Call find_by_group_chat_id handler with non-existent group
+        let result = find_by_group_chat_id(
             Extension(user.clone()),
             State(group_membership_state),
             Path(non_existent_group_id),
@@ -136,16 +136,16 @@ mod find_by_group_id_handler_integration_tests {
     #[tokio::test]
     async fn test_find_by_id_group_not_active_membership() {
         // Arrange
-        let (admin_user, _) = create_test_user("find_by_group_id_admin").await;
-        let (member_user1, _) = create_test_user("find_by_group_id_member1").await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_id_group", admin_user.id).await;
+        let (admin_user, _) = create_test_user("find_by_group_chat_id_admin").await;
+        let (member_user1, _) = create_test_user("find_by_group_chat_id_member1").await;
+        let group_chat = create_test_group_chat_with_invitation_and_membership("find_by_group_chat_id_group", admin_user.id).await;
         add_test_user_to_a_group(member_user1.id, &group_chat).await;
         
         test_user_leave_from_a_group(member_user1.id, group_chat.id).await;
 
         // Act
         let group_membership_state = create_group_membership_state().await;
-        let result = find_by_group_id(
+        let result = find_by_group_chat_id(
                 Extension(member_user1.clone()),
                 State(group_membership_state),
                 Path(group_chat.id),

@@ -4,7 +4,7 @@ use ruggine_server::entity::group_membership::{MemberRole, MembershipStatus};
 use ruggine_server::model::group_membership_model::GroupMembershipWithInvitationRow;
 
 #[cfg(test)]
-mod group_membership_repository_find_by_group_id_integration_tests {
+mod group_membership_repository_find_by_group_chat_id_integration_tests {
     use super::*;
     use crate::{
         get_database, create_test_user, create_test_group_chat, cleanup_group_chat,
@@ -12,19 +12,19 @@ mod group_membership_repository_find_by_group_id_integration_tests {
     };
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_success_single_membership() {
+    async fn test_find_by_group_chat_id_success_single_membership() {
         let db = get_database().await;
         let repository = GroupMembershipRepository::new(&db);
 
-        let (from_user, _) = create_test_user("find_by_group_id_from_single").await;
-        let (to_user, _) = create_test_user("find_by_group_id_to_single").await;
-        let group_chat = create_test_group_chat("find_by_group_id_single", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_group_chat_id_from_single").await;
+        let (to_user, _) = create_test_user("find_by_group_chat_id_to_single").await;
+        let group_chat = create_test_group_chat("find_by_group_chat_id_single", from_user.id).await;
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
 
         let new_membership = GroupMembershipFactory::fake_new_group_membership_with_id(invitation.id);
         let membership_id = repository.insert(new_membership.clone()).await.unwrap();
 
-        let result = repository.find_by_group_id(group_chat.id).await;
+        let result = repository.find_by_group_chat_id(group_chat.id).await;
 
         assert!(result.is_ok(), "Failed to find memberships by group_id");
         let found: Vec<GroupMembershipWithInvitationRow> = result.unwrap();
@@ -47,15 +47,15 @@ mod group_membership_repository_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_success_multiple_memberships() {
+    async fn test_find_by_group_chat_id_success_multiple_memberships() {
         let db = get_database().await;
         let repository = GroupMembershipRepository::new(&db);
 
-        let (from_user, _) = create_test_user("find_by_group_id_from_multi").await;
-        let (to_user1, _) = create_test_user("find_by_group_id_to1_multi").await;
-        let (to_user2, _) = create_test_user("find_by_group_id_to2_multi").await;
-        let (to_user3, _) = create_test_user("find_by_group_id_to3_multi").await;
-        let group_chat = create_test_group_chat("find_by_group_id_multi", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_group_chat_id_from_multi").await;
+        let (to_user1, _) = create_test_user("find_by_group_chat_id_to1_multi").await;
+        let (to_user2, _) = create_test_user("find_by_group_chat_id_to2_multi").await;
+        let (to_user3, _) = create_test_user("find_by_group_chat_id_to3_multi").await;
+        let group_chat = create_test_group_chat("find_by_group_chat_id_multi", from_user.id).await;
 
         // Create invitations and memberships for multiple users
         let invitation1 = create_test_invitation(from_user.id, to_user1.id, group_chat.id).await;
@@ -70,7 +70,7 @@ mod group_membership_repository_find_by_group_id_integration_tests {
         let membership_id2 = repository.insert(new_membership2).await.unwrap();
         let membership_id3 = repository.insert(new_membership3).await.unwrap();
 
-        let result = repository.find_by_group_id(group_chat.id).await;
+        let result = repository.find_by_group_chat_id(group_chat.id).await;
 
         assert!(result.is_ok(), "Failed to find memberships by group_id");
         let found: Vec<GroupMembershipWithInvitationRow> = result.unwrap();
@@ -112,12 +112,12 @@ mod group_membership_repository_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_empty_result() {
+    async fn test_find_by_group_chat_id_empty_result() {
         let db = get_database().await;
         let repository = GroupMembershipRepository::new(&db);
 
         let non_existing_group_id = 999999;
-        let result = repository.find_by_group_id(non_existing_group_id).await;
+        let result = repository.find_by_group_chat_id(non_existing_group_id).await;
 
         assert!(result.is_ok(), "Failed to query non-existing group");
         let found: Vec<GroupMembershipWithInvitationRow> = result.unwrap();
@@ -125,14 +125,14 @@ mod group_membership_repository_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_only_active_memberships() {
+    async fn test_find_by_group_chat_id_only_active_memberships() {
         let db = get_database().await;
         let repository = GroupMembershipRepository::new(&db);
 
-        let (from_user, _) = create_test_user("find_by_group_id_from_active").await;
-        let (to_user1, _) = create_test_user("find_by_group_id_to1_active").await;
-        let (to_user2, _) = create_test_user("find_by_group_id_to2_active").await;
-        let group_chat = create_test_group_chat("find_by_group_id_active", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_group_chat_id_from_active").await;
+        let (to_user1, _) = create_test_user("find_by_group_chat_id_to1_active").await;
+        let (to_user2, _) = create_test_user("find_by_group_chat_id_to2_active").await;
+        let group_chat = create_test_group_chat("find_by_group_chat_id_active", from_user.id).await;
 
         // Create active membership
         let invitation1 = create_test_invitation(from_user.id, to_user1.id, group_chat.id).await;
@@ -153,7 +153,7 @@ mod group_membership_repository_find_by_group_id_integration_tests {
         };
         repository.update(update_membership).await.unwrap();
 
-        let result = repository.find_by_group_id(group_chat.id).await;
+        let result = repository.find_by_group_chat_id(group_chat.id).await;
 
         assert!(result.is_ok(), "Failed to find memberships by group_id");
         let found: Vec<GroupMembershipWithInvitationRow> = result.unwrap();
@@ -179,14 +179,14 @@ mod group_membership_repository_find_by_group_id_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_with_different_roles() {
+    async fn test_find_by_group_chat_id_with_different_roles() {
         let db = get_database().await;
         let repository = GroupMembershipRepository::new(&db);
 
-        let (from_user, _) = create_test_user("find_by_group_id_from_roles").await;
-        let (admin_user, _) = create_test_user("find_by_group_id_admin_roles").await;
-        let (member_user, _) = create_test_user("find_by_group_id_member_roles").await;
-        let group_chat = create_test_group_chat("find_by_group_id_roles", from_user.id).await;
+        let (from_user, _) = create_test_user("find_by_group_chat_id_from_roles").await;
+        let (admin_user, _) = create_test_user("find_by_group_chat_id_admin_roles").await;
+        let (member_user, _) = create_test_user("find_by_group_chat_id_member_roles").await;
+        let group_chat = create_test_group_chat("find_by_group_chat_id_roles", from_user.id).await;
 
         // Create admin invitation and membership
         let admin_invitation = create_test_invitation(from_user.id, admin_user.id, group_chat.id).await;
@@ -200,7 +200,7 @@ mod group_membership_repository_find_by_group_id_integration_tests {
         member_membership.role = MemberRole::Member;
         let member_membership_id = repository.insert(member_membership).await.unwrap();
 
-        let result = repository.find_by_group_id(group_chat.id).await;
+        let result = repository.find_by_group_chat_id(group_chat.id).await;
 
         assert!(result.is_ok(), "Failed to find memberships by group_id");
         let found: Vec<GroupMembershipWithInvitationRow> = result.unwrap();

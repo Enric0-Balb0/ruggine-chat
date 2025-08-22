@@ -4,7 +4,7 @@ use crate::repository::group_membership_repository::GroupMembershipRepository;
 use sqlx::Error as SqlxError;
 
 impl GroupMembershipRepository {
-    pub async fn find_by_group_id_inner(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
+    pub async fn find_by_group_chat_id_inner(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
         let rows = sqlx::query_as!(
             GroupMembershipWithInvitationRow,
             r#"
@@ -33,7 +33,7 @@ impl GroupMembershipRepository {
 }
 
 #[cfg(test)]
-mod group_membership_repository_find_by_group_id_tests {
+mod group_membership_repository_find_by_group_chat_id_tests {
     use mockall::predicate::*;
     use crate::repository::group_membership_repository::group_membership_repository_trait::MockGroupMembershipRepositoryTrait;
     use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
@@ -44,7 +44,7 @@ mod group_membership_repository_find_by_group_id_tests {
     use sqlx::Error;
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_success() {
+    async fn test_find_by_group_chat_id_success() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
         let group_id = 1;
         let expected = vec![
@@ -53,7 +53,7 @@ mod group_membership_repository_find_by_group_id_tests {
         ];
 
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -64,7 +64,7 @@ mod group_membership_repository_find_by_group_id_tests {
                 Box::pin(async move { Ok(result) })
             });
 
-        let result = mock_repo.find_by_group_id(group_id).await;
+        let result = mock_repo.find_by_group_chat_id(group_id).await;
 
         assert!(result.is_ok());
         let found = result.unwrap();
@@ -73,31 +73,31 @@ mod group_membership_repository_find_by_group_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_empty_result() {
+    async fn test_find_by_group_chat_id_empty_result() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
         let group_id = 999;
 
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(|_| {
                 Box::pin(async move { Ok(vec![]) })
             });
 
-        let result = mock_repo.find_by_group_id(group_id).await;
+        let result = mock_repo.find_by_group_chat_id(group_id).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_single_membership() {
+    async fn test_find_by_group_chat_id_single_membership() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
         let expected = GroupMembershipFactory::fake_group_membership_with_invitation_row();
         let group_id = expected.group_chat_id;
 
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -105,7 +105,7 @@ mod group_membership_repository_find_by_group_id_tests {
                 Box::pin(async move { Ok(result) })
             });
 
-        let result = mock_repo.find_by_group_id(group_id).await;
+        let result = mock_repo.find_by_group_chat_id(group_id).await;
 
         assert!(result.is_ok());
         let found = result.unwrap();
@@ -114,12 +114,12 @@ mod group_membership_repository_find_by_group_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_only_active_memberships() {
+    async fn test_find_by_group_chat_id_only_active_memberships() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
         let group_id = 1;
 
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -132,7 +132,7 @@ mod group_membership_repository_find_by_group_id_tests {
                 Box::pin(async move { Ok(result) })
             });
 
-        let result = mock_repo.find_by_group_id(group_id).await;
+        let result = mock_repo.find_by_group_chat_id(group_id).await;
 
         assert!(result.is_ok());
         let found = result.unwrap();
@@ -142,19 +142,19 @@ mod group_membership_repository_find_by_group_id_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_find_by_group_id_database_error() {
+    async fn test_find_by_group_chat_id_database_error() {
         let mut mock_repo = MockGroupMembershipRepositoryTrait::new();
         let group_id = 1;
 
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(|_| {
                 Box::pin(async move { Err(Error::RowNotFound) })
             });
 
-        let result = mock_repo.find_by_group_id(group_id).await;
+        let result = mock_repo.find_by_group_chat_id(group_id).await;
         assert!(result.is_err());
     }
 }

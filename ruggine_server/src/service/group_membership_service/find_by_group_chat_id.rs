@@ -9,14 +9,14 @@ impl GroupMembershipService {
     /// Find all group memberships for a given group ID
     /// Only authenticated users who are active members of the group can see all memberships
     /// Returns all active group memberships for the specified group
-    pub async fn find_by_group_id_internal(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError> {
+    pub async fn find_by_group_chat_id_internal(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError> {
         // First, check if the group exists
         let _group = self.group_chat_service.find_by_id(group_id).await.map_err(|_| {
             ApiError::GroupMembershipError(GroupMembershipError::GroupNotFound)
         })?;
 
         // Retrieve all active memberships for the group from the repository
-        let group_memberships = self.group_membership_repo.find_by_group_id(group_id).await.map_err(|e| {
+        let group_memberships = self.group_membership_repo.find_by_group_chat_id(group_id).await.map_err(|e| {
             let db_error = ApiError::DbError(DbError::SomethingWentWrong(e.to_string()));
             db_error
         })?;
@@ -85,7 +85,7 @@ mod tests {
 
         // Mock find all memberships for group
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -97,7 +97,7 @@ mod tests {
             });
 
         let service = setup_service_with_mock_repo(mock_repo, mock_group_service, mock_user_service);
-        let result = service.find_by_group_id_internal(group_id).await;
+        let result = service.find_by_group_chat_id_internal(group_id).await;
 
         assert!(result.is_ok());
         let memberships = result.unwrap();
@@ -125,7 +125,7 @@ mod tests {
             });
 
         let service = setup_service_with_mock_repo(mock_repo, mock_group_service, mock_user_service);
-        let result = service.find_by_group_id_internal(group_id).await;
+        let result = service.find_by_group_chat_id_internal(group_id).await;
 
         assert!(result.is_err());
         if let Err(ApiError::GroupMembershipError(GroupMembershipError::GroupNotFound)) = result {
@@ -157,7 +157,7 @@ mod tests {
 
         // Mock empty result for group memberships
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -165,7 +165,7 @@ mod tests {
             });
 
         let service = setup_service_with_mock_repo(mock_repo, mock_group_service, mock_user_service);
-        let result = service.find_by_group_id_internal(group_id).await;
+        let result = service.find_by_group_chat_id_internal(group_id).await;
 
         assert!(result.is_ok());
         let memberships = result.unwrap();
@@ -193,7 +193,7 @@ mod tests {
 
         // Mock database error for group memberships
         mock_repo
-            .expect_find_by_group_id()
+            .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(move |_| {
@@ -201,7 +201,7 @@ mod tests {
             });
 
         let service = setup_service_with_mock_repo(mock_repo, mock_group_service, mock_user_service);
-        let result = service.find_by_group_id_internal(group_id).await;
+        let result = service.find_by_group_chat_id_internal(group_id).await;
 
         assert!(result.is_err());
         if let Err(ApiError::DbError(_)) = result {

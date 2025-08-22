@@ -51,6 +51,7 @@ use crate::handler::{
         invitation_handler::find_by_id_and_user_id::find_by_id_and_user_id,
         invitation_handler::update_status::update_status,
         invitation_handler::find_by_user_id::find_by_user_id,
+        group_membership_handler::find_by_group_chat_id::find_by_group_chat_id,
         group_membership_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_active_by_id_and_user_id::find_active_by_id_and_user_id,
         group_membership_handler::leave_group::leave_group,
