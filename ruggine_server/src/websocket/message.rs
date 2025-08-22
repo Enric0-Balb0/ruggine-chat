@@ -33,6 +33,12 @@ pub enum WebSocketMessage {
     Control(ControlMessage),
 }
 
+/// Parametri della query per la connessione WebSocket
+#[derive(Debug, Deserialize)]
+pub struct WebSocketQuery {
+    pub token: Option<String>,
+}
+
 /// Azioni inviate dal client, divise per dominio
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

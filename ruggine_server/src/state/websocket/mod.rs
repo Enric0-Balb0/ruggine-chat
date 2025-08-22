@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     state::token_state::TokenState, 
     websocket::WebSocketManager,
-    service::websocket::WebSocketGroupService,
+    service::websocket::{WebSocketGroupService, WebSocketGroupServiceTrait},
     service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait},
     config::database::Database,
 };
@@ -24,7 +24,6 @@ impl WebSocketState {
             Arc::new(GroupMembershipService::new(db_conn));
         
         let group_service = Arc::new(WebSocketGroupService::new(
-            manager.clone(),
             group_membership_service,
         ));
         

@@ -55,7 +55,7 @@ pub async fn create(
         
         crate::handler::websocket::group_handler::handle_new_group_message(
             state.websocket_group_service.clone().unwrap().clone(),
-            state.websocket_group_service.clone().unwrap().ws_manager.clone(),
+            state.ws_manager.clone().unwrap().clone(),
             payload.group_chat_id,
             notification
         ).await;

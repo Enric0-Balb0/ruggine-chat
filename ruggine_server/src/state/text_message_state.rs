@@ -10,6 +10,7 @@ use crate::utils::service_initializer::ServiceInitializer;
 pub struct TextMessageState {
     pub text_message_service: Arc<dyn TextMessageServiceTrait>,
     pub websocket_group_service: Option<Arc<WebSocketGroupService>>,
+    pub ws_manager: Option<Arc<WebSocketManager>>,
 }
 
 impl TextMessageState {
@@ -20,11 +21,13 @@ impl TextMessageState {
         Self {
             text_message_service,
             websocket_group_service: None, // Sarà impostato quando necessario
+            ws_manager: None,
         }
     }
 
-    pub fn with_websocket_service(mut self, websocket_group_service: Arc<WebSocketGroupService>) -> Self {
+    pub fn with_websocket_service(mut self, ws_manager: Arc<WebSocketManager>, websocket_group_service: Arc<WebSocketGroupService>) -> Self {
         self.websocket_group_service = Some(websocket_group_service);
+        self.ws_manager = Some(ws_manager);
         self
     }
 
@@ -34,6 +37,7 @@ impl TextMessageState {
         Self {
             text_message_service,
             websocket_group_service: None,
+            ws_manager: None,
         }
     }
 }

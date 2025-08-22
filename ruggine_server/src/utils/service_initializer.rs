@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use axum::extract::ws;
+
 use crate::config::database::Database;
 use crate::service::group_chat_service::{GroupChatService, GroupChatServiceTrait};
 use crate::service::invitation_service::{InvitationService, InvitationServiceTrait};
@@ -6,6 +8,7 @@ use crate::service::user_service::{UserService, UserServiceTrait};
 use crate::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
 use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 use crate::repository::text_message_repository::TextMessageRepository;
+use crate::service::websocket::{WebSocketGroupService, WebSocketGroupServiceTrait};
 
 /// ServiceInitializer manages the creation and initialization of all services
 /// with proper dependency injection to avoid circular dependencies.
@@ -16,6 +19,7 @@ pub struct ServiceInitializer {
     user_service: Arc<dyn UserServiceTrait>,
     group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
     text_message_service: Arc<dyn TextMessageServiceTrait>,
+    websocket_group_service: Arc<dyn WebSocketGroupServiceTrait>,
 }
 
 impl ServiceInitializer {
@@ -42,13 +46,19 @@ impl ServiceInitializer {
         // Set up circular dependencies using dependency injection
         group_chat_service.set_invitation_service(invitation_service.clone());
         group_membership_service.set_invitation_service(invitation_service.clone());
-        
+
+        // Create WebSocket group service
+        let websocket_group_service = Arc::new(WebSocketGroupService::new(
+            group_membership_service.clone()
+        ));
+
         Self {
             group_chat_service,
             invitation_service,
             user_service,
             group_membership_service,
             text_message_service,
+            websocket_group_service,
         }
     }
 
@@ -75,5 +85,10 @@ impl ServiceInitializer {
     /// Get the TextMessageService instance
     pub fn text_message_service(&self) -> Arc<dyn TextMessageServiceTrait> {
         Arc::clone(&self.text_message_service)
+    }
+
+    // Get the WebSocketGroupService instance
+    pub fn websocket_group_service(&self) -> Arc<dyn WebSocketGroupServiceTrait> {
+        Arc::clone(&self.websocket_group_service)
     }
 }

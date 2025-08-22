@@ -1,9 +1,9 @@
-use crate::dto::websocket::WebSocketQuery;
 use crate::error::connection_error::ConnectionError;
 use crate::error::request_error::ValidatedWebSocketMessage;
 use crate::error::web_socket_error::WebSocketError;
-use crate::service::websocket::WebSocketGroupService;
+use crate::service::websocket::{WebSocketGroupService, WebSocketGroupServiceTrait};
 use crate::state::websocket::WebSocketState;
+use crate::websocket::message::WebSocketQuery;
 use crate::websocket::group_message::GroupAction::{Join, Leave};
 use crate::websocket::group_message::GroupEvent::NewMessage;
 use crate::websocket::message::{ControlMessage, ServerEvent, WsError};
@@ -207,14 +207,14 @@ async fn handle_group_client_message(
     Ok(())
 }
 
-// nel tuo handler "nuovo messaggio gruppo"
+// Handler for receiving new message from the server
 pub async fn handle_new_group_message(
     group_service: Arc<WebSocketGroupService>,
     manager: Arc<WebSocketManager>,
     group_id: i32,
     message: WebSocketMessage,
 ) {
-    // chiediamo al service chi sono gli utenti
+    // Search for active connections in the group
     let connection_ids = match group_service.broadcast_to_group(group_id).await {
         Ok(res) => res,
         Err(e) => {

@@ -26,7 +26,7 @@ pub fn routes(db_conn: Arc<Database>) -> Router {
     
     // Crea lo stato per i text message con il servizio WebSocket
     let text_message_state = TextMessageState::new(&db_conn)
-        .with_websocket_service(websocket_state.group_service.clone());
+        .with_websocket_service(websocket_state.manager.clone(), websocket_state.group_service.clone());
 
     let merged_router = Router::new()
         .nest("/auth", auth_route::routes().with_state(auth_state))

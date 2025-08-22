@@ -1,6 +1,3 @@
-pub mod connect;
-pub mod ping;
-pub mod stats;
 pub mod group;
 
 use axum::Router;
