@@ -7,7 +7,7 @@ impl ApiEndpoints {
     pub const AUTH_LOGOUT: &'static str = "/auth/logout";
     pub const AUTH_REFRESH: &'static str = "/auth/refresh";
     pub const AUTH_VERIFY: &'static str = "/auth/verify";
-    
+
     // User endpoints
     pub const USER_REGISTER: &'static str = "/user/register";
     pub const USER_PROFILE: &'static str = "/user/profile";
@@ -15,8 +15,6 @@ impl ApiEndpoints {
     pub const USER_CHANGE_PASSWORD: &'static str = "/user/password";
     pub const USER_GROUPS: &'static str = "/user/groups";
     pub const USER_BY_ID: &'static str = "/user"; // + /{id}
-    pub const USER_SEARCH: &'static str = "/user/search"; // Future endpoint
-    pub const USER_EXISTS: &'static str = "/user/exists"; // Future endpoint
     
     // Group chat endpoints
     pub const GROUP_CREATE: &'static str = "/group_chat/create";
@@ -25,12 +23,14 @@ impl ApiEndpoints {
     pub const GROUP_DELETE: &'static str = "/group_chat"; // + /{id}
     pub const GROUP_PARTICIPANTS: &'static str = "/group_chat"; // + /{id}/participants
     pub const GROUP_MESSAGES: &'static str = "/group_chat"; // + /{id}/messages
-    pub const GROUP_MARK_READ: &'static str = "/group_chat"; // + /{id}/mark_read
     
     // Group membership endpoints
     pub const GROUP_MEMBERSHIP_BY_USER: &'static str = "/group_membership/user";
     pub const GROUP_MEMBERSHIP_BY_ID: &'static str = "/group_membership"; // + /{id}
-    
+    pub const GROUP_MEMBERSHIP_BY_GROUP_CHAT: &'static str = "/group_membership/group_chat"; // + /{group_id}
+    pub const GROUP_MEMBERSHIP_LEAVE: &'static str = "/group_membership/leave";
+
+
     // Invitation endpoints
     pub const INVITATION_SEND: &'static str = "/invitation/send";
     pub const INVITATION_UPDATE: &'static str = "/invitation/update_status";
@@ -46,6 +46,10 @@ impl ApiEndpoints {
     pub fn group_by_id(group_id: &str) -> String {
         format!("{}/{}", Self::GROUP_BY_ID, group_id)
     }
+
+    pub fn group_membership_by_group_chat(group_id: &str) -> String {
+        format!("{}/{}", Self::GROUP_MEMBERSHIP_BY_GROUP_CHAT, group_id)
+    }
     
     pub fn group_participants(group_id: &str) -> String {
         format!("{}/{}/participants", Self::GROUP_BY_ID, group_id)
@@ -53,10 +57,6 @@ impl ApiEndpoints {
     
     pub fn group_messages(group_id: &str) -> String {
         format!("{}/{}/messages", Self::GROUP_BY_ID, group_id)
-    }
-    
-    pub fn group_mark_read(group_id: &str) -> String {
-        format!("{}/{}/mark_read", Self::GROUP_BY_ID, group_id)
     }
 
     pub fn invitation_by_id(invitation_id: &str) -> String {

@@ -2,7 +2,7 @@ use leptos::*;
 use leptos::html::Div;
 use wasm_bindgen::JsCast;
 use crate::hooks::GroupMembershipWithDetails;
-use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, ViewMembersModal, LucideIcon};
+use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -139,7 +139,6 @@ pub fn ChatView(
                         {group_name.clone()}
                     </h2>
                     <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-text-secondary-dark">
-                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
                         <span>
                             {move || match group_data_clone.group_details.as_ref() {
                                 Some(group) => match group.member_count {
@@ -150,7 +149,7 @@ pub fn ChatView(
                             }}
                         </span>
                         <span>"•"</span>
-                        <span>"Ultimo accesso ora"</span>
+                        <span>"4 online"</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 relative" node_ref=dropdown_ref>
@@ -227,11 +226,11 @@ pub fn ChatView(
                 group_name=group_name.clone()
             />
 
-            // View Members Modal
-            <ViewMembersModal
+            // Group Details Modal
+            <GroupDetailsModal
                 is_open=view_members_modal_open
                 on_close=handle_view_members_modal_close
-                group_name=group_name.clone()
+                group_id=group_data_clone.membership.group_chat_id
             />
         </div>
     }

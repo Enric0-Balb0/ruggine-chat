@@ -8,6 +8,7 @@ edition = "2021"
 [build-dependencies]
 # Dependencies per il build script che genera i tipi dal server
 [dependencies]
+futures = "0.3"
 leptos = { version = "0.6", features = ["csr"] }
 leptos_router = { version = "0.6", features = ["csr"] }
 wasm-bindgen = "0.2"

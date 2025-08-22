@@ -39,15 +39,6 @@ impl GroupChatService {
         Ok(group_chat)
     }
 
-    /// Get user's group memberships
-    pub async fn get_user_groups(&self) -> Result<Vec<GroupMembership>, AuthError> {
-        let response: ApiSuccessResponseVecGroupMembershipReadDto = self.http_client
-            .get(ApiEndpoints::GROUP_MEMBERSHIP_BY_USER)
-            .await
-            .map_err(AuthError::from)?;
-
-        Ok(Vec::from(response))
-    }
 
     /// Get group by ID
     pub async fn get_group_by_id(&self, group_id: &str) -> Result<GroupChat, AuthError> {

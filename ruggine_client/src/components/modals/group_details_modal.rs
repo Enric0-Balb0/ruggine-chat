@@ -1,8 +1,9 @@
 use leptos::*;
 use leptos::wasm_bindgen::JsCast;
 use crate::types::user::{UserProfile, UserStatus, UserType, Gender};
+use crate::api::services::UserService;
 use crate::components::{ UserAvatar, LucideIcon};
-use crate::components::modals::invite_member_modal::{MemberRole};
+use crate::types::invitation::MemberRole;
 use chrono::{DateTime, Utc, NaiveDate};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,129 +35,103 @@ impl GroupMember {
     }
 }
 
-// Static data for demo
-fn create_mock_members() -> Vec<GroupMember> {
-    vec![
-        GroupMember {
-            user_profile: UserProfile {
-                id: 1,
-                email: "mario.rossi@email.com".to_string(),
-                first_name: "Mario".to_string(),
-                last_name: "Rossi".to_string(),
-                username: "mario_rossi".to_string(),
-                birthday: NaiveDate::from_ymd_opt(1990, 5, 15).unwrap_or_default(),
-                address: "Roma, Italia".to_string(),
-                gender: Gender::Male,
-                user_type: UserType::EndUser,
-                user_status: UserStatus::Active,
-                is_online: true,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-            },
-            role: MemberRole::Admin,
-            joined_at: Utc::now(),
-            is_creator: true,
-        },
-        GroupMember {
-            user_profile: UserProfile {
-                id: 2,
-                email: "giulia.bianchi@email.com".to_string(),
-                first_name: "Giulia".to_string(),
-                last_name: "Bianchi".to_string(),
-                username: "giulia_b".to_string(),
-                birthday: NaiveDate::from_ymd_opt(1992, 8, 22).unwrap_or_default(),
-                address: "Milano, Italia".to_string(),
-                gender: Gender::Female,
-                user_type: UserType::EndUser,
-                user_status: UserStatus::Active,
-                is_online: true,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-            },
-            role: MemberRole::Member,
-            joined_at: Utc::now(),
-            is_creator: false,
-        },
-        GroupMember {
-            user_profile: UserProfile {
-                id: 3,
-                email: "luca.verdi@email.com".to_string(),
-                first_name: "Luca".to_string(),
-                last_name: "Verdi".to_string(),
-                username: "luca_v".to_string(),
-                birthday: NaiveDate::from_ymd_opt(1988, 12, 3).unwrap_or_default(),
-                address: "Napoli, Italia".to_string(),
-                gender: Gender::Male,
-                user_type: UserType::EndUser,
-                user_status: UserStatus::Active,
-                is_online: false,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-            },
-            role: MemberRole::Member,
-            joined_at: Utc::now(),
-            is_creator: false,
-        },
-        GroupMember {
-            user_profile: UserProfile {
-                id: 4,
-                email: "anna.ferrari@email.com".to_string(),
-                first_name: "Anna".to_string(),
-                last_name: "Ferrari".to_string(),
-                username: "anna_ferrari".to_string(),
-                birthday: NaiveDate::from_ymd_opt(1995, 3, 18).unwrap_or_default(),
-                address: "Torino, Italia".to_string(),
-                gender: Gender::Female,
-                user_type: UserType::EndUser,
-                user_status: UserStatus::Active,
-                is_online: true,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-            },
-            role: MemberRole::Admin,
-            joined_at: Utc::now(),
-            is_creator: false,
-        },
-        GroupMember {
-            user_profile: UserProfile {
-                id: 5,
-                email: "francesco.neri@email.com".to_string(),
-                first_name: "Francesco".to_string(),
-                last_name: "Neri".to_string(),
-                username: "fra_neri".to_string(),
-                birthday: NaiveDate::from_ymd_opt(1993, 7, 9).unwrap_or_default(),
-                address: "Firenze, Italia".to_string(),
-                gender: Gender::Male,
-                user_type: UserType::EndUser,
-                user_status: UserStatus::Suspended,
-                is_online: false,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-            },
-            role: MemberRole::Member,
-            joined_at: Utc::now(),
-            is_creator: false,
-        },
-    ]
-}
 
 #[component]
-pub fn ViewMembersModal(
+pub fn GroupDetailsModal(
     #[prop(into)] is_open: ReadSignal<bool>,
     #[prop(into)] on_close: Callback<()>,
-    #[prop(into, optional)] group_name: Option<String>,
+    #[prop(into)] group_id: i32,
 ) -> impl IntoView {
-    // Store group name in a signal to avoid move issues
-    let group_name_signal = create_signal(group_name.clone()).0;
-    
-    // Mock members data
-    let members = create_mock_members();
-    let members_signal = create_signal(members).0;
+    let (members_signal, set_members_signal) = create_signal(Vec::<GroupMember>::new());
+    let (group_signal, set_group_signal) = create_signal(None::<crate::types::group::GroupChat>);
+
+    let storage_service = crate::utils::storage::StorageService::new();
+    let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+    if let Some(token_response) = storage_service.get_token() {
+        http_client.set_auth_token(Some(token_response.token));
+    }
+    let membership_service = crate::api::services::GroupMembershipService::new(http_client.clone(), storage_service.clone());
+    let user_service = UserService::new(http_client.clone(), storage_service.clone());
+    let group_service = crate::api::services::GroupChatService::new(http_client, storage_service);
+
+    create_effect(move |_| {
+        if is_open.get() {
+            let group_id = group_id;
+            let set_members_signal = set_members_signal.clone();
+            let set_group_signal = set_group_signal.clone();
+            let membership_service = membership_service.clone();
+            let user_service = user_service.clone();
+            let group_service = group_service.clone();
+            spawn_local(async move {
+                // Fetch group info
+                match group_service.get_group_by_id(&group_id.to_string()).await {
+                    Ok(group) => set_group_signal.set(Some(group)),
+                    Err(_) => set_group_signal.set(None),
+                }
+                // Fetch memberships
+                match membership_service.get_by_group_chat_id(&group_id.to_string()).await {
+                    Ok(memberships) => {
+                        let mut group_members = Vec::with_capacity(memberships.len());
+                        let mut tasks = Vec::with_capacity(memberships.len());
+                        for m in memberships {
+                            let user_service = user_service.clone();
+                            let user_id = m.user_id;
+                            let role = m.role;
+                            let joined_at = m.joined_at;
+                            tasks.push(async move {
+                                let user_profile = match user_service.get_user_by_id(&user_id.to_string()).await {
+                                    Ok(profile) => UserProfile {
+                                        id: user_id,
+                                        email: profile.email,
+                                        first_name: profile.first_name,
+                                        last_name: profile.last_name,
+                                        username: profile.username,
+                                        birthday: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+                                        address: String::new(),
+                                        gender: Gender::Other,
+                                        user_type: UserType::EndUser,
+                                        user_status: UserStatus::Active,
+                                        is_online: false,
+                                        created_at: chrono::Utc::now(),
+                                        updated_at: chrono::Utc::now(),
+                                        last_login: None,
+                                    },
+                                    Err(_) => UserProfile {
+                                        id: user_id,
+                                        email: String::new(),
+                                        first_name: String::from(""),
+                                        last_name: String::from(""),
+                                        username: String::from(""),
+                                        birthday: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+                                        address: String::new(),
+                                        gender: Gender::Other,
+                                        user_type: UserType::EndUser,
+                                        user_status: UserStatus::Active,
+                                        is_online: false,
+                                        created_at: chrono::Utc::now(),
+                                        updated_at: chrono::Utc::now(),
+                                        last_login: None,
+                                    }
+                                };
+                                GroupMember {
+                                    user_profile,
+                                    role,
+                                    joined_at,
+                                    is_creator: false,
+                                }
+                            });
+                        }
+                        let results = futures::future::join_all(tasks).await;
+                        group_members.extend(results);
+                        set_members_signal.set(group_members);
+                    }
+                    Err(_e) => {
+                        set_members_signal.set(Vec::new());
+                    }
+                }
+            });
+        }
+    });
 
     // Animation states
     let (is_visible, set_is_visible) = create_signal(false);
@@ -239,7 +214,7 @@ pub fn ViewMembersModal(
                             // Header
                             <div class="flex items-center justify-between mb-4 flex-shrink-0">
                                 <h2 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark m-0">
-                                    "Membri del gruppo"
+                                    {move || group_signal.get().as_ref().map(|g| g.name.clone()).unwrap_or_else(|| "Dettagli gruppo".to_string())}
                                 </h2>
                                 <button
                                     type="button"
@@ -257,6 +232,15 @@ pub fn ViewMembersModal(
                                 </button>
                             </div>
 
+                            // Group description
+                            <Show when=move || group_signal.get().is_some()>
+                                <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div class="text-text-primary dark:text-text-primary-dark text-base">
+                                        {move || group_signal.get().as_ref().map(|g| g.description.clone()).unwrap_or_default()}
+                                    </div>
+                                </div>
+                            </Show>
+
                             // Group info and stats
                             <div class="mb-6 flex-shrink-0">
                                 <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -266,8 +250,8 @@ pub fn ViewMembersModal(
                                             <p class="m-0 text-sm text-text-primary dark:text-text-primary-dark leading-relaxed">
                                                 <strong class="font-medium">
                                                     {move || {
-                                                        if let Some(ref name) = group_name_signal.get() {
-                                                            format!("Membri di \"{}\"", name)
+                                                        if let Some(ref group) = group_signal.get() {
+                                                            format!("Membri di \"{}\"", group.name)
                                                         } else {
                                                             "Membri del gruppo".to_string()
                                                         }
@@ -275,7 +259,7 @@ pub fn ViewMembersModal(
                                                 </strong>
                                                 <br/>
                                                 <span class="text-text-secondary dark:text-text-secondary-dark">
-                                                    {move || format!("{} membri totali - {} online - {} amministratori", 
+                                                    {move || format!("{} membri - {} online - {} admin", 
                                                         total_count.get(), online_count.get(), admin_count.get()
                                                     )}
                                                 </span>
@@ -285,7 +269,7 @@ pub fn ViewMembersModal(
                                 </div>
                             </div>
 
-                            // Members List - scrollable con pattern di registration.rs
+                            // Members List - scrollable
                             <div class="mb-6">
                                 <div class="max-h-96 overflow-y-auto custom-scrollbar mb-8 pr-2">
                                     <div class="space-y-3">
@@ -301,7 +285,6 @@ pub fn ViewMembersModal(
                                                                 username={member.user_profile.username.clone()}
                                                                 size="xl"
                                                             />
-                                                            // Status dot posizionato sull'avatar
                                                             <div class=format!("absolute top-8 -right-1 w-4 h-4 {} rounded-full border-2 border-white dark:border-surface-dark", member.status_color())></div>
                                                         </div>
                                                     

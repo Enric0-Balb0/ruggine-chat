@@ -24,7 +24,7 @@ pub use ui::{
 };
 
 pub use layout::{AppLayout, AppNavbar, Sidebar};
-pub use modals::{CreateGroupModal, InviteMemberModal, InviteMemberRequest, MemberRole, ViewMembersModal, GroupMember};
+pub use modals::{CreateGroupModal, InviteMemberModal, InviteMemberRequest, MemberRole, GroupDetailsModal, GroupMember};
 pub use chat::{ChatView, ChatHeaderAction, MessageInputArea};
 pub use groups::{GroupItem, CreateGroupButton, ShowInvitesButton};
 pub use theme::{ThemeToggle, ThemeSlider};

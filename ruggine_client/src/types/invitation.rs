@@ -11,6 +11,15 @@ pub enum MemberRole {
     Admin,
 }
 
+impl MemberRole {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            MemberRole::Admin => "Admin",
+            MemberRole::Member => "Membro",
+        }
+    }
+}
+
 /// Membership status from server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MembershipStatus {
