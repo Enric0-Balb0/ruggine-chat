@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::entity::group_membership::{MemberRole, MembershipStatus};
+use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
 
 #[derive(Debug, sqlx::FromRow, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GroupMembershipWithInvitationRow {
@@ -12,4 +12,5 @@ pub struct GroupMembershipWithInvitationRow {
     pub left_at: Option<DateTime<Utc>>,
     pub membership_status: MembershipStatus,
     pub invitation_id: i32,
+    pub current_action: CurrentAction,
 }

@@ -187,6 +187,7 @@ mod find_by_user_id_e2e_tests {
         for membership in memberships {
             assert_eq!(membership["user_id"].as_i64().unwrap() as i32, member_id);
             assert_eq!(membership["membership_status"].as_str().unwrap(), "active");
+            assert_eq!(membership["current_action"].as_str().unwrap(), "waiting");
             
             // Check that the membership ID and group chat ID are in our expected lists
             let membership_id = membership["id"].as_i64().unwrap() as i32;

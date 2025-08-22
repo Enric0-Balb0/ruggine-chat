@@ -10,7 +10,7 @@ use crate::common::cleanup_user_by_email;
 
 #[cfg(test)]
 mod profile_handler_integration_tests {
-    use ruggine_server::entity::user::{CurrentAction, UserStatus};
+    use ruggine_server::entity::user::{UserStatus};
     use crate::get_database;
     use super::*;
 
@@ -45,7 +45,6 @@ mod profile_handler_integration_tests {
 
         // Extra check
         assert!(!data.is_online, "User should not be online by default");
-        assert_eq!(data.current_action, CurrentAction::Waiting, "User should be in Waiting state by default");
 
         // Cleanup
         cleanup_user_by_email(user.email).await;
@@ -68,7 +67,6 @@ mod profile_handler_integration_tests {
 
         // Extra check: user should not be online and should be waiting
         assert!(!data.is_online, "User should not be online by default");
-        assert_eq!(data.current_action, CurrentAction::Waiting);
         
         // Cleanup
         cleanup_user_by_email(user.email).await;
@@ -104,7 +102,6 @@ mod profile_handler_integration_tests {
         assert_eq!(data.user_status, UserStatus::Deleted, "User status should reflect deletion");
 
         assert!(!data.is_online, "User should not be online by default");
-        assert_eq!(data.current_action, CurrentAction::Waiting, "Default action should be Waiting");
 
         // Cleanup
         cleanup_user_by_email(updated_user.email).await;
@@ -229,8 +226,6 @@ mod profile_handler_integration_tests {
         // Both should have default values for auto-generated fields
         assert!(!data1.is_online);
         assert!(!data2.is_online);
-        assert_eq!(data1.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
-        assert_eq!(data2.current_action, ruggine_server::entity::user::CurrentAction::Waiting);
         
         // Cleanup
         cleanup_user_by_email(user1.email).await;

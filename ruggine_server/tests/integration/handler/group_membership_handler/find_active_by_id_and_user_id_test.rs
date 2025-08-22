@@ -40,6 +40,7 @@ mod find_active_by_id_and_user_id_handler_integration_tests {
         assert_eq!(membership_response.data().user_id, member_user.id);
         assert_eq!(membership_response.data().group_chat_id, group_chat.id);
         assert_eq!(membership_response.data().invitation_id, invitation.id);
+        assert_eq!(membership_response.data().current_action, membership.current_action);
 
         // Cleanup
         cleanup_group_membership(membership.id).await;

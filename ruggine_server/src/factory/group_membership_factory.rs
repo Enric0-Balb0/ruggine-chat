@@ -5,6 +5,7 @@ use crate::{
     dto::group_membership_dto::{GroupMembershipCreateDto, GroupMembershipReadDto, LeaveGroupMembershipDto},
     entity::group_membership::{GroupMembership, MemberRole, MembershipStatus, NewGroupMembership, UpdateGroupMembership}
 };
+use crate::entity::group_membership::CurrentAction;
 use crate::entity::invitation::Invitation;
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 
@@ -50,7 +51,9 @@ impl GroupMembershipFactory {
             joined_at: Utc::now(),
             left_at: None,
             membership_status: MembershipStatus::Active,
+            current_action: CurrentAction::Waiting,
             invitation_id: 1,
+
         }
     }
 
@@ -77,6 +80,7 @@ impl GroupMembershipFactory {
             left_at: None,
             membership_status: MembershipStatus::Active,
             invitation_id,
+            current_action: CurrentAction::Waiting,
         }
     }
 
@@ -105,6 +109,17 @@ impl GroupMembershipFactory {
             role: Some(MemberRole::Admin),
             left_at: None,
             membership_status: None,
+            current_action: None,
+        }
+    }
+
+    pub fn fake_update_group_membership_current_action() -> UpdateGroupMembership {
+        UpdateGroupMembership {
+            id: 1,
+            role: None,
+            left_at: None,
+            membership_status: None,
+            current_action: Some(CurrentAction::Writing),
         }
     }
 
@@ -114,6 +129,7 @@ impl GroupMembershipFactory {
             role: None,
             left_at: Some(Utc::now()),
             membership_status: Some(MembershipStatus::Left),
+            current_action: None,
         }
     }
 
@@ -147,6 +163,7 @@ impl GroupMembershipFactory {
             left_at: None,
             membership_status: MembershipStatus::Active,
             invitation_id: 1,
+            current_action: CurrentAction::Waiting,
         }
     }
 
@@ -160,6 +177,7 @@ impl GroupMembershipFactory {
             left_at: Some(Utc::now()),
             membership_status: MembershipStatus::Left,
             invitation_id: 1,
+            current_action: CurrentAction::Waiting,
         }
     }
 
@@ -173,6 +191,7 @@ impl GroupMembershipFactory {
             left_at: membership.left_at,
             membership_status: membership.membership_status.clone(),
             invitation_id: membership.invitation_id,
+            current_action: CurrentAction::Waiting,
         }
     }
 
@@ -186,6 +205,7 @@ impl GroupMembershipFactory {
             invitation_id: 100,
             user_id: 42,
             group_chat_id: 77,
+            current_action: CurrentAction::Waiting,
         }
     }
 
@@ -199,6 +219,7 @@ impl GroupMembershipFactory {
             invitation_id: 101,
             user_id: 43,
             group_chat_id: 78,
+            current_action: CurrentAction::Waiting,
         }
     }
 }

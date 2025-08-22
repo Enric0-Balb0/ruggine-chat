@@ -91,7 +91,7 @@ mod tests {
     use crate::error::api_error::ApiError;
     use crate::factory::user_factory::UserFactory;
     use crate::factory::group_chat_factory::GroupChatFactory;
-    use crate::entity::group_membership::MembershipStatus;
+    use crate::entity::group_membership::{CurrentAction, MembershipStatus};
 
     fn create_mock_group_membership_service() -> MockGroupMembershipServiceTrait {
         MockGroupMembershipServiceTrait::new()
@@ -114,6 +114,7 @@ mod tests {
             left_at: None,
             membership_status: MembershipStatus::Active,
             invitation_id: 1,
+            current_action: CurrentAction::Waiting,
         }
     }
 

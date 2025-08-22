@@ -41,7 +41,7 @@ pub async fn login(
 #[cfg(test)]
 mod login_tests {
     use super::*;
-    use crate::entity::user::{CurrentAction, Gender, User, UserStatus};
+    use crate::entity::user::{Gender, User, UserStatus};
     use crate::dto::token_dto::TokenReadDto;
     use crate::error::user_error::UserError;
     // Import the auto-generated mocks
@@ -92,7 +92,6 @@ mod login_tests {
             birthday: Utc::now().naive_utc().into(),
             is_online: false,
             address: "123 Main St".to_string(),
-            current_action: CurrentAction::Waiting,
             gender: Gender::Other,
         }
     }

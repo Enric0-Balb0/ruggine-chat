@@ -59,8 +59,6 @@ mod register_handler_integration_tests {
         
         // Verify default values for auto-generated fields
         assert!(!user_response.data().is_online, "New user should not be online by default");
-        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
-                  "New user should be in Waiting state by default");
 
         // Cleanup
         cleanup_user_by_email(register_dto.email).await;
@@ -134,8 +132,6 @@ mod register_handler_integration_tests {
         
         // Verify default values are correctly set in database
         assert!(!stored_user.is_online, "User should not be online by default in database");
-        assert_eq!(stored_user.current_action, ruggine_server::entity::user::CurrentAction::Waiting, 
-                  "User should be in Waiting state by default in database");
 
         // Cleanup
         cleanup_user_by_email(register_dto.email).await;
@@ -278,7 +274,6 @@ mod register_handler_integration_tests {
         
         // Verify default values for auto-generated fields
         assert!(!user_response.data().is_online, "User should not be online by default");
-        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting);
         
         // Verify response structure
         assert!(user_response.data().id > 0);
@@ -349,7 +344,6 @@ mod register_handler_integration_tests {
         assert_eq!(user_response.data().address, register_dto.address);
         assert_eq!(user_response.data().gender, register_dto.gender);
         assert_eq!(user_response.data().is_online, false); // Should default to false
-        assert_eq!(user_response.data().current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Verify new fields are stored in database
         let db = get_database().await;
@@ -363,8 +357,6 @@ mod register_handler_integration_tests {
         assert_eq!(stored_user.address, register_dto.address);
         assert_eq!(stored_user.gender, register_dto.gender);
         assert_eq!(stored_user.is_online, false); // Should default to false
-        assert_eq!(stored_user.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
-
         // Cleanup
         cleanup_user_by_email(register_dto.email).await;
     }

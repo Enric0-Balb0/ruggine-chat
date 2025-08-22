@@ -41,7 +41,6 @@ mod user_repository_find_by_email_tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
             is_online: false,
             address: "123 Test St".to_string(),
-            current_action: Default::default(), // Default current action
             gender: Default::default(), // Default gender
         };
 

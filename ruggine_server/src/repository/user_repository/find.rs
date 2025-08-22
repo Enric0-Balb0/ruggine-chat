@@ -19,6 +19,7 @@ mod user_repository_find_tests {
     use crate::entity::user::{User};
     use chrono::{Utc};
     use mockall::predicate::*;
+    use crate::entity::group_membership::CurrentAction;
     use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::repository::user_repository::UserRepositoryTrait;
 
@@ -41,7 +42,6 @@ mod user_repository_find_tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
             is_online: false,
             address: "456 Oak Ave".to_string(),
-            current_action: Default::default(), // Default current action
             gender: crate::entity::user::Gender::Female,
         };
 

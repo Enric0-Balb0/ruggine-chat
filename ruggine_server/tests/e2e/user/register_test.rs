@@ -66,7 +66,6 @@ mod register_e2e_tests {
         assert!(data.get("birthday").is_some(), "Response should contain birthday");
         assert!(data.get("is_online").is_some(), "Response should contain is_online");
         assert!(data.get("address").is_some(), "Response should contain address");
-        assert!(data.get("current_action").is_some(), "Response should contain current_action");
         assert!(data.get("gender").is_some(), "Response should contain gender");
 
         // Verify user data matches input
@@ -81,7 +80,6 @@ mod register_e2e_tests {
         assert_eq!(data["address"], register_dto.address);
         assert_eq!(data["gender"], register_dto.gender.to_string());
         assert_eq!(data["is_online"], false); // Should default to false
-        assert_eq!(data["current_action"], "waiting"); // Should default to waiting
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "Response should not contain password");
@@ -142,7 +140,6 @@ mod register_e2e_tests {
         
         // Verify default values for auto-generated fields
         assert!(!stored_user.is_online, "User should not be online by default");
-        assert_eq!(stored_user.current_action.to_string(), "waiting", "User should be in waiting state by default");
 
         // Verify password is hashed
         assert_ne!(stored_user.password, register_dto.password, "Password should be hashed");

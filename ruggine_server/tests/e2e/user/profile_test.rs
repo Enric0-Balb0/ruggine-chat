@@ -103,7 +103,6 @@ mod profile_e2e_tests {
         assert!(data.get("birthday").is_some(), "User data should contain birthday");
         assert!(data.get("is_online").is_some(), "User data should contain is_online");
         assert!(data.get("address").is_some(), "User data should contain address");
-        assert!(data.get("current_action").is_some(), "User data should contain current_action");
         assert!(data.get("gender").is_some(), "User data should contain gender");
 
         // Verify user data matches expected values
@@ -119,7 +118,6 @@ mod profile_e2e_tests {
         assert_eq!(data["address"], user_dto.address);
         assert_eq!(data["gender"], user_dto.gender.to_string());
         assert_eq!(data["is_online"], false); // Should default to false
-        assert_eq!(data["current_action"], "waiting"); // Should default to waiting
 
         // Verify password is not included in response
         assert!(data.get("password").is_none(), "User data should not contain password");
@@ -363,7 +361,6 @@ mod profile_e2e_tests {
         assert!(data.get("birthday").is_some(), "Birthday should be present");
         assert!(data.get("is_online").is_some(), "Is online should be present");
         assert!(data.get("address").is_some(), "Address should be present");
-        assert!(data.get("current_action").is_some(), "Current action should be present");
         assert!(data.get("gender").is_some(), "Gender should be present");
         assert!(data.get("created_at").is_some(), "Created at should be present");
 
@@ -410,7 +407,6 @@ mod profile_e2e_tests {
         assert!(data["birthday"].is_string(), "birthday should be a string");
         assert!(data["is_online"].is_boolean(), "is_online should be a boolean");
         assert!(data["address"].is_string(), "address should be a string");
-        assert!(data["current_action"].is_string(), "current_action should be a string");
         assert!(data["gender"].is_string(), "gender should be a string");
 
         // Verify field values are reasonable
@@ -425,7 +421,6 @@ mod profile_e2e_tests {
         assert!(!data["user_status"].as_str().unwrap().is_empty(), "user_status should not be empty");
         assert!(!data["birthday"].as_str().unwrap().is_empty(), "birthday should not be empty");
         assert!(!data["address"].as_str().unwrap().is_empty(), "address should not be empty");
-        assert!(!data["current_action"].as_str().unwrap().is_empty(), "current_action should not be empty");
         assert!(!data["gender"].as_str().unwrap().is_empty(), "gender should not be empty");
         assert!(!data["updated_at"].as_str().unwrap().is_empty(), "updated_at should not be empty");
         assert!(!data["user_type"].as_str().unwrap().is_empty(), "user_type should not be empty");

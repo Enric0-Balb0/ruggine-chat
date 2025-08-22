@@ -152,7 +152,8 @@ mod group_membership_repository_find_active_by_user_id_and_group_id_integration_
             membership_status: Some(MembershipStatus::Left),
             left_at: Some(chrono::Utc::now()),
             id: membership_id,
-            role: None
+            role: None,
+            current_action: None
         };
         repository.update(update_membership).await.unwrap();
 
@@ -202,6 +203,7 @@ mod group_membership_repository_find_active_by_user_id_and_group_id_integration_
             left_at: Some(chrono::Utc::now()),
             id: membership_id1,
             role: None,
+            current_action: None
         };
         repository.update(update_membership).await.unwrap();
 

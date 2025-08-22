@@ -28,7 +28,7 @@ impl GroupMembershipRepository {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use crate::factory::group_membership_factory::GroupMembershipFactory;
     use chrono::Utc;
     use sqlx::Error;
@@ -110,6 +110,7 @@ mod unit_tests {
             left_at: if status == MembershipStatus::Left { Some(Utc::now()) } else { None },
             membership_status: status,
             invitation_id: 1,
+            current_action: CurrentAction::Waiting,
         }
     }
 

@@ -129,7 +129,7 @@ impl InvitationService {
 mod invitation_service_send_tests {
     use super::*;
     use mockall::predicate::*;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use crate::factory::invitation_factory::InvitationFactory;
     use crate::factory::user_factory::UserFactory;
     use crate::dto::group_chat_dto::GroupChatReadDto;
@@ -213,6 +213,7 @@ mod invitation_service_send_tests {
             invitation_id: 100,
             user_id: from_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let admin_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(admin_membership_row);
         mock_group_membership_service
@@ -386,6 +387,7 @@ mod invitation_service_send_tests {
             invitation_id: 101,
             user_id: from_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let member_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(member_membership_row);
         mock_group_membership_service
@@ -489,6 +491,7 @@ mod invitation_service_send_tests {
             invitation_id: 102,
             user_id: from_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let admin_membership_dto2 = crate::dto::group_membership_dto::GroupMembershipReadDto::from(admin_membership_row2);
         mock_group_membership_service
@@ -590,6 +593,7 @@ mod invitation_service_send_tests {
             invitation_id: 100,
             user_id: to_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let active_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(active_membership_row);
         mock_group_membership_service
@@ -778,6 +782,7 @@ mod invitation_service_send_tests {
             invitation_id: 100,
             user_id: from_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let inactive_admin_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(inactive_admin_membership_row);
         mock_group_membership_service

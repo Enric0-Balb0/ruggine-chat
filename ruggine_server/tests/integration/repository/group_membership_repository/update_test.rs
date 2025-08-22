@@ -1,11 +1,11 @@
 use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
-use ruggine_server::factory::group_membership_factory::GroupMembershipFactory;
 use ruggine_server::entity::group_membership::{MemberRole, MembershipStatus, UpdateGroupMembership};
 use crate::common::{get_database, create_test_user, cleanup_user_by_email, cleanup_group_chat, cleanup_invitation, create_test_invitation, create_test_group_membership, cleanup_group_membership};
 use chrono::Utc;
 
 #[cfg(test)]
 mod group_membership_repository_update_integration_tests {
+    use ruggine_server::entity::group_membership::CurrentAction;
     use crate::create_test_group_chat;
     use super::*;
 
@@ -30,6 +30,7 @@ mod group_membership_repository_update_integration_tests {
             role: None,
             membership_status: Some(MembershipStatus::Left),
             left_at: Some(Utc::now()),
+            current_action: None,
         };
 
         // Act: Update the membership
@@ -44,6 +45,7 @@ mod group_membership_repository_update_integration_tests {
         
         let updated = updated_membership.unwrap();
         assert_eq!(updated.membership_status, MembershipStatus::Left);
+        assert_eq!(updated.current_action, CurrentAction::Waiting); // Should remain waiting
         assert!(updated.left_at.is_some());
 
         // Cleanup
@@ -75,6 +77,7 @@ mod group_membership_repository_update_integration_tests {
             role: Some(MemberRole::Admin),
             membership_status: None,
             left_at: None,
+            current_action: None,
         };
 
         // Act: Update the membership
@@ -90,6 +93,54 @@ mod group_membership_repository_update_integration_tests {
         let updated = updated_membership.unwrap();
         assert_eq!(updated.role, MemberRole::Admin);
         assert_eq!(updated.membership_status, MembershipStatus::Active); // Should remain active
+        assert_eq!(updated.current_action, CurrentAction::Waiting); // Should remain waiting
+
+        // Cleanup
+        cleanup_group_membership(membership.id).await;
+        cleanup_invitation(invitation.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_update_current_action_change_success() {
+        // Arrange: Create real membership in database
+        let db = get_database().await;
+        let repository = GroupMembershipRepository::new(&db);
+
+        // Create users and group
+        let (admin_user, _) = create_test_user("update_role_admin").await;
+        let (member_user, _) = create_test_user("update_role_member").await;
+
+        // Create group and membership
+        let group_chat = create_test_group_chat("update_role_group", admin_user.id).await;
+        let invitation = create_test_invitation(admin_user.id, member_user.id, group_chat.id).await;
+        let membership = create_test_group_membership(invitation.id, member_user.id).await;
+
+        // Create update to change role to admin
+        let update_membership = UpdateGroupMembership {
+            id: membership.id,
+            role: None,
+            membership_status: None,
+            left_at: None,
+            current_action: Some(CurrentAction::Writing),
+        };
+
+        // Act: Update the membership
+        let result = repository.update(update_membership).await;
+
+        // Assert: Verify update was successful
+        assert!(result.is_ok(), "Failed to update membership role: {:?}", result);
+
+        // Verify the role was actually updated
+        let updated_membership = repository.find_by_id_and_user_id(membership.id, member_user.id).await;
+        assert!(updated_membership.is_ok(), "Failed to retrieve updated membership");
+
+        let updated = updated_membership.unwrap();
+        assert_eq!(updated.role, MemberRole::Member);
+        assert_eq!(updated.membership_status, MembershipStatus::Active); // Should remain active
+        assert_eq!(updated.current_action, CurrentAction::Writing);
 
         // Cleanup
         cleanup_group_membership(membership.id).await;
@@ -111,6 +162,7 @@ mod group_membership_repository_update_integration_tests {
             role: Some(MemberRole::Admin),
             membership_status: None,
             left_at: None,
+            current_action: None,
         };
 
         // Act: Try to update non-existent membership
@@ -146,6 +198,7 @@ mod group_membership_repository_update_integration_tests {
             role: None,
             membership_status: None,
             left_at: None,
+            current_action: None,
         };
 
         // Act: Update with no changes
@@ -183,6 +236,7 @@ mod group_membership_repository_update_integration_tests {
             role: Some(MemberRole::Admin),
             membership_status: Some(MembershipStatus::Left),
             left_at: Some(left_time),
+            current_action: Some(CurrentAction::Writing),
         };
 
         // Act: Update multiple fields
@@ -199,6 +253,7 @@ mod group_membership_repository_update_integration_tests {
         assert_eq!(updated.role, MemberRole::Admin);
         assert_eq!(updated.membership_status, MembershipStatus::Left);
         assert!(updated.left_at.is_some());
+        assert_eq!(updated.current_action, CurrentAction::Writing);
 
         // Cleanup
         cleanup_group_membership(membership.id).await;

@@ -121,7 +121,7 @@ mod invitation_service_send_for_group_chat_create_tests {
     use super::*;
     use mockall::predicate::*;
     use crate::error::invitation_error::InvitationError;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use crate::factory::invitation_factory::InvitationFactory;
     use crate::factory::user_factory::UserFactory;
     use crate::dto::group_chat_dto::GroupChatReadDto;
@@ -439,6 +439,7 @@ mod invitation_service_send_for_group_chat_create_tests {
             invitation_id: 100,
             user_id: to_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
 
         // Mock user service to return the user exists
@@ -821,6 +822,7 @@ mod invitation_service_send_for_group_chat_create_tests {
             invitation_id: 100,
             user_id: to_user_id,
             group_chat_id,
+            current_action: CurrentAction::Waiting,
         };
         let inactive_membership_dto = crate::dto::group_membership_dto::GroupMembershipReadDto::from(inactive_membership_row);
         mock_group_membership_service

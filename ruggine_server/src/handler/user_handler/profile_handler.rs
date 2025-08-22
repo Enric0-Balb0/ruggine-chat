@@ -82,7 +82,6 @@ mod tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1992, 8, 20).unwrap(),
             is_online: true,
             address: "789 Profile St".to_string(),
-            current_action: crate::entity::user::CurrentAction::Writing,
             gender: crate::entity::user::Gender::Female,
         };
 
@@ -103,7 +102,6 @@ mod tests {
         assert_eq!(data.birthday, user.birthday);
         assert_eq!(data.is_online, user.is_online);
         assert_eq!(data.address, user.address);
-        assert_eq!(data.current_action, user.current_action);
         assert_eq!(data.gender, user.gender);
     }
 
@@ -144,7 +142,6 @@ mod tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1988, 3, 15).unwrap(),
             is_online: false,
             address: "321 New Field Blvd".to_string(),
-            current_action: crate::entity::user::CurrentAction::Waiting,
             gender: crate::entity::user::Gender::Other,
         };
 
@@ -157,7 +154,6 @@ mod tests {
         assert_eq!(data.birthday, user.birthday);
         assert_eq!(data.is_online, user.is_online);
         assert_eq!(data.address, user.address);
-        assert_eq!(data.current_action, user.current_action);
         assert_eq!(data.gender, user.gender);
         assert_eq!(data.user_type, user.user_type);
     }

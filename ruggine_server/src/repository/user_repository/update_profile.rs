@@ -37,7 +37,6 @@ impl UserRepository {
                 birthday,
                 is_online,
                 address,
-                current_action as "current_action: _",
                 gender as "gender: _""#,
             updated_first_name,
             updated_last_name,

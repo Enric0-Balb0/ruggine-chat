@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use validator::Validate;
 use utoipa::ToSchema;
+use crate::entity::group_membership::CurrentAction;
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
@@ -38,7 +39,8 @@ pub struct LeaveGroupMembershipDto {
     "joined_at": "2024-01-01T12:00:00Z",
     "left_at": null,
     "membership_status": "active",
-    "invitation_id": 1
+    "invitation_id": 1,
+    "current_action": "waiting"
 }))]
 pub struct GroupMembershipReadDto {
     #[schema(example = 1)]
@@ -57,6 +59,8 @@ pub struct GroupMembershipReadDto {
     pub membership_status: MembershipStatus,
     #[schema(example = 1)]
     pub invitation_id: i32, // Foreign key to Invitation
+    #[schema(example = "waiting")]
+    pub current_action: CurrentAction,
 }
 
 impl From<GroupMembershipWithInvitationRow> for GroupMembershipReadDto {
@@ -70,6 +74,7 @@ impl From<GroupMembershipWithInvitationRow> for GroupMembershipReadDto {
             left_at: row.left_at,
             membership_status: row.membership_status,
             invitation_id: row.invitation_id,
+            current_action: row.current_action,
         }
     }
 }
@@ -91,6 +96,7 @@ impl LeaveGroupMembershipDto {
             left_at: Some(Utc::now()), // Set left_at to now
             role: None, // Role is not updated when leaving
             id: self.id,
+            current_action: None,
         }
     }
 }
@@ -134,6 +140,7 @@ mod tests {
             left_at: None,
             membership_status: MembershipStatus::Active,
             invitation_id: 10,
+            current_action: CurrentAction::Writing,
         };
 
         let read_dto = GroupMembershipReadDto::from(row.clone());
@@ -146,6 +153,7 @@ mod tests {
         assert_eq!(read_dto.left_at, row.left_at);
         assert_eq!(read_dto.membership_status, row.membership_status);
         assert_eq!(read_dto.invitation_id, row.invitation_id);
+        assert_eq!(read_dto.current_action, row.current_action);
     }
 
     #[test]
@@ -161,6 +169,7 @@ mod tests {
             left_at: Some(left_time),
             membership_status: MembershipStatus::Left,
             invitation_id: 77,
+            current_action: CurrentAction::Writing,
         };
 
         let read_dto = GroupMembershipReadDto::from(row.clone());
@@ -172,6 +181,7 @@ mod tests {
         assert_eq!(read_dto.left_at, row.left_at);
         assert_eq!(read_dto.membership_status, row.membership_status);
         assert_eq!(read_dto.invitation_id, row.invitation_id);
+        assert_eq!(read_dto.current_action, row.current_action);
     }
 
     #[test]

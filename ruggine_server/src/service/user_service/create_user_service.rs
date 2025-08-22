@@ -68,7 +68,6 @@ mod tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
             is_online: false,
             address: "123 Test St".to_string(),
-            current_action: Default::default(),
             gender: Default::default(),
         };
 
@@ -141,7 +140,6 @@ mod tests {
             birthday: chrono::NaiveDate::from_ymd_opt(1985, 5, 10).unwrap(),
             is_online: true,
             address: "456 Oak Ave".to_string(),
-            current_action: Default::default(),
             gender: crate::entity::user::Gender::Female,
         };
 

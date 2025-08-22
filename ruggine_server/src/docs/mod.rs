@@ -27,7 +27,7 @@ use crate::{dto::{
             TextMessageReadDto,
         },
     },
-    entity::{user::{CurrentAction, Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole}},
+    entity::{user::{Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole, CurrentAction}},
 };
 use crate::handler::{
     auth_handler,

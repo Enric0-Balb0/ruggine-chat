@@ -21,7 +21,8 @@ impl GroupMembershipRepository {
                 gm.membership_status,
                 gm.invitation_id,
                 i.to_user_id AS user_id,
-                i.group_chat_id
+                i.group_chat_id,
+                gm.current_action
             FROM group_membership gm
             JOIN invitation i ON gm.invitation_id = i.id
             WHERE gm.id = $1 AND i.to_user_id = $2
@@ -76,6 +77,7 @@ mod group_membership_repository_find_by_id_and_user_id_tests {
         assert_eq!(found.role, expected.role);
         assert_eq!(found.membership_status, expected.membership_status);
         assert_eq!(found.left_at, expected.left_at);
+        assert_eq!(found.current_action, expected.current_action);
     }
 
     #[tokio_shared_rt::test(shared)]

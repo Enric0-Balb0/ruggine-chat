@@ -15,7 +15,6 @@ erDiagram
         date birthday "NULLABLE"
         boolean is_online "NOT NULL, DEFAULT false"
         varchar address "NULLABLE"
-        current_action current_action "NOT NULL, DEFAULT 'waiting'"
         gender gender "NOT NULL"
         timestamptz created_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
         timestamptz updated_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
@@ -40,12 +39,23 @@ erDiagram
         timestamptz sent_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
     }
 
+    %% InfoMessage Entity
+    INFO_TEXT_MESSAGE {
+        int id PK "SERIAL"
+        int user_id FK "NOT NULL (UK)"
+        int text_message_id FK "NOT NULL (UK)"
+        timestamptz sent_at "NULLABLE"
+        timestamptz read_at "NULLABLE"
+    }
+    %% Nota: UNIQUE(user_id, text_message_id)
+
     %% GroupMembership Entity
     GROUP_MEMBERSHIP {
         int id PK "SERIAL"
         member_role role "NOT NULL"
         membership_status membership_status "NOT NULL, DEFAULT 'active'"
         timestamptz joined_at "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
+        current_action current_action "NOT NULL, DEFAULT 'waiting'"
         int invitation_id FK "UNIQUE, NOT NULL"
         timestamptz left_at "NULLABLE"
     }
@@ -81,6 +91,8 @@ erDiagram
     INVITATION }o--|| USER : "from_user_id"
     INVITATION }o--|| USER : "to_user_id"
     INVITATION }o--|| GROUP_CHAT : "group_chat_id"
+    INFO_TEXT_MESSAGE }o--|| USER : "user_id"
+    INFO_TEXT_MESSAGE }|--|| TEXT_MESSAGE : "text_message_id"
 ```
 
 ### Database ENUMs

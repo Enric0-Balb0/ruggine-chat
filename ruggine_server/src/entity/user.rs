@@ -18,7 +18,6 @@ pub struct User {
     pub birthday: NaiveDate,
     pub is_online: bool,
     pub address: String,
-    pub current_action: CurrentAction,
     pub gender: Gender,
 }
 
@@ -83,22 +82,6 @@ pub enum UserStatus {
 impl Default for UserStatus {
     fn default() -> Self {
         UserStatus::Active
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema, Display)]
-#[sqlx(type_name = "current_action")]
-#[sqlx(rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum CurrentAction {
-    Waiting,
-    Writing,
-}
-
-impl Default for CurrentAction {
-    fn default() -> Self {
-        CurrentAction::Waiting
     }
 }
 

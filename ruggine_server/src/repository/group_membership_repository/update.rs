@@ -33,6 +33,11 @@ impl GroupMembershipRepository {
             bind_index += 1;
         }
 
+        if update_membership.current_action.is_some() {
+            set_clauses.push(format!("current_action = ${}", bind_index));
+            bind_index += 1;
+        }
+
         if set_clauses.is_empty() {
             return Ok(()); // Nothing to update
         }
@@ -55,6 +60,10 @@ impl GroupMembershipRepository {
 
         if let Some(left_at) = update_membership.left_at {
             query = query.bind(left_at);
+        }
+
+        if let Some(current_cation) = update_membership.current_action {
+            query = query.bind(current_cation)
         }
 
         match query.execute(self.db_conn.get_pool()).await {
@@ -80,7 +89,7 @@ mod group_membership_repository_update_tests {
     use crate::factory::group_membership_factory::GroupMembershipFactory;
     use crate::repository::group_membership_repository::group_membership_repository_trait::MockGroupMembershipRepositoryTrait;
     use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use chrono::Utc;
 
     #[tokio_shared_rt::test(shared)]
@@ -136,6 +145,32 @@ mod group_membership_repository_update_tests {
             role: Some(MemberRole::Admin),
             membership_status: None,
             left_at: None,
+            current_action: None
+        };
+
+        mock_group_membership_repo
+            .expect_update()
+            .with(eq(update_membership.clone()))
+            .times(1)
+            .returning(|_| Box::pin(async move { Ok(()) }));
+
+        // Act
+        let result = mock_group_membership_repo.update(update_membership).await;
+
+        // Assert
+        assert!(result.is_ok());
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_update_current_action_change() {
+        // Arrange
+        let mut mock_group_membership_repo = MockGroupMembershipRepositoryTrait::new();
+        let update_membership = UpdateGroupMembership {
+            id: 1,
+            role: None,
+            membership_status: None,
+            left_at: None,
+            current_action: Some(CurrentAction::Writing),
         };
 
         mock_group_membership_repo
@@ -160,6 +195,7 @@ mod group_membership_repository_update_tests {
             role: None,
             membership_status: Some(MembershipStatus::Left),
             left_at: Some(Utc::now()),
+            current_action: None,
         };
 
         mock_group_membership_repo
@@ -211,6 +247,7 @@ mod group_membership_repository_update_tests {
             role: None,
             membership_status: None,
             left_at: None,
+            current_action: None,
         };
 
         mock_group_membership_repo

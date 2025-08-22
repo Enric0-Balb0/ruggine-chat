@@ -86,7 +86,7 @@ impl GroupMembershipService {
 mod group_membership_service_create_checked_tests {
     use super::*;
     use mockall::predicate::*;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use crate::service::group_membership_service::group_membership_service_trait::GroupMembershipServiceTrait;
     use crate::factory::invitation_factory::InvitationFactory;
     use chrono::Utc;
@@ -161,6 +161,7 @@ mod group_membership_service_create_checked_tests {
             invitation_id,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         mock_group_membership_repo

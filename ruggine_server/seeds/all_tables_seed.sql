@@ -26,10 +26,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_status') THEN
         CREATE TYPE user_status AS ENUM ('pending', 'active', 'suspended', 'deleted', 'banned');
     END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'current_action') THEN
-        CREATE TYPE current_action AS ENUM ('waiting', 'writing');
-    END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
         CREATE TYPE gender AS ENUM ('male', 'female', 'other');
@@ -49,19 +45,18 @@ CREATE TABLE "user" (
     birthday DATE NOT NULL,
     is_online BOOLEAN NOT NULL DEFAULT false,
     address VARCHAR(256) NOT NULL,
-    current_action current_action NOT NULL DEFAULT 'waiting',
     gender gender NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, current_action, gender)
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, gender)
 VALUES
-('Test1', 'User1', 'testuser1', 'test.user1@example.com', '$2b$04$somethinghashed', 'developer', 'active', '1990-01-01', false, '123 Main St', 'waiting', 'male');
+('Test1', 'User1', 'testuser1', 'test.user1@example.com', '$2b$04$somethinghashed', 'developer', 'active', '1990-01-01', false, '123 Main St', 'male');
 
-INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, current_action, gender)
+INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, gender)
 VALUES
-('Test2', 'User2', 'testuser2', 'test.user2@example.com', '$2b$04$somethinghashed', 'end_user', 'active', '2000-01-01', false, '123 Main St', 'waiting', 'female');
+('Test2', 'User2', 'testuser2', 'test.user2@example.com', '$2b$04$somethinghashed', 'end_user', 'active', '2000-01-01', false, '123 Main St', 'female');
 
 
 
@@ -166,6 +161,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membership_status') THEN
         CREATE TYPE membership_status AS ENUM ('active', 'left', 'banned');
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'current_action') THEN
+        CREATE TYPE current_action AS ENUM ('waiting', 'writing');
+    END IF;
 END$$;
 
 -- Creazione della tabella group_membership
@@ -175,6 +174,7 @@ CREATE TABLE group_membership (
     membership_status membership_status NOT NULL DEFAULT 'active',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     invitation_id INT NOT NULL UNIQUE REFERENCES invitation(id),
+    current_action current_action NOT NULL DEFAULT 'waiting',
     left_at TIMESTAMPTZ
 );
 

@@ -16,7 +16,8 @@ impl GroupMembershipRepository {
                 gm.membership_status as "membership_status: _",
                 gm.invitation_id,
                 i.to_user_id AS user_id,
-                i.group_chat_id
+                i.group_chat_id,
+                gm.current_action as "current_action: _"
             FROM "group_membership" gm
             INNER JOIN "invitation" i ON gm.invitation_id = i.id
             WHERE i.group_chat_id = $1 

@@ -174,7 +174,6 @@ mod user_service_integration_tests {
         assert_eq!(user_dto.address, dto.address);
         assert_eq!(user_dto.gender, dto.gender);
         assert_eq!(user_dto.is_online, false); // Should default to false
-        assert_eq!(user_dto.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Also verify by fetching from database directly
         let user_option = repository.find_by_email(dto.email.clone()).await;
@@ -185,7 +184,6 @@ mod user_service_integration_tests {
         assert_eq!(user.address, dto.address);
         assert_eq!(user.gender, dto.gender);
         assert_eq!(user.is_online, false); // Should default to false
-        assert_eq!(user.current_action, ruggine_server::entity::user::CurrentAction::Waiting); // Should default to Waiting
 
         // Cleanup: Delete the test user
         if let Err(e) = repository.delete_by_email(dto.email.clone()).await {

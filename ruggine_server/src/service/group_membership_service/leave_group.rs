@@ -74,7 +74,7 @@ impl GroupMembershipService {
 mod group_membership_service_leave_group_tests {
     use super::*;
     use mockall::predicate::*;
-    use crate::entity::group_membership::{MemberRole, MembershipStatus};
+    use crate::entity::group_membership::{CurrentAction, MemberRole, MembershipStatus};
     use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
     use crate::service::group_membership_service::GroupMembershipServiceTrait;
     use chrono::Utc;
@@ -108,6 +108,7 @@ mod group_membership_service_leave_group_tests {
             invitation_id: 1,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         let updated_membership = GroupMembershipWithInvitationRow {
@@ -119,6 +120,7 @@ mod group_membership_service_leave_group_tests {
             invitation_id: 1,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         // Mock finding existing membership
@@ -236,6 +238,7 @@ mod group_membership_service_leave_group_tests {
             invitation_id: 1,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         // Mock finding membership that already left
@@ -292,6 +295,7 @@ mod group_membership_service_leave_group_tests {
             invitation_id: 1,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         // Mock finding existing membership
@@ -356,6 +360,7 @@ mod group_membership_service_leave_group_tests {
             invitation_id: 1,
             user_id: auth_user_id,
             group_chat_id: 1,
+            current_action: CurrentAction::Waiting,
         };
 
         // Mock finding existing membership

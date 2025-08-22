@@ -69,6 +69,7 @@ mod tests {
         assert_eq!(dto.group_chat_id, expected_membership.group_chat_id);
         assert_eq!(dto.role, expected_membership.role);
         assert_eq!(dto.membership_status, expected_membership.membership_status);
+        assert_eq!(dto.current_action, expected_membership.current_action);
     }
 
     #[tokio::test]

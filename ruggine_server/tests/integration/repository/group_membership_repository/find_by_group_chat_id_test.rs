@@ -150,6 +150,7 @@ mod group_membership_repository_find_by_group_chat_id_integration_tests {
             role: None,
             membership_status: Some(MembershipStatus::Left),
             left_at: Some(chrono::Utc::now()),
+            current_action: None,
         };
         repository.update(update_membership).await.unwrap();
 

@@ -115,6 +115,7 @@ mod find_active_by_id_and_user_id_e2e_tests {
         assert_eq!(json["data"]["user_id"].as_i64().unwrap() as i32, member_id);
         assert_eq!(json["data"]["group_chat_id"].as_i64().unwrap() as i32, group_chat_id);
         assert_eq!(json["data"]["membership_status"].as_str().unwrap(), "active");
+        assert_eq!(json["data"]["current_action"].as_str().unwrap(), "waiting");
 
         // Cleanup
         cleanup_test_user_from_a_group_chat(admin_id, group_chat_id).await;

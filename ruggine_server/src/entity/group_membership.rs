@@ -10,6 +10,7 @@ pub struct GroupMembership {
     pub joined_at: DateTime<Utc>,
     pub left_at: Option<DateTime<Utc>>,
     pub membership_status: MembershipStatus,
+    pub current_action: CurrentAction,
     pub invitation_id: i32, // Foreign key to Invitation
 }
 
@@ -25,6 +26,7 @@ pub struct UpdateGroupMembership {
     pub role: Option<MemberRole>,
     pub membership_status: Option<MembershipStatus>,
     pub left_at: Option<DateTime<Utc>>,
+    pub current_action: Option<CurrentAction>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema, Display)]
@@ -79,6 +81,7 @@ impl UpdateGroupMembership {
         self.role.is_some()
             || self.left_at.is_some()
             || self.membership_status.is_some()
+            || self.current_action.is_some()
     }
 
     pub fn is_valid(&self) -> bool {
@@ -113,6 +116,7 @@ mod tests {
             role: Some(MemberRole::Admin),
             left_at: None,
             membership_status: None,
+            current_action: None,
         };
         assert!(update.has_updates());
 
@@ -121,6 +125,7 @@ mod tests {
             role: None,
             left_at: Some(Utc::now()),
             membership_status: None,
+            current_action: None,
         };
         assert!(update.has_updates());
 
@@ -129,6 +134,7 @@ mod tests {
             role: None,
             left_at: None,
             membership_status: None,
+            current_action: None,
         };
         assert!(!update.has_updates());
 
@@ -137,6 +143,16 @@ mod tests {
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Active),
+            current_action: None,
+        };
+        assert!(update.has_updates());
+
+        let update = UpdateGroupMembership {
+            id: 1,
+            role: None,
+            left_at: None,
+            membership_status: None,
+            current_action: Some(CurrentAction::Writing),
         };
         assert!(update.has_updates());
     }
@@ -167,12 +183,14 @@ mod tests {
             role: Some(MemberRole::Admin),
             left_at: Some(Utc::now()),
             membership_status: Some(MembershipStatus::Left),
+            current_action: Some(CurrentAction::Waiting),
         };
 
         assert_eq!(update.id, 1);
         assert_eq!(update.role, Some(MemberRole::Admin));
         assert!(update.left_at.is_some());
         assert_eq!(update.membership_status, Some(MembershipStatus::Left));
+        assert_eq!(update.current_action, Some(CurrentAction::Waiting));
     }
 
     #[test]
@@ -221,6 +239,7 @@ mod tests {
             role: None,
             left_at: Some(Utc::now()),
             membership_status: Some(MembershipStatus::Left),
+            current_action: None,
         };
         assert!(update.is_valid());
 
@@ -230,6 +249,7 @@ mod tests {
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Left),
+            current_action: None,
         };
         assert!(!update.is_valid());
 
@@ -239,6 +259,7 @@ mod tests {
             role: None,
             left_at: None,
             membership_status: Some(MembershipStatus::Active),
+            current_action: None,
         };
         assert!(update.is_valid());
 
@@ -248,7 +269,24 @@ mod tests {
             role: None,
             left_at: None,
             membership_status: None,
+            current_action: None,
         };
         assert!(update.is_valid());
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema, Display)]
+#[sqlx(type_name = "current_action")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum CurrentAction {
+    Waiting,
+    Writing,
+}
+
+impl Default for CurrentAction {
+    fn default() -> Self {
+        CurrentAction::Waiting
     }
 }

@@ -1,4 +1,4 @@
-use crate::entity::user::{User, UserStatus, UserType, CurrentAction, Gender};
+use crate::entity::user::{User, UserStatus, UserType, Gender};
 use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -129,7 +129,6 @@ pub struct ProfileUpdateDto {
     "birthday": "1990-01-01",
     "is_online": false,
     "address": "123 Main St",
-    "current_action": "waiting",
     "gender": "male"
 }))]
 pub struct UserReadDto {
@@ -157,8 +156,6 @@ pub struct UserReadDto {
     pub is_online: bool,
     #[schema(example = "123 Main St")]
     pub address: String,
-    #[schema(example = "waiting")]
-    pub current_action: CurrentAction,
     #[schema(example = "male")]
     pub gender: Gender,
 }
@@ -179,7 +176,6 @@ impl UserReadDto {
             birthday: model.birthday,
             is_online: model.is_online,
             address: model.address,
-            current_action: model.current_action,
             gender: model.gender,
         }
     }

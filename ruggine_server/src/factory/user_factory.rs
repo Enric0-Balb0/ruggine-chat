@@ -1,7 +1,8 @@
 use std::sync::{atomic::{AtomicU32, Ordering}};
 use chrono::{Utc, NaiveDate};
 
-use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto, ProfileUpdateDto}, entity::user::{NewUser, User, UserStatus, CurrentAction, Gender}};
+use crate::{dto::user_dto::{UserLoginDto, UserReadDto, UserRegisterDto, ProfileUpdateDto}, entity::user::{NewUser, User, UserStatus, Gender}};
+use crate::entity::group_membership::CurrentAction;
 
 // Global counter for unique test data
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -74,7 +75,6 @@ impl UserFactory {
             created_at: now,
             updated_at: now,
             is_online: Default::default(),
-            current_action: Default::default(),
         }
     }
 
@@ -108,7 +108,6 @@ impl UserFactory {
             birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
             is_online: true,
             address: "456 Oak Ave".to_string(),
-            current_action: CurrentAction::Writing,
             gender: Gender::Female,
         }
     }
@@ -127,7 +126,6 @@ impl UserFactory {
             birthday: NaiveDate::from_ymd_opt(1992, 5, 15).unwrap(),
             is_online: true,
             address: "456 Oak Ave".to_string(),
-            current_action: CurrentAction::Writing,
             gender: Gender::Female,
         }
     }

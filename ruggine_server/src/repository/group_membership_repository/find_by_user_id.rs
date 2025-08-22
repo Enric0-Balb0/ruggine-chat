@@ -18,7 +18,8 @@ impl GroupMembershipRepository {
                 gm.membership_status,
                 gm.invitation_id,
                 i.to_user_id AS user_id,
-                i.group_chat_id
+                i.group_chat_id,
+                gm.current_action
             FROM group_membership gm
             JOIN invitation i ON gm.invitation_id = i.id
             WHERE i.to_user_id = $1
@@ -41,7 +42,6 @@ mod group_membership_repository_find_by_user_id_tests {
     use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
     use crate::factory::group_membership_factory::GroupMembershipFactory;
     use crate::entity::group_membership::{MembershipStatus, MemberRole};
-    use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
     use chrono::Utc;
     use sqlx::Error;
 
