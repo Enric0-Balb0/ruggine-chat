@@ -42,14 +42,6 @@ pub enum UserType {
     Admin,
 }
 
-/// Current user action from server
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CurrentAction {
-    #[serde(rename = "waiting")]
-    Waiting,
-    #[serde(rename = "writing")]
-    Writing,
-}
 
 // =============================================================================
 // DTOs - Server synchronized
@@ -63,7 +55,7 @@ pub struct UserRegisterRequest {
     pub first_name: String,
     pub last_name: String,
     pub username: String,
-    pub birthday: String, // date format as per OpenAPI
+    pub birthday: String,
     pub address: String,
     pub gender: Gender,
 }
@@ -73,7 +65,7 @@ pub struct UserRegisterRequest {
 pub struct UserUpdateRequest {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
-    pub birthday: Option<String>, // date format as per OpenAPI
+    pub birthday: Option<String>,
     pub address: Option<String>,
     pub gender: Option<Gender>,
 }
@@ -98,7 +90,6 @@ pub struct UserReadDto {
     pub birthday: String,
     pub is_online: bool,
     pub address: String,
-    pub current_action: CurrentAction,
     pub gender: Gender,
 }
 
@@ -115,8 +106,7 @@ pub struct UserProfile {
     pub gender: Gender,
     pub user_type: UserType,
     pub user_status: UserStatus,
-    pub current_action: CurrentAction,
-    pub is_online: bool, // MISSING FIELD! From server UserReadDto
+    pub is_online: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,
@@ -148,7 +138,6 @@ impl From<ApiSuccessResponseUserReadDto> for UserProfile {
             gender: user_data.gender,
             user_type: user_data.user_type,
             user_status: user_data.user_status,
-            current_action: user_data.current_action,
             is_online: user_data.is_online, // Now correctly mapped from server
             created_at: user_data.created_at.parse().unwrap_or_default(), // Convert from string
             updated_at: user_data.updated_at.parse().unwrap_or_default(), // Convert from string
@@ -229,7 +218,6 @@ mod tests {
             gender: Gender::Male,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
-            current_action: CurrentAction::Waiting,
             is_online: true, // Added missing field
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -259,7 +247,6 @@ mod tests {
             gender: Gender::Male,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
-            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -281,7 +268,6 @@ mod tests {
             gender: Gender::Female,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
-            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -303,7 +289,6 @@ mod tests {
             gender: Gender::Other,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
-            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),

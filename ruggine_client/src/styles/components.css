@@ -80,6 +80,39 @@
     }
   }
 
+  /* Dropdown slide animation */
+  .animate-dropdown-open {
+    animation: dropdown-open 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top;
+  }
+  
+  .animate-dropdown-close {
+    animation: dropdown-close 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top;
+  }
+  
+  @keyframes dropdown-open {
+    0% {
+      opacity: 0;
+      transform: scaleY(0) translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scaleY(1) translateY(0);
+    }
+  }
+  
+  @keyframes dropdown-close {
+    0% {
+      opacity: 1;
+      transform: scaleY(1) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scaleY(0) translateY(-10px);
+    }
+  }
+
   /* ===== HOVER STATES ===== */
   .hover-scale {
     transition: transform 150ms ease;

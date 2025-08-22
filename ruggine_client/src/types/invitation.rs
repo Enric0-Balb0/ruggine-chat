@@ -1,3 +1,4 @@
+use std::fmt;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
@@ -32,6 +33,18 @@ pub enum InvitationStatus {
     Rejected,
 }
 
+// Implementazione Display per InvitationStatus
+impl fmt::Display for InvitationStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            InvitationStatus::Pending => "pending",
+            InvitationStatus::Accepted => "accepted",
+            InvitationStatus::Rejected => "rejected",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 // =============================================================================
 // DTOs - Server synchronized
 // =============================================================================
@@ -41,20 +54,26 @@ pub enum InvitationStatus {
 pub struct InvitationCreateRequest {
     pub to_user_id: i32,
     pub group_chat_id: i32,
-    pub role_at_join: MemberRole, // MISSING FIELD! Required by OpenAPI
+    pub role_at_join: MemberRole, 
 }
 
 /// Invitation status update request - exact server DTO (InvitationUpdateStatusDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvitationUpdateRequest {
     pub status: InvitationStatus,
-    pub invitation_id: i32, // MISSING FIELD! Required by OpenAPI
+    pub invitation_id: i32, 
 }
 
 /// Invitation response wrapper from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiSuccessResponseInvitationReadDto {
     pub data: InvitationReadDto,
+}
+
+/// Vector of group memberships response wrapper from server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponseVecInvitationReadDto {
+    pub data: Vec<InvitationReadDto>,
 }
 
 /// Invitation data from server - exact structure from OpenAPI
@@ -67,7 +86,7 @@ pub struct InvitationReadDto {
     pub status: InvitationStatus,
     pub sent_at: String, // date-time format from OpenAPI
     pub responded_at: Option<String>, // date-time format, nullable
-    pub role_at_join: MemberRole, // MISSING FIELD! Required by OpenAPI
+    pub role_at_join: MemberRole, 
 }
 
 /// Invitation update response data from server - from ApiSuccessResponseInvitationUpdateDto
@@ -94,7 +113,7 @@ pub struct Invitation {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
-    
+    pub role_at_join: MemberRole,
     // Denormalized data for UI
     pub group_name: Option<String>,
     pub from_user_name: Option<String>,
@@ -108,21 +127,19 @@ pub struct Invitation {
 impl From<ApiSuccessResponseInvitationReadDto> for Invitation {
     fn from(response: ApiSuccessResponseInvitationReadDto) -> Self {
         let invitation_data = response.data;
-        
         Self {
             id: invitation_data.id,
             group_chat_id: invitation_data.group_chat_id,
             from_user_id: invitation_data.from_user_id,
             to_user_id: invitation_data.to_user_id,
             status: invitation_data.status,
-            created_at: invitation_data.sent_at.parse().unwrap_or_default(), // sent_at maps to created_at
+            created_at: invitation_data.sent_at.parse().unwrap_or_default(),
             updated_at: invitation_data.responded_at
                 .as_ref()
                 .and_then(|s| s.parse().ok())
-                .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()), // responded_at or fallback to sent_at
-            expires_at: None, // Not provided by server, client-side enhancement
-            
-            // Denormalized data for UI - not provided by server
+                .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()),
+            expires_at: None,
+            role_at_join: invitation_data.role_at_join,
             group_name: None,
             from_user_name: None,
             to_user_name: None,
@@ -130,7 +147,31 @@ impl From<ApiSuccessResponseInvitationReadDto> for Invitation {
     }
 }
 
-// =============================================================================
+impl From<ApiSuccessResponseVecInvitationReadDto> for Vec<Invitation> {
+    fn from(response: ApiSuccessResponseVecInvitationReadDto) -> Self {
+        response.data.into_iter().map(|invitation_data| {
+            Invitation {
+                id: invitation_data.id,
+                group_chat_id: invitation_data.group_chat_id,
+                from_user_id: invitation_data.from_user_id,
+                to_user_id: invitation_data.to_user_id,
+                status: invitation_data.status,
+                created_at: invitation_data.sent_at.parse().unwrap_or_default(),
+                updated_at: invitation_data.responded_at
+                    .as_ref()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()),
+                expires_at: None,
+                role_at_join: invitation_data.role_at_join,
+                group_name: None,
+                from_user_name: None,
+                to_user_name: None,
+            }
+        }).collect()
+    }
+}
+
+/// =============================================================================
 // IMPLEMENTATIONS - Business logic methods
 // =============================================================================
 

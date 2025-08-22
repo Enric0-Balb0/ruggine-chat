@@ -1,5 +1,8 @@
 use leptos::*;
-use crate::components::{GroupItem, CreateGroupButton};
+use crate::components::{GroupItem, CreateGroupButton, ShowInvitesButton};
+use crate::components::modals::ShowInvitesModal;
+use crate::api::services::invitation::InvitationService;
+use crate::types::Invitation;
 use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
 
 /// Sidebar component for the main app layout
@@ -14,9 +17,8 @@ pub fn Sidebar(
     let is_loading = use_groups_loading(&groups_hook);
     let error = use_groups_error(&groups_hook);
 
-    // Load groups on mount - only if we have auth
+    // Load groups on mount
     create_effect(move |_| {
-        // Simple check - try to get token from localStorage to see if we should load groups
         if let Some(window) = web_sys::window() {
             if let Some(storage) = window.local_storage().ok().flatten() {
                 if let Ok(Some(_token)) = storage.get_item("ruggine_auth_token") {
@@ -38,21 +40,50 @@ pub fn Sidebar(
         logging::log!("Selected group: {}", group_id);
     };
 
-    // Handle create group button click
+
+    // Stato per apertura modal inviti
+    let (show_invites_modal, set_show_invites_modal) = create_signal(false);
+    let (invites, set_invites) = create_signal(Vec::<Invitation>::new());
+    let (is_loading_invites, set_is_loading_invites) = create_signal(false);
+
     let handle_create_click = move |_| {
         on_create_group_click.call(());
     };
 
+    let handle_show_invites_click = move |_| {
+        set_show_invites_modal.set(true);
+        set_is_loading_invites.set(true);
+        // Fetch inviti async
+        spawn_local(async move {
+            let storage_service = crate::utils::storage::StorageService::new();
+            let mut http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+            if let Some(token_response) = storage_service.get_token() {
+                http_client.set_auth_token(Some(token_response.token));
+            }
+            let service = InvitationService::new(http_client, storage_service);
+            match service.get_user_invitations().await {
+                Ok(list) => set_invites.set(list),
+                Err(e) => {
+                    logging::error!("Errore caricamento inviti: {:?}", e);
+                    set_invites.set(Vec::new());
+                }
+            }
+            set_is_loading_invites.set(false);
+        });
+    };
+
+    let handle_close_invites_modal = move |_| {
+        set_show_invites_modal.set(false);
+    };
+
     view! {
-        <div class="w-[280px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col">
-            // Teams Section
-            <div class="flex-1 p-4">
+        <div class="w-[280px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col h-full">
+            {/* Sezione gruppi scrollabile */}
+            <div class="flex-1 p-4 flex flex-col">
                 <div class="text-xs font-semibold text-text-secondary dark:text-text-secondary-dark uppercase tracking-wide mb-3">
                     "Team e Gruppi"
                 </div>
-                
-                // Groups List
-                <div class="space-y-1">
+                <div class="flex-1 overflow-y-auto max-h-[340px] pr-1">
                     {move || {
                         if let Some(_error_msg) = error.get() {
                             view! {
@@ -101,14 +132,26 @@ pub fn Sidebar(
                             }
                         }
                     }}
-                    
-                    // Separatore sottile prima del pulsante di creazione
-                    <div class="h-px bg-border dark:bg-border-dark my-2"></div>
-                    
-                    // Create new group button
-                    <CreateGroupButton on_create_click=handle_create_click />
                 </div>
             </div>
+
+            {/* Sezione fissa in fondo: Inviti e Crea gruppo */}
+            <div class="p-4 border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col gap-2">
+                {/* Bottone Crea gruppo */}
+                <CreateGroupButton on_create_click=handle_create_click />
+                {/* Bottone Inviti */}
+                <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={invites.get().iter().filter(|i| i.status.to_string() == "pending").count()} />
+            </div>
+
+            {/* Modal Inviti */}
+            <ShowInvitesModal
+                is_open=show_invites_modal
+                on_close=handle_close_invites_modal
+                invites=invites
+                set_invites=set_invites
+                is_loading=is_loading_invites
+            />
         </div>
+
     }
 }

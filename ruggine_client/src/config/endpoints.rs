@@ -33,10 +33,9 @@ impl ApiEndpoints {
     
     // Invitation endpoints
     pub const INVITATION_SEND: &'static str = "/invitation/send";
+    pub const INVITATION_UPDATE: &'static str = "/invitation/update_status";
+    pub const INVITATION_BY_USER: &'static str = "/invitation/user";
     pub const INVITATION_BY_ID: &'static str = "/invitation"; // + /{id}
-    pub const INVITATION_PENDING: &'static str = "/invitations/pending"; // Future endpoint
-    pub const INVITATION_RESPOND: &'static str = "/invitations"; // + /{id} - Future endpoint  
-    pub const INVITATION_HISTORY: &'static str = "/invitations/history"; // Future endpoint
     
     // Message endpoints (future)
     pub const MESSAGE_SEND: &'static str = "/messages";
@@ -59,14 +58,12 @@ impl ApiEndpoints {
     pub fn group_mark_read(group_id: &str) -> String {
         format!("{}/{}/mark_read", Self::GROUP_BY_ID, group_id)
     }
-    
+
     pub fn invitation_by_id(invitation_id: &str) -> String {
         format!("{}/{}", Self::INVITATION_BY_ID, invitation_id)
     }
     
-    pub fn invitation_respond(invitation_id: &str) -> String {
-        format!("{}/{}", Self::INVITATION_RESPOND, invitation_id)
-    }
+
     
     pub fn user_by_id(user_id: &str) -> String {
         format!("{}/{}", Self::USER_BY_ID, user_id)
