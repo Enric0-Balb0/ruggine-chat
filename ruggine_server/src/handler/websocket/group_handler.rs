@@ -8,6 +8,7 @@ use crate::websocket::group_message::GroupAction::{Join, Leave};
 use crate::websocket::group_message::GroupEvent::NewMessage;
 use crate::websocket::message::{ControlMessage, ServerEvent, WsError};
 use crate::websocket::{ClientAction, WebSocketConnection, WebSocketManager, WebSocketMessage};
+use crate::websocket::core::manager_trait::WebSocketManagerTrait;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::http::StatusCode;
@@ -44,8 +45,8 @@ pub async fn group_websocket_handler(
 async fn handle_group_websocket_upgrade(
     socket: WebSocket,
     user_id: i32,
-    manager: Arc<WebSocketManager>,
-    group_service: Arc<WebSocketGroupService>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
 ) {
     info!(
         "WebSocket group connection established for user {}",
@@ -58,8 +59,8 @@ async fn handle_group_websocket_upgrade(
 pub async fn handle_group_websocket_connection(
     socket: WebSocket,
     user_id: i32,
-    manager: Arc<WebSocketManager>,
-    group_service: Arc<WebSocketGroupService>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
 ) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<WebSocketMessage>();
@@ -128,12 +129,12 @@ pub async fn handle_group_websocket_connection(
     info!("Cleaned up group WebSocket connection for user {}", user_id);
 }
 
-async fn handle_group_client_message(
+pub async fn handle_group_client_message(
     user_id: i32,
     connection_id: &str,
     message: WebSocketMessage,
-    manager: &Arc<WebSocketManager>,
-    group_service: &Arc<WebSocketGroupService>,
+    manager: &Arc<dyn WebSocketManagerTrait>,
+    group_service: &Arc<dyn WebSocketGroupServiceTrait>,
 ) -> Result<(), WsError> {
     match message {
         WebSocketMessage::Request { request_id, action } => match action {
@@ -209,8 +210,8 @@ async fn handle_group_client_message(
 
 // Handler for receiving new message from the server
 pub async fn handle_new_group_message(
-    group_service: Arc<WebSocketGroupService>,
-    manager: Arc<WebSocketManager>,
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
     group_id: i32,
     message: WebSocketMessage,
 ) {

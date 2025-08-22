@@ -3,6 +3,7 @@ use tokio::sync::{mpsc, watch, Mutex};
 use tokio::task::JoinHandle;
 use crate::websocket::message::WebSocketMessage;
 use crate::error::connection_error::ConnectionError;
+use crate::websocket::core::manager_trait::WebSocketManagerTrait;
 use tracing::{debug, error, info, warn};
 use crate::websocket::WebSocketManager;
 
@@ -14,7 +15,7 @@ pub struct WebSocketConnection {
     close_tx: watch::Sender<bool>,
     pub close_rx: watch::Receiver<bool>,
     handle: Mutex<Option<JoinHandle<()>>>,
-    manager: Weak<WebSocketManager>,
+    manager: Arc<WebSocketManager>,
 }
 
 impl WebSocketConnection {
@@ -23,7 +24,7 @@ impl WebSocketConnection {
         connection_id: String,
         sender: mpsc::UnboundedSender<WebSocketMessage>,
         handle: Option<JoinHandle<()>>,
-        manager: Weak<WebSocketManager>,
+        manager: Arc<WebSocketManager>,
     ) -> Arc<Self> {
         let (close_tx, close_rx) = watch::channel(false);
 
@@ -81,11 +82,9 @@ impl WebSocketConnection {
         let _ = self.close_tx.send(true);
 
         // cleanup nel manager se è ancora vivo
-        if let Some(manager) = self.manager.upgrade() {
-            manager
-                .remove_connection(&self.connection_id, self.user_id)
-                .await;
-        }
+        self.manager
+            .remove_connection(&self.connection_id, self.user_id)
+            .await;
 
         info!("Connection {} closed", self.connection_id);
     }

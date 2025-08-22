@@ -1,42 +1,48 @@
-use std::sync::atomic::AtomicU64;
-use std::sync::{Arc};
-use dashmap::DashMap;
-use tokio::sync::OnceCell;
-use ruggine_server::{config::database::Database, entity::invitation::UpdateInvitationStatus};
-use std::sync::Once;
 use axum::body::{to_bytes, Body};
 use axum::http::{Request, StatusCode};
 use axum::Router;
-use serde_json::json;
-use sqlx::PgPool;
-use tower::ServiceExt;
+use dashmap::DashMap;
+use futures_util::stream::StreamExt;
+use futures_util::SinkExt;
 use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
 use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::entity::group_chat::GroupChat;
-use ruggine_server::entity::group_membership;
-use ruggine_server::entity::group_membership::{all_membership_statuses, GroupMembership, MemberRole};
-use ruggine_server::entity::user::User;
+use ruggine_server::entity::group_membership::{all_membership_statuses, MemberRole};
 use ruggine_server::entity::invitation::{Invitation, InvitationStatus, NewInvitation};
-use ruggine_server::entity::text_message::{TextMessage, NewTextMessage};
+use ruggine_server::entity::text_message::{NewTextMessage, TextMessage};
+use ruggine_server::entity::user::User;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
-use ruggine_server::factory::text_message_factory::TextMessageFactory;
 use ruggine_server::model::group_membership_model::GroupMembershipWithInvitationRow;
 use ruggine_server::repository::group_chat_repository::{GroupChatRepository, GroupChatRepositoryTrait};
 use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
-use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
-use ruggine_server::routes::{auth_route, user_route, group_chat_route, invitation_route, group_membership_route, text_message_route};
+use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
+use ruggine_server::routes::{auth_route, group_chat_route, group_membership_route, invitation_route, text_message_route, user_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
 use ruggine_server::state::group_chat_state::GroupChatState;
 use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::state::invitation_state::InvitationState;
+use ruggine_server::state::text_message_state::TextMessageState;
 use ruggine_server::state::token_state::TokenState;
 use ruggine_server::state::user_state::UserState;
-use ruggine_server::state::text_message_state::TextMessageState;
+use ruggine_server::state::websocket::WebSocketState;
 use ruggine_server::utils::service_initializer::ServiceInitializer;
+use ruggine_server::websocket::WebSocketMessage;
+use ruggine_server::{config::database::Database, entity::invitation::UpdateInvitationStatus};
+use serde_json::json;
+use sqlx::PgPool;
+use std::net::SocketAddr;
+use std::sync::atomic::AtomicU64;
+use std::sync::Once;
+use std::sync::Arc;
+use tokio::net::TcpListener;
+use tokio::sync::{oneshot, OnceCell};
+use tokio_tungstenite::connect_async;
+use tower::ServiceExt;
+use tungstenite::Message;
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -114,9 +120,17 @@ pub async fn create_group_membership_router() -> Router {
 
 pub async fn create_text_message_router() -> Router {
     let db = get_database().await;
-    let text_message_state = TextMessageState::new(&db);
     let token_state = TokenState::new(&db);
+    let text_message_state = TextMessageState::new(&db);
+
     text_message_route::routes(text_message_state, token_state)
+}
+
+pub async fn create_websocket_router() -> Router {
+    let db = get_database().await;
+    let token_state = TokenState::new(&db);
+    let websocket_state = WebSocketState::new(Arc::new(token_state), &db);
+    ruggine_server::routes::websocket::routes(websocket_state)
 }
 
 /// Helper function to create the full application router for e2e tests
@@ -427,7 +441,7 @@ pub async fn create_test_text_messages_for_group(group_chat_id: i32, sender_id: 
 /// Helper function to create multiple test text messages with different senders
 pub async fn create_test_text_messages_multi_sender(group_chat_id: i32, sender_ids: Vec<i32>) -> Vec<TextMessage> {
     let mut messages = Vec::new();
-    for (i, sender_id) in sender_ids.iter().enumerate() {
+    for (_i, sender_id) in sender_ids.iter().enumerate() {
         let content = format!("Message from user {} in group {}", sender_id, group_chat_id);
         let message = create_test_text_message(*sender_id, group_chat_id, Some(content)).await;
         messages.push(message);
@@ -495,6 +509,71 @@ pub async fn cleanup_text_message(message_id: i32) {
 pub async fn cleanup_text_messages(message_ids: Vec<i32>) {
     for message_id in message_ids {
         cleanup_text_message(message_id).await;
+    }
+}
+
+/// Helper function to start a test server and return the address
+pub async fn start_test_server() -> (SocketAddr, oneshot::Sender<()>) {
+    let app = create_full_router().await;
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let (tx, rx) = oneshot::channel::<()>();
+
+    tokio::spawn(async move {
+        let server = axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                rx.await.ok();
+            });
+
+        if let Err(e) = server.await {
+            eprintln!("Server error: {}", e);
+        }
+    });
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+    (addr, tx)
+}
+
+/// Helper function to establish websocket connection with authentication
+pub async fn connect_group_websocket_with_auth(
+    addr: SocketAddr,
+    token: &str,
+) -> Result<
+    (
+        tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+        tungstenite::http::Response<Option<Vec<u8>>>,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    let ws_url = format!("ws://{}/api/ws/group?token={}", addr, token);
+    let (ws_stream, response) = connect_async(&ws_url).await?;
+    Ok((ws_stream, response))
+}
+
+/// Helper function to send a websocket message and wait for response
+pub async fn send_websocket_message_and_get_response(
+    ws_stream: &mut tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    >,
+    message: WebSocketMessage,
+) -> Result<WebSocketMessage, Box<dyn std::error::Error>> {
+    let message_json = message.to_json()?;
+    ws_stream.send(Message::Text(message_json)).await?;
+
+    if let Some(msg) = ws_stream.next().await {
+        match msg? {
+            Message::Text(text) => {
+                let response = WebSocketMessage::from_json(&text)?;
+                Ok(response)
+            }
+            _ => Err("Expected text message".into()),
+        }
+    } else {
+        Err("No response received".into())
     }
 }
 

@@ -238,7 +238,7 @@ mod text_message_create_handler_integration_tests {
             "handler_special_chars_group",
             user.id,
         ).await;
-        
+
         // Create text message data with special characters
         let mut create_dto = TextMessageFactory::fake_text_message_create_dto_with_group_id(group_chat.id);
         create_dto.content = "Message with émojis 🎉 and special chars: àáâãäå çčć".to_string();

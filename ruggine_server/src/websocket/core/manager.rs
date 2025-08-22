@@ -3,6 +3,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::websocket::message::WebSocketMessage;
 use crate::error::connection_error::ConnectionError;
+use crate::websocket::core::manager_trait::WebSocketManagerTrait;
+use async_trait::async_trait;
 use uuid::Uuid;
 use tracing::{info, debug, warn};
 use crate::websocket::WebSocketConnection;
@@ -18,18 +20,88 @@ impl WebSocketManager {
         Self::default()
     }
 
-    pub async fn register_connection(self: &Arc<Self>, user_id: i32, sender: tokio::sync::mpsc::UnboundedSender<WebSocketMessage>) -> Arc<WebSocketConnection> {
+    fn clone_for_arc(&self) -> Self {
+        Self {
+            connections: Arc::clone(&self.connections),
+            user_connections: Arc::clone(&self.user_connections),
+        }
+    }
+
+    async fn register_connection_with_arc(
+        self: &Arc<Self>,
+        user_id: i32,
+        sender: tokio::sync::mpsc::UnboundedSender<WebSocketMessage>,
+    )  -> Arc<WebSocketConnection> {
         let connection_id = Uuid::new_v4().to_string();
-        let connection = WebSocketConnection::new(user_id, connection_id.clone(), sender, None, Arc::downgrade(self));
+        let connection = WebSocketConnection::new(
+            user_id,
+            connection_id.clone(),
+            sender,
+            None,
+            Arc::clone(self),
+        );
 
         self.connections.write().await.insert(connection_id.clone(), connection.clone());
-        self.user_connections.write().await.entry(user_id).or_default().insert(connection_id.clone());
+        self.user_connections.write().await
+            .entry(user_id)
+            .or_default()
+            .insert(connection_id.clone());
 
         info!("Registered connection {} for user {}", connection_id, user_id);
         connection
     }
+}
 
-    pub async fn remove_connection(&self, connection_id: &str, user_id: i32) {
+#[async_trait]
+impl WebSocketManagerTrait for WebSocketManager {
+    async fn register_connection(
+        &self,
+        user_id: i32,
+        sender: tokio::sync::mpsc::UnboundedSender<WebSocketMessage>,
+    ) -> Arc<WebSocketConnection> {
+        let self_arc = Arc::new(self.clone_for_arc());
+        self_arc.register_connection_with_arc(user_id, sender).await
+    }
+
+
+    async fn send_to_connection(&self, connection_id: &str, message: WebSocketMessage) -> Result<(), ConnectionError> {
+        let conns = self.connections.read().await;
+        if let Some(conn) = conns.get(connection_id) {
+            conn.send_message(message).await
+        } else {
+            Err(ConnectionError::ConnectionNotFound)
+        }
+    }
+
+    async fn send_to_user(&self, user_id: i32, message: WebSocketMessage) -> usize {
+        let conns = self.connections.read().await;
+        let user_map = self.user_connections.read().await;
+
+        let mut sent = 0;
+        if let Some(connection_ids) = user_map.get(&user_id) {
+            for id in connection_ids {
+                if let Some(conn) = conns.get(id) {
+                    if conn.send_message(message.clone()).await.is_ok() {
+                        sent += 1;
+                    } else {
+                        warn!("Failed to send to connection {}", id);
+                    }
+                }
+            }
+        }
+        sent
+    }
+
+    async fn broadcast(&self, message: WebSocketMessage) -> usize {
+        let user_ids: Vec<i32> = self.user_connections.read().await.keys().copied().collect();
+        let mut total = 0;
+        for user_id in user_ids {
+            total += self.send_to_user(user_id, message.clone()).await;
+        }
+        total
+    }
+
+    async fn remove_connection(&self, connection_id: &str, user_id: i32) {
         {
             let mut connections = self.connections.write().await;
             connections.remove(connection_id);
@@ -50,41 +122,20 @@ impl WebSocketManager {
         info!("Removed connection {} for user {}", connection_id, user_id);
     }
 
-    pub async fn send_to_connection(&self, connection_id: &str, message: WebSocketMessage) -> Result<(), ConnectionError> {
-        let conns = self.connections.read().await;
-        if let Some(conn) = conns.get(connection_id) {
-            conn.send_message(message).await
-        } else {
-            Err(ConnectionError::ConnectionNotFound)
-        }
+    async fn connection_exists(&self, connection_id: &str) -> bool {
+        self.connections.read().await.contains_key(connection_id)
     }
-
-    pub async fn send_to_user(&self, user_id: i32, message: WebSocketMessage) -> usize {
-        let conns = self.connections.read().await;
-        let user_map = self.user_connections.read().await;
-
-        let mut sent = 0;
-        if let Some(connection_ids) = user_map.get(&user_id) {
-            for id in connection_ids {
-                if let Some(conn) = conns.get(id) {
-                    if conn.send_message(message.clone()).await.is_ok() {
-                        sent += 1;
-                    } else {
-                        warn!("Failed to send to connection {}", id);
-                    }
-                }
-            }
-        }
-        sent
+    
+    async fn user_connection_count(&self, user_id: i32) -> usize {
+        self.user_connections
+            .read()
+            .await
+            .get(&user_id)
+            .map(|conns| conns.len())
+            .unwrap_or(0)
     }
-
-    pub async fn broadcast(&self, message: WebSocketMessage) -> usize {
-        let user_ids: Vec<i32> = self.user_connections.read().await.keys().copied().collect();
-        let mut total = 0;
-        for user_id in user_ids {
-            total += self.send_to_user(user_id, message.clone()).await;
-        }
-        total
+    
+    async fn total_connections(&self) -> usize {
+        self.connections.read().await.len()
     }
-
 }
