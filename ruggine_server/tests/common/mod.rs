@@ -76,6 +76,17 @@ pub async fn cleanup_user_by_email(email: String) {
     }
 }
 
+pub async fn create_user_state() -> UserState {
+    let db = get_database().await;
+    let user_service = Arc::new(UserService::new(&db));
+    let user_repo = Arc::new(UserRepository::new(&db));
+
+    UserState {
+        user_service,
+        user_repo,
+    }
+}
+
 pub async fn cleanup_user(id: i32) {
     let db = get_database().await;
     let repository = UserRepository::new(&db);

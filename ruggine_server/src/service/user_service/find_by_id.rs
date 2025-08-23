@@ -1,39 +1,32 @@
 use crate::dto::user_dto::UserReadDto;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
+use crate::error::user_error::UserError;
 use crate::service::user_service::UserService;
 
 impl UserService {
     pub async fn find_by_id_internal(&self, id: i32) -> Result<UserReadDto, ApiError> {
-        let user = self.user_repo.find(id).await.map_err(|e| {
-            // Qui fai la conversione da sqlx::Error a DbError
-            let db_error = match e {
-                sqlx::Error::Database(db_err) => {
-                    if let Some(code) = db_err.code() {
-                        if code == "23505" {
-                            return ApiError::DbError(DbError::UniqueConstraintViolation(db_err.to_string()));
-                        }
-                    }
-                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                }
-                _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-            };
-            db_error
-        })?;
-
-        Ok(UserReadDto::from(user))
+        match self.user_repo.find(id).await {
+            Ok(user) => Ok(UserReadDto::from(user)),
+            Err(sqlx::Error::RowNotFound) => {
+                Err(ApiError::UserError(UserError::UserNotFound))
+            }
+            Err(e) => {
+                Err(ApiError::DbError(DbError::SomethingWentWrong(format!("Failed to find user: {}", e))))
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod find_by_id_service_tests {
     use super::*;
+    use crate::entity::user::UserStatus;
     use crate::factory::user_factory::UserFactory;
     use crate::repository::user_repository::user_repository_trait::MockUserRepositoryTrait;
     use crate::service::user_service::UserService;
     use mockall::predicate::*;
     use std::sync::Arc;
-    use crate::entity::user::UserStatus;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_success() {
@@ -87,7 +80,7 @@ mod find_by_id_service_tests {
         // Assert
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(matches!(error, ApiError::DbError(DbError::SomethingWentWrong(_))));
+        assert!(matches!(error, ApiError::UserError(UserError::UserNotFound)));
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -101,7 +94,7 @@ mod find_by_id_service_tests {
             .with(eq(user_id))
             .times(1)
             .returning(move |_| {
-                Box::pin(async move {Err(sqlx::Error::RowNotFound)})
+                Box::pin(async move {Err(sqlx::Error::PoolClosed)})
             });
 
         let service = UserService {
