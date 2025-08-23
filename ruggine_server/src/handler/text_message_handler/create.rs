@@ -1,7 +1,7 @@
 use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
 use crate::error::{api_error::ApiError, request_error::ValidatedRequest};
 use crate::response::api_response::ApiSuccessResponse;
-use crate::routes::websocket::group;
+use crate::routes::websocket::chat;
 use crate::service::websocket::group_service;
 use crate::state::text_message_state::TextMessageState;
 use axum::response::sse::Event;
@@ -53,7 +53,7 @@ pub async fn create(
             timestamp: Utc::now(),
         };
         
-        crate::handler::websocket::group_handler::handle_new_group_message(
+        crate::handler::websocket::chat_handler::handle_new_group_message(
             state.websocket_group_service.clone().unwrap().clone(),
             state.ws_manager.clone().unwrap().clone(),
             payload.group_chat_id,

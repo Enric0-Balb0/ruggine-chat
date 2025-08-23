@@ -5,7 +5,7 @@ use axum::{
 };
 
 use crate::{
-    handler::websocket::group_handler::group_websocket_handler
+    handler::websocket::chat_handler::chat_websocket_handler
     ,
     state::websocket::WebSocketState,
 };
@@ -13,5 +13,5 @@ use crate::{
 /// Routes per la sottoscrizione WebSocket ai gruppi
 pub fn routes() -> Router<WebSocketState> {
     Router::new()
-        .route("/group", get(group_websocket_handler))
+        .route("/chat", get(chat_websocket_handler))
 }

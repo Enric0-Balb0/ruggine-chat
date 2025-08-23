@@ -1,4 +1,4 @@
-pub mod group;
+pub mod chat;
 
 use axum::Router;
 use tower::ServiceBuilder;
@@ -13,7 +13,7 @@ use crate::{
 pub fn routes(state: WebSocketState) -> Router<()> {
     // Endpoint WebSocket senza autenticazione middleware (gestisce token manualmente)
     let websocket_routes = Router::new()
-        .merge(group::routes())
+        .merge(chat::routes())
         .with_state(state.clone())
         .layer(ServiceBuilder::new().layer(
             middleware::from_fn_with_state(

@@ -20,7 +20,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use crate::entity::user::User;
 
-pub async fn group_websocket_handler(
+pub async fn chat_websocket_handler(
     ws: WebSocketUpgrade,
     State(state): State<WebSocketState>,
     Query(params): Query<WebSocketQuery>,
@@ -33,7 +33,7 @@ pub async fn group_websocket_handler(
     );
 
     Ok(ws.on_upgrade(move |socket| {
-        handle_group_websocket_upgrade(
+        handle_chat_websocket_upgrade(
             socket,
             user_id,
             state.manager.clone(),
@@ -42,7 +42,7 @@ pub async fn group_websocket_handler(
     }))
 }
 
-async fn handle_group_websocket_upgrade(
+async fn handle_chat_websocket_upgrade(
     socket: WebSocket,
     user_id: i32,
     manager: Arc<dyn WebSocketManagerTrait>,
@@ -52,11 +52,11 @@ async fn handle_group_websocket_upgrade(
         "WebSocket group connection established for user {}",
         user_id
     );
-    handle_group_websocket_connection(socket, user_id, manager, group_service).await;
+    handle_chat_websocket_connection(socket, user_id, manager, group_service).await;
     info!("WebSocket group connection closed for user {}", user_id);
 }
 
-pub async fn handle_group_websocket_connection(
+pub async fn handle_chat_websocket_connection(
     socket: WebSocket,
     user_id: i32,
     manager: Arc<dyn WebSocketManagerTrait>,
@@ -103,7 +103,7 @@ pub async fn handle_group_websocket_connection(
                             Err(_) => break,
                         };
 
-                    match handle_group_client_message(
+                    match handle_chat_client_message(
                         user_id,
                         &connection_id,
                         validated.0,
@@ -129,7 +129,7 @@ pub async fn handle_group_websocket_connection(
     info!("Cleaned up group WebSocket connection for user {}", user_id);
 }
 
-pub async fn handle_group_client_message(
+pub async fn handle_chat_client_message(
     user_id: i32,
     connection_id: &str,
     message: WebSocketMessage,

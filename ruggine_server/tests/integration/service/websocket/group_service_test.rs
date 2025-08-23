@@ -216,7 +216,7 @@ mod websocket_group_service_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_subscription_overwrite_behavior() {
+    async fn test_multiple_connections_per_user() {
         // Arrange
         let service = create_test_service().await;
         let user_id = 54321;
@@ -225,9 +225,63 @@ mod websocket_group_service_integration_tests {
         let _ = service.subscribe(user_id, "first_connection").await;
         assert_eq!(service.get_stats().await, 1);
 
-        // Act - Subscribe with second connection (should overwrite)
+        // Act - Subscribe with second connection (should add, not overwrite)
         let _ = service.subscribe(user_id, "second_connection").await;
-        assert_eq!(service.get_stats().await, 1); // Still only one subscription
+        assert_eq!(service.get_stats().await, 1); // Still one user but with multiple connections
+
+        // Act - Subscribe with third connection for same user
+        let _ = service.subscribe(user_id, "third_connection").await;
+        assert_eq!(service.get_stats().await, 1); // Still one user with multiple connections
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_broadcast_with_multiple_connections_per_user() {
+        // Arrange
+        let service = create_test_service().await;
+        
+        let (admin_user, _) = create_test_user("ws_multi_conn_admin").await;
+        let (member1, _) = create_test_user("ws_multi_conn_member1").await;
+
+        let group_chat = create_test_group_chat_with_invitation_and_membership("ws_multi_conn_group", admin_user.id).await;
+        let _membership1 = add_test_user_to_a_group(member1.id, &group_chat).await;
+
+        // Subscribe admin with multiple connections
+        let _ = service.subscribe(admin_user.id, "admin_conn_1").await;
+        let _ = service.subscribe(admin_user.id, "admin_conn_2").await;
+        let _ = service.subscribe(admin_user.id, "admin_conn_3").await;
+
+        // Subscribe member with single connection
+        let _ = service.subscribe(member1.id, "member1_conn").await;
+
+        assert_eq!(service.get_stats().await, 2); // Two users
+
+        // Act
+        let result = service.broadcast_to_group(group_chat.id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        
+        // Should return 4 connections total (3 for admin + 1 for member1)
+        assert_eq!(connection_ids.len(), 4);
+        assert!(connection_ids.contains(&"admin_conn_1".to_string()));
+        assert!(connection_ids.contains(&"admin_conn_2".to_string()));
+        assert!(connection_ids.contains(&"admin_conn_3".to_string()));
+        assert!(connection_ids.contains(&"member1_conn".to_string()));
+
+        // Test cleanup of one connection for admin
+        service.cleanup_connection("admin_conn_2").await;
+        
+        let result = service.broadcast_to_group(group_chat.id).await;
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 3); // Should have 3 connections left
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(member1.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_test_users(vec![admin_user.id, member1.id]).await;
     }
 
     #[tokio_shared_rt::test(shared)]

@@ -363,7 +363,7 @@
             currentGroupId = null; // Non più legato a un gruppo specifico
             
             // Crea nuova connessione WebSocket per tutti i gruppi
-            const wsUrl = `ws://127.0.0.1:8002/api/ws/group?token=${encodeURIComponent(token)}`;
+            const wsUrl = `ws://127.0.0.1:8002/api/ws/chat?token=${encodeURIComponent(token)}`;
             
             addMessage(`🔗 Connessione a tutti i gruppi...`, 'info');
             addMessage(`📡 URL: ${wsUrl}`, 'info');

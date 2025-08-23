@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use chrono::Utc;
 use tokio::sync::RwLock;
@@ -17,7 +17,7 @@ use crate::websocket::message::{WebSocketMessage, ServerEvent, WsError};
 #[derive(Clone)]
 pub struct WebSocketGroupService {
     group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
-    group_subscriptions: Arc<RwLock<HashMap<i32, String>>>, // user_id -> connection_id
+    group_subscriptions: Arc<RwLock<HashMap<i32, HashSet<String>>>>, // user_id -> connection_ids
 }
 
 impl WebSocketGroupService {
@@ -35,7 +35,10 @@ impl WebSocketGroupService {
 impl WebSocketGroupServiceTrait for WebSocketGroupService {
     /// Sottoscrive un utente al servizio WebSocket dei gruppi
     async fn subscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError> {
-        self.group_subscriptions.write().await.insert(user_id, connection_id.to_string());
+        self.group_subscriptions.write().await
+            .entry(user_id)
+            .or_insert_with(HashSet::new)
+            .insert(connection_id.to_string());
         info!("User {} subscribed via connection {}", user_id, connection_id);
         Ok(())
     }
@@ -50,7 +53,11 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     /// Pulisce tutte le sottoscrizioni relative a una connessione chiusa
     async fn cleanup_connection(&self, connection_id: &str) {
         let mut map = self.group_subscriptions.write().await;
-        map.retain(|_, conn_id| conn_id != connection_id);
+        for (_, connections) in map.iter_mut() {
+            connections.remove(connection_id);
+        }
+        // Rimuovi gli utenti che non hanno più connessioni attive
+        map.retain(|_, connections| !connections.is_empty());
     }
 
     /// Invia un messaggio a tutti i membri di un gruppo
@@ -68,8 +75,10 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
 
         for member in members {
             // Se l’utente ha una sottoscrizione WebSocket attiva → recupero connection_id
-            if let Some(conn_id) = self.group_subscriptions.read().await.get(&member.user_id).cloned() {
-                connection_ids.push(conn_id);
+            if let Some(connnections) = self.group_subscriptions.read().await.get(&member.user_id).cloned() {
+                for conn_id in connnections {
+                    connection_ids.push(conn_id);
+                }
             }
         }
 
@@ -150,7 +159,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_subscribe_overwrite_existing_user() {
+    async fn test_subscribe_multiple_connections_same_user() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
         let service = create_test_service_with_mock(mock_service);
@@ -161,10 +170,13 @@ mod tests {
         let _ = service.subscribe(user_id, "conn_new").await;
 
         // Assert
-        assert_eq!(service.get_stats().await, 1);
-        // Check that the connection was overwritten
+        assert_eq!(service.get_stats().await, 1); // Still 1 user
+        // Check that both connections are stored
         let subscriptions = service.group_subscriptions.read().await;
-        assert_eq!(subscriptions.get(&user_id).unwrap(), "conn_new");
+        let connections = subscriptions.get(&user_id).unwrap();
+        assert_eq!(connections.len(), 2);
+        assert!(connections.contains("conn_old"));
+        assert!(connections.contains("conn_new"));
     }
 
     #[tokio::test]
@@ -225,6 +237,37 @@ mod tests {
         assert!(!subscriptions.contains_key(&1));
         assert!(subscriptions.contains_key(&2));
         assert!(!subscriptions.contains_key(&3));
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_connection_partial_removal_multiple_connections() {
+        // Arrange
+        let mock_service = create_mock_group_membership_service();
+        let service = create_test_service_with_mock(mock_service);
+        let user_id = 1;
+
+        // Setup user with multiple connections
+        let _ = service.subscribe(user_id, "conn_remove").await;
+        let _ = service.subscribe(user_id, "conn_keep").await;
+        let _ = service.subscribe(2, "conn_other").await;
+        
+        assert_eq!(service.get_stats().await, 2); // 2 users
+
+        // Act - remove only one connection for user 1
+        service.cleanup_connection("conn_remove").await;
+
+        // Assert
+        assert_eq!(service.get_stats().await, 2); // Still 2 users
+        let subscriptions = service.group_subscriptions.read().await;
+        
+        // User 1 should still exist with one connection
+        assert!(subscriptions.contains_key(&1));
+        let user1_connections = subscriptions.get(&1).unwrap();
+        assert_eq!(user1_connections.len(), 1);
+        assert!(user1_connections.contains("conn_keep"));
+        
+        // User 2 should be unaffected
+        assert!(subscriptions.contains_key(&2));
     }
 
     #[tokio::test]
@@ -291,6 +334,50 @@ mod tests {
         assert_eq!(connection_ids.len(), 2);
         assert!(connection_ids.contains(&"conn_1".to_string()));
         assert!(connection_ids.contains(&"conn_3".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_to_group_multiple_connections_per_user() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let group_id = 1;
+        let user1_id = 10;
+        let user2_id = 20;
+
+        // Setup mock to return group members
+        mock_service
+            .expect_find_by_group_chat_id()
+            .with(eq(group_id))
+            .times(1)
+            .returning(move |_| {
+                let members = vec![
+                    create_test_group_membership_dto(10, 1),
+                    create_test_group_membership_dto(20, 1),
+                ];
+                Box::pin(async move { Ok(members) })
+            });
+
+        let service = create_test_service_with_mock(mock_service);
+
+        // Subscribe users with multiple connections each
+        let _ = service.subscribe(user1_id, "conn_1a").await;
+        let _ = service.subscribe(user1_id, "conn_1b").await;
+        let _ = service.subscribe(user2_id, "conn_2a").await;
+        let _ = service.subscribe(user2_id, "conn_2b").await;
+        let _ = service.subscribe(user2_id, "conn_2c").await;
+
+        // Act
+        let result = service.broadcast_to_group(group_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 5); // 2 connections for user1 + 3 for user2
+        assert!(connection_ids.contains(&"conn_1a".to_string()));
+        assert!(connection_ids.contains(&"conn_1b".to_string()));
+        assert!(connection_ids.contains(&"conn_2a".to_string()));
+        assert!(connection_ids.contains(&"conn_2b".to_string()));
+        assert!(connection_ids.contains(&"conn_2c".to_string()));
     }
 
     #[tokio::test]

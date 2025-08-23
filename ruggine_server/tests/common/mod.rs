@@ -548,7 +548,7 @@ pub async fn start_test_server() -> (SocketAddr, oneshot::Sender<()>) {
 }
 
 /// Helper function to establish websocket connection with authentication
-pub async fn connect_group_websocket_with_auth(
+pub async fn connect_chat_websocket_with_auth(
     addr: SocketAddr,
     token: &str,
 ) -> Result<
@@ -560,7 +560,7 @@ pub async fn connect_group_websocket_with_auth(
     ),
     Box<dyn std::error::Error>,
 > {
-    let ws_url = format!("ws://{}/api/ws/group?token={}", addr, token);
+    let ws_url = format!("ws://{}/api/ws/chat?token={}", addr, token);
     let (ws_stream, response) = connect_async(&ws_url).await?;
     Ok((ws_stream, response))
 }

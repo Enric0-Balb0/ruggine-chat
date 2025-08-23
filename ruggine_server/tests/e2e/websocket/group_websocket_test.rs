@@ -15,7 +15,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod group_websocket_e2e_tests {
-    use crate::{cleanup_text_message, connect_group_websocket_with_auth, send_websocket_message_and_get_response, start_test_server};
+    use crate::{cleanup_text_message, connect_chat_websocket_with_auth, send_websocket_message_and_get_response, start_test_server};
     use ruggine_server::websocket::GroupEvent::NewMessage;
     use std::time::Duration;
     use tower::ServiceExt;
@@ -34,7 +34,7 @@ mod group_websocket_e2e_tests {
         let (addr, shutdown) = start_test_server().await;
 
         // Act: Attempt to connect to websocket with valid token
-        let result = connect_group_websocket_with_auth(addr, &token).await;
+        let result = connect_chat_websocket_with_auth(addr, &token).await;
 
         // Assert: Connection should succeed
         if let Err(e) = &result {
@@ -61,7 +61,7 @@ mod group_websocket_e2e_tests {
         let (addr, shutdown) = start_test_server().await;
 
         // Act: Attempt to connect to websocket with invalid token
-        let result = connect_group_websocket_with_auth(addr, "invalid_token").await;
+        let result = connect_chat_websocket_with_auth(addr, "invalid_token").await;
 
         // Assert: Connection should fail
         assert!(
@@ -83,7 +83,7 @@ mod group_websocket_e2e_tests {
         // Start test server and establish websocket connection
         let (addr, shutdown) = start_test_server().await;
 
-        let (mut ws_stream, _response) = connect_group_websocket_with_auth(addr, &token)
+        let (mut ws_stream, _response) = connect_chat_websocket_with_auth(addr, &token)
             .await
             .expect("Failed to connect to websocket");
 
@@ -132,7 +132,7 @@ mod group_websocket_e2e_tests {
         // Start test server and establish websocket connection
         let (addr, shutdown) = start_test_server().await;
 
-        let (mut ws_stream, _response) = connect_group_websocket_with_auth(addr, &token)
+        let (mut ws_stream, _response) = connect_chat_websocket_with_auth(addr, &token)
             .await
             .expect("Failed to connect to websocket");
 
@@ -202,7 +202,7 @@ mod group_websocket_e2e_tests {
         // Start test server and establish websocket connection
         let (addr, shutdown) = start_test_server().await;
 
-        let (mut ws_stream, _response) = connect_group_websocket_with_auth(addr, &token)
+        let (mut ws_stream, _response) = connect_chat_websocket_with_auth(addr, &token)
             .await
             .expect("Failed to connect to websocket");
 
@@ -252,7 +252,7 @@ mod group_websocket_e2e_tests {
         let mut connections = Vec::new();
 
         // Connect owner
-        let (mut owner_ws, _) = connect_group_websocket_with_auth(addr, &owner_token)
+        let (mut owner_ws, _) = connect_chat_websocket_with_auth(addr, &owner_token)
             .await
             .expect("Failed to connect owner to websocket");
 
@@ -270,7 +270,7 @@ mod group_websocket_e2e_tests {
 
         // Connect other users
         for token in &user_tokens {
-            let (mut user_ws, _) = connect_group_websocket_with_auth(addr, token)
+            let (mut user_ws, _) = connect_chat_websocket_with_auth(addr, token)
                 .await
                 .expect("Failed to connect user to websocket");
 
@@ -326,7 +326,7 @@ mod group_websocket_e2e_tests {
         // Start test server and establish websocket connection
         let (addr, shutdown) = start_test_server().await;
 
-        let (mut ws_stream, _response) = connect_group_websocket_with_auth(addr, &token)
+        let (mut ws_stream, _response) = connect_chat_websocket_with_auth(addr, &token)
             .await
             .expect("Failed to connect to websocket");
 
@@ -379,7 +379,7 @@ mod group_websocket_e2e_tests {
         // Start test server and establish websocket connection
         let (addr, shutdown) = start_test_server().await;
 
-        let (mut ws_stream, _response) = connect_group_websocket_with_auth(addr, &token)
+        let (mut ws_stream, _response) = connect_chat_websocket_with_auth(addr, &token)
             .await
             .expect("Failed to connect to websocket");
 
@@ -467,7 +467,7 @@ mod group_websocket_e2e_tests {
         let mut connections = Vec::new();
 
         // Connect owner
-        let (mut owner_ws, _) = connect_group_websocket_with_auth(addr, &owner_token)
+        let (mut owner_ws, _) = connect_chat_websocket_with_auth(addr, &owner_token)
             .await
             .expect("Failed to connect owner to websocket");
 
@@ -485,7 +485,7 @@ mod group_websocket_e2e_tests {
 
         // Connect other users
         for token in &user_tokens {
-            let (mut user_ws, _) = connect_group_websocket_with_auth(addr, token)
+            let (mut user_ws, _) = connect_chat_websocket_with_auth(addr, token)
                 .await
                 .expect("Failed to connect user to websocket");
 
@@ -602,6 +602,329 @@ mod group_websocket_e2e_tests {
         cleanup_test_users_from_a_group_chat(all_user_ids.clone(), group.id).await;
         cleanup_group_chat(group.id).await;
         cleanup_test_users(all_user_ids).await;
+        shutdown.send(()).unwrap();
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_user_with_multiple_connections_receives_messages() {
+        // Arrange: Create users and group
+        let (owner, _password, owner_token) =
+            create_login_and_get_token("e2e_ws_multi_conn_owner".to_string()).await;
+        let (user, password, user_token1) =
+            create_login_and_get_token("e2e_ws_multi_conn_user".to_string()).await;
+
+        let group = create_test_group_chat_with_invitation_and_membership("e2e_ws_multi_conn_group", owner.id).await;
+
+        // Add user to the group
+        let test_users = create_test_users_for_a_group("e2e_ws_multi_conn_member", 0, &group).await;
+        let _membership = crate::common::add_test_user_to_a_group(user.id, &group).await;
+
+        // Create a second token for the same user (simulating login from different device)
+        let user_token2 = crate::common::login_and_get_token_for_user(&user, &password).await;
+
+        // Start test server
+        let (addr, shutdown) = start_test_server().await;
+
+        // Connect owner
+        let (mut owner_ws, _) = connect_chat_websocket_with_auth(addr, &owner_token)
+            .await
+            .expect("Failed to connect owner to websocket");
+
+        let owner_join_id = Uuid::new_v4().to_string();
+        let owner_join_msg = WebSocketMessage::Request {
+            request_id: owner_join_id.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _owner_response = send_websocket_message_and_get_response(&mut owner_ws, owner_join_msg)
+            .await
+            .expect("Owner failed to join group");
+
+        // Connect user with first connection/token
+        let (mut user_ws1, _) = connect_chat_websocket_with_auth(addr, &user_token1)
+            .await
+            .expect("Failed to connect user with first token");
+
+        let user_join_id1 = Uuid::new_v4().to_string();
+        let user_join_msg1 = WebSocketMessage::Request {
+            request_id: user_join_id1.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _user_response1 = send_websocket_message_and_get_response(&mut user_ws1, user_join_msg1)
+            .await
+            .expect("User failed to join group with first connection");
+
+        // Connect user with second connection/token
+        let (mut user_ws2, _) = connect_chat_websocket_with_auth(addr, &user_token2)
+            .await
+            .expect("Failed to connect user with second token");
+
+        let user_join_id2 = Uuid::new_v4().to_string();
+        let user_join_msg2 = WebSocketMessage::Request {
+            request_id: user_join_id2.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _user_response2 = send_websocket_message_and_get_response(&mut user_ws2, user_join_msg2)
+            .await
+            .expect("User failed to join group with second connection");
+
+        // Act: Send a message through the API
+        let payload = json!({
+            "content": "Test message for multiple connections",
+            "group_chat_id": group.id,
+        });
+
+        // Create tasks to listen for messages on both connections
+        let mut received_on_connection1 = false;
+        let mut received_on_connection2 = false;
+
+        let handle1 = tokio::spawn(async move {
+            let mut message_received = false;
+            while let Some(message) = user_ws1.next().await {
+                match message.unwrap() {
+                    Message::Text(text) => {
+                        let parsed: WebSocketMessage = serde_json::from_str(&text).unwrap();
+                        match parsed {
+                            WebSocketMessage::Event { event, .. } => {
+                                match event {
+                                    ruggine_server::websocket::ServerEvent::Groups(NewMessage {
+                                        content, ..
+                                    }) => {
+                                        if content == "Test message for multiple connections" {
+                                            message_received = true;
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            message_received
+        });
+
+        let handle2 = tokio::spawn(async move {
+            let mut message_received = false;
+            while let Some(message) = user_ws2.next().await {
+                match message.unwrap() {
+                    Message::Text(text) => {
+                        let parsed: WebSocketMessage = serde_json::from_str(&text).unwrap();
+                        match parsed {
+                            WebSocketMessage::Event { event, .. } => {
+                                match event {
+                                    ruggine_server::websocket::ServerEvent::Groups(NewMessage {
+                                        content, ..
+                                    }) => {
+                                        if content == "Test message for multiple connections" {
+                                            message_received = true;
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            message_received
+        });
+
+        // Wait a bit for connections to be established
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Send the message
+        let message_id = tokio::spawn({
+            let token = owner_token.clone();
+            let payload_clone = payload.clone();
+            async move {
+                let client = reqwest::Client::new();
+                let response = client
+                    .post(format!("http://{}/api/text_message/create", addr))
+                    .bearer_auth(&token)
+                    .json(&payload_clone)
+                    .send()
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                let response_json: serde_json::Value = response.json().await.unwrap();
+                let message_data = &response_json["data"];
+                message_data["id"].as_i64().unwrap() as i32
+            }
+        })
+        .await
+        .unwrap();
+
+        // Wait for both connections to receive the message
+        let (conn1_received, conn2_received) = tokio::join!(handle1, handle2);
+
+        // Assert: Both connections should have received the message
+        assert!(
+            conn1_received.unwrap(),
+            "User's first connection should receive the message"
+        );
+        assert!(
+            conn2_received.unwrap(),
+            "User's second connection should receive the message"
+        );
+
+        // Cleanup
+        cleanup_text_message(message_id).await;
+        cleanup_test_users_from_a_group_chat(vec![owner.id, user.id], group.id).await;
+        cleanup_group_chat(group.id).await;
+        cleanup_test_users(vec![owner.id, user.id]).await;
+        shutdown.send(()).unwrap();
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_user_partial_disconnection_still_receives_messages() {
+        // Arrange: Create users and group
+        let (owner, _password, owner_token) =
+            create_login_and_get_token("e2e_ws_partial_disc_owner".to_string()).await;
+        let (user, password, user_token1) =
+            create_login_and_get_token("e2e_ws_partial_disc_user".to_string()).await;
+
+        let group = create_test_group_chat_with_invitation_and_membership("e2e_ws_partial_disc_group", owner.id).await;
+
+        // Add user to the group
+        let _membership = crate::common::add_test_user_to_a_group(user.id, &group).await;
+
+        // Create a second token for the same user
+        let user_token2 = crate::common::login_and_get_token_for_user(&user, &password).await;
+
+        // Start test server
+        let (addr, shutdown) = start_test_server().await;
+
+        // Connect owner
+        let (mut owner_ws, _) = connect_chat_websocket_with_auth(addr, &owner_token)
+            .await
+            .expect("Failed to connect owner to websocket");
+
+        let owner_join_id = Uuid::new_v4().to_string();
+        let owner_join_msg = WebSocketMessage::Request {
+            request_id: owner_join_id.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _owner_response = send_websocket_message_and_get_response(&mut owner_ws, owner_join_msg)
+            .await
+            .expect("Owner failed to join group");
+
+        // Connect user with both connections
+        let (mut user_ws1, _) = connect_chat_websocket_with_auth(addr, &user_token1)
+            .await
+            .expect("Failed to connect user with first token");
+
+        let user_join_id1 = Uuid::new_v4().to_string();
+        let user_join_msg1 = WebSocketMessage::Request {
+            request_id: user_join_id1.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _user_response1 = send_websocket_message_and_get_response(&mut user_ws1, user_join_msg1)
+            .await
+            .expect("User failed to join group with first connection");
+
+        let (mut user_ws2, _) = connect_chat_websocket_with_auth(addr, &user_token2)
+            .await
+            .expect("Failed to connect user with second token");
+
+        let user_join_id2 = Uuid::new_v4().to_string();
+        let user_join_msg2 = WebSocketMessage::Request {
+            request_id: user_join_id2.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _user_response2 = send_websocket_message_and_get_response(&mut user_ws2, user_join_msg2)
+            .await
+            .expect("User failed to join group with second connection");
+
+        // Act: Close the first connection deliberately
+        let _ = user_ws1.close(None).await;
+        drop(user_ws1);
+
+        // Wait a bit for the disconnection to be processed
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Send a message through the API
+        let payload = json!({
+            "content": "Message after partial disconnect",
+            "group_chat_id": group.id,
+        });
+
+        // Create task to listen for message on the remaining connection
+        let handle2 = tokio::spawn(async move {
+            let mut message_received = false;
+            while let Some(message) = user_ws2.next().await {
+                match message.unwrap() {
+                    Message::Text(text) => {
+                        let parsed: WebSocketMessage = serde_json::from_str(&text).unwrap();
+                        match parsed {
+                            WebSocketMessage::Event { event, .. } => {
+                                match event {
+                                    ruggine_server::websocket::ServerEvent::Groups(NewMessage {
+                                        content, ..
+                                    }) => {
+                                        if content == "Message after partial disconnect" {
+                                            message_received = true;
+                                            break;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            message_received
+        });
+
+        // Wait a bit before sending
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Send the message
+        let message_id = tokio::spawn({
+            let token = owner_token.clone();
+            let payload_clone = payload.clone();
+            async move {
+                let client = reqwest::Client::new();
+                let response = client
+                    .post(format!("http://{}/api/text_message/create", addr))
+                    .bearer_auth(&token)
+                    .json(&payload_clone)
+                    .send()
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                let response_json: serde_json::Value = response.json().await.unwrap();
+                let message_data = &response_json["data"];
+                message_data["id"].as_i64().unwrap() as i32
+            }
+        })
+        .await
+        .unwrap();
+
+        // Wait for the remaining connection to receive the message
+        let conn2_received = handle2.await.unwrap();
+
+        // Assert: The remaining connection should still receive the message
+        assert!(
+            conn2_received,
+            "User's remaining connection should still receive messages after partial disconnect"
+        );
+
+        // Cleanup
+        cleanup_text_message(message_id).await;
+        cleanup_test_users_from_a_group_chat(vec![owner.id, user.id], group.id).await;
+        cleanup_group_chat(group.id).await;
+        cleanup_test_users(vec![owner.id, user.id]).await;
         shutdown.send(()).unwrap();
     }
 }
