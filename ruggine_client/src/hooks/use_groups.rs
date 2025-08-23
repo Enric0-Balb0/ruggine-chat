@@ -1,5 +1,5 @@
 use leptos::*;
-use crate::api::services::group::GroupChatService;
+use crate::api::services::{GroupChatService, GroupMembershipService};
 use crate::types::membership::GroupMembership;
 use crate::types::group::GroupChat;
 use crate::types::common::LoadingState;
@@ -42,7 +42,8 @@ pub fn use_groups() -> UseGroups {
         http_client.set_auth_token(Some(token_response.token));
     }
     
-    let group_service = GroupChatService::new(http_client, storage_service);
+    let group_service = GroupChatService::new(http_client.clone(), storage_service.clone());
+    let membership_service = GroupMembershipService::new(http_client, storage_service);
 
     // State for groups
     let (groups, set_groups) = create_signal(LoadingState::Idle);
@@ -52,12 +53,12 @@ pub fn use_groups() -> UseGroups {
 
     // Action to refresh groups
     let refresh_groups = create_action(move |_: &()| {
-        let service = group_service.clone();
+    let group_service = group_service.clone();
+    let membership_service = membership_service.clone();
         async move {
             logging::log!("Fetching user groups...");
             
-            // First, get user memberships
-            let memberships = match service.get_user_groups().await {
+            let memberships = match membership_service.get_user_groups().await {
                 Ok(memberships) => memberships,
                 Err(e) => {
                     let error_msg = format!("Failed to fetch groups: {:?}", e);
@@ -69,12 +70,11 @@ pub fn use_groups() -> UseGroups {
 
             logging::log!("Successfully fetched {} group memberships", memberships.len());
 
-            // Then, fetch details for each group
             let mut groups_with_details = Vec::new();
-            
             for membership in memberships {
                 let group_id = membership.group_chat_id.to_string();
-                let group_details = match service.get_group_by_id(&group_id).await {
+                // Fetch group details
+                let mut group_details = match group_service.get_group_by_id(&group_id).await {
                     Ok(details) => {
                         logging::log!("Fetched details for group {}", group_id);
                         Some(details)
@@ -84,6 +84,18 @@ pub fn use_groups() -> UseGroups {
                         None // Continue without details
                     }
                 };
+
+                // Fetch group membership count and set member_count if possible
+                if let Some(ref mut group) = group_details {
+                    match membership_service.get_by_group_chat_id(&group_id).await {
+                        Ok(members) => {
+                            group.member_count = Some(members.len() as i32);
+                        },
+                        Err(e) => {
+                            logging::warn!("Failed to fetch membership count for group {}: {:?}", group_id, e);
+                        }
+                    }
+                }
 
                 groups_with_details.push(GroupMembershipWithDetails {
                     membership,
