@@ -7,45 +7,39 @@ use serde::{Deserialize, Serialize};
 
 /// User gender from server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Gender {
-    #[serde(rename = "male")]
     Male,
-    #[serde(rename = "female")]
     Female,
-    #[serde(rename = "other")]
     Other,
 }
 
 /// User status from server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UserStatus {
-    #[serde(rename = "pending")]
     Pending,
-    #[serde(rename = "active")]
     Active,
-    #[serde(rename = "suspended")]
     Suspended,
-    #[serde(rename = "deleted")]
     Deleted,
-    #[serde(rename = "banned")]
     Banned,
 }
 
 /// User type from server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UserType {
-    #[serde(rename = "end_user")]
     EndUser,
-    #[serde(rename = "developer")]
     Developer,
-    #[serde(rename = "admin")]
     Admin,
 }
+
 
 
 // =============================================================================
 // DTOs - Server synchronized
 // =============================================================================
+
 
 /// User registration request - exact server DTO (UserRegisterDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +54,13 @@ pub struct UserRegisterRequest {
     pub gender: Gender,
 }
 
+/// User response wrapper from server (nullable data, per /user/username/{username})
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponseUserOptionReadDto {
+    pub data: Option<UserReadDto>,
+}
+
+
 /// Profile update request - exact server DTO (ProfileUpdateDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserUpdateRequest {
@@ -70,11 +71,13 @@ pub struct UserUpdateRequest {
     pub gender: Option<Gender>,
 }
 
+
 /// User response wrapper from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiSuccessResponseUserReadDto {
     pub data: UserReadDto,
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserReadDto {

@@ -6,6 +6,8 @@ use crate::api::client::ApiClient;
 use crate::utils::storage::StorageService;
 use crate::config::constants::AppConstants;
 use crate::components::LucideIcon;
+use crate::hooks::groups_provider::use_groups_context;
+use crate::components::ui::feedback::use_toast;
 
 #[component]
 pub fn ShowInvitesModal(
@@ -64,7 +66,10 @@ pub fn ShowInvitesModal(
         }
     });
 
+    let groups_ctx = use_groups_context();
     let handle_close = move |_| {
+        // Refetch gruppi quando si chiude il modal
+        groups_ctx.groups_hook.refresh_groups.dispatch(());
         on_close.call(());
     };
 
@@ -79,8 +84,10 @@ pub fn ShowInvitesModal(
 
     // Funzione per accettare un invito
     let set_invites_signal = set_invites.clone();
+    let toast = use_toast();
     let handle_accept_invite = Callback::new(move |invitation_id: i32| {
         let set_invites_signal = set_invites_signal.clone();
+        let toast = toast.clone();
         spawn_local(async move {
             let storage_service = StorageService::new();
             let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
@@ -97,6 +104,8 @@ pub fn ShowInvitesModal(
                 if let Ok(new_list) = invitation_service.get_user_invitations().await {
                     set_invites_signal.set(new_list);
                 }
+                // Toast di successo
+                toast.success("Invito accettato! Ora fai parte del gruppo.");
             }
         });
     });

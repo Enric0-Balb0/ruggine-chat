@@ -222,7 +222,7 @@ pub fn ChatView(
             <InviteMemberModal
                 is_open=invite_modal_open
                 on_close=handle_invite_modal_close
-                on_invite=handle_invite_member
+                group_chat_id=group_data.membership.group_chat_id
                 group_name=group_name.clone()
             />
 

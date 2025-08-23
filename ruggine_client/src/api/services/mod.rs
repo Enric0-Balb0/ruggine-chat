@@ -1,3 +1,4 @@
+pub mod message;
 // API Services - Handle backend communication
 pub mod auth;
 pub mod user;
