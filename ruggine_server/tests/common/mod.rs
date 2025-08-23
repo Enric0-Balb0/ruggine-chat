@@ -9,7 +9,7 @@ use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::group_membership::{all_membership_statuses, MemberRole};
 use ruggine_server::entity::invitation::{Invitation, InvitationStatus, NewInvitation};
-use ruggine_server::entity::text_message::{NewTextMessage, TextMessage};
+use ruggine_server::entity::text_message::{NewTextMessage, TextMessage, TextMessageInfoUpdate};
 use ruggine_server::entity::user::User;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
@@ -38,11 +38,13 @@ use std::net::SocketAddr;
 use std::sync::atomic::AtomicU64;
 use std::sync::Once;
 use std::sync::Arc;
+use chrono::{DateTime, Utc};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, OnceCell};
 use tokio_tungstenite::connect_async;
 use tower::ServiceExt;
 use tungstenite::Message;
+use ruggine_server::config::database::DatabaseTrait;
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -523,6 +525,30 @@ pub async fn cleanup_text_messages(message_ids: Vec<i32>) {
     }
 }
 
+/// Helper function to cleanup a text message info from database
+pub async fn cleanup_text_message_info(info_id: i32) {
+    let db = get_database().await;
+    let pool = db.get_pool();
+    if let Err(e) = sqlx::query("DELETE FROM text_message_info WHERE id = $1")
+        .bind(info_id)
+        .execute(pool)
+        .await {
+        panic!("Cleanup failed for text_message_info {}: {:?}", info_id, e);
+    }
+}
+
+/// Helper function to cleanup text message infos by message_id from database
+pub async fn cleanup_text_message_info_by_message_id(message_id: i32) {
+    let db = get_database().await;
+    let pool = db.get_pool();
+    if let Err(e) = sqlx::query("DELETE FROM text_message_info WHERE message_id = $1")
+        .bind(message_id)
+        .execute(pool)
+        .await {
+        panic!("Cleanup failed for text_message_info {} message_id: {:?}", message_id, e);
+    }
+}
+
 /// Helper function to start a test server and return the address
 pub async fn start_test_server() -> (SocketAddr, oneshot::Sender<()>) {
     let app = create_full_router().await;
@@ -588,6 +614,48 @@ pub async fn send_websocket_message_and_get_response(
     }
 }
 
+pub async fn mark_message_as_read(text_message_info_id: i32, read_at: DateTime<Utc>) {
+    let update_text_message_info = TextMessageInfoUpdate {
+        id: text_message_info_id,
+        read_at: Some(read_at),
+        sent_at: None,
+    };
+
+    let db = get_database().await;
+    let repository = TextMessageRepository::new(&db);
+    if let Err(e) = repository.update_info(update_text_message_info).await {
+        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
+    }
+}
+
+pub async fn mark_message_as_sent_and_read(text_message_info_id: i32, time: DateTime<Utc>) {
+    let update_text_message_info = TextMessageInfoUpdate {
+        id: text_message_info_id,
+        read_at: Some(time),
+        sent_at: Some(time),
+    };
+
+    let db = get_database().await;
+    let repository = TextMessageRepository::new(&db);
+    if let Err(e) = repository.update_info(update_text_message_info).await {
+        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
+    }
+}
+
+pub async fn mark_message_as_sent(text_message_info_id: i32, read_at: DateTime<Utc>) {
+    let update_text_message_info = TextMessageInfoUpdate {
+        id: text_message_info_id,
+        sent_at: Some(read_at),
+        read_at: None,
+    };
+
+    let db = get_database().await;
+    let repository = TextMessageRepository::new(&db);
+    if let Err(e) = repository.update_info(update_text_message_info).await {
+        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
+    }
+
+}
 fn init_test_logging() {
     INIT_LOG.call_once(|| {
         let _ = env_logger::builder().is_test(true).try_init();

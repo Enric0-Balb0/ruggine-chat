@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use chrono::{DateTime, Utc};
-use crate::entity::text_message::{TextMessage, NewTextMessage};
+use crate::entity::text_message::{TextMessage, NewTextMessage, NewTextMessageInfo, TextMessageInfo};
 use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
 
 // Counter per generare dati unici nei test
@@ -203,5 +203,116 @@ impl TextMessageFactory {
     pub fn with_group_chat_id_dto(mut dto: TextMessageCreateDto, group_chat_id: i32) -> TextMessageCreateDto {
         dto.group_chat_id = group_chat_id;
         dto
+    }
+
+    // NewTextMessageInfo factory methods
+    pub fn fake_new_text_message_info() -> NewTextMessageInfo {
+        NewTextMessageInfo {
+            user_id: 1,
+            text_message_id: 1,
+        }
+    }
+
+    pub fn fake_new_text_message_info_with_ids(user_id: i32, text_message_id: i32) -> NewTextMessageInfo {
+        NewTextMessageInfo {
+            user_id,
+            text_message_id,
+        }
+    }
+
+    // Utility methods for NewTextMessageInfo
+    pub fn with_user_id_info(mut info: NewTextMessageInfo, user_id: i32) -> NewTextMessageInfo {
+        info.user_id = user_id;
+        info
+    }
+
+    pub fn with_text_message_id_info(mut info: NewTextMessageInfo, text_message_id: i32) -> NewTextMessageInfo {
+        info.text_message_id = text_message_id;
+        info
+    }
+
+    // TextMessageInfo factory methods
+    pub fn fake_text_message_info() -> TextMessageInfo {
+        TextMessageInfo {
+            id: 1,
+            user_id: 1,
+            text_message_id: 1,
+            sent_at: Some(Utc::now()),
+            read_at: None,
+        }
+    }
+
+    pub fn fake_text_message_info_with_ids(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfo {
+        TextMessageInfo {
+            id,
+            user_id,
+            text_message_id,
+            sent_at: Some(Utc::now()),
+            read_at: None,
+        }
+    }
+
+    pub fn fake_text_message_info_read(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfo {
+        let now = Utc::now();
+        TextMessageInfo {
+            id,
+            user_id,
+            text_message_id,
+            sent_at: Some(now - chrono::Duration::minutes(5)),
+            read_at: Some(now),
+        }
+    }
+
+    pub fn fake_text_message_info_sent_only(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfo {
+        TextMessageInfo {
+            id,
+            user_id,
+            text_message_id,
+            sent_at: Some(Utc::now()),
+            read_at: None,
+        }
+    }
+
+    pub fn fake_text_message_infos_for_message(message_id: i32, count: usize) -> Vec<TextMessageInfo> {
+        let mut infos = Vec::new();
+        let base_time = Utc::now();
+        
+        for i in 0..count {
+            infos.push(TextMessageInfo {
+                id: (i + 1) as i32,
+                user_id: ((i % 3) + 1) as i32, // Rotate between users 1, 2, 3
+                text_message_id: message_id,
+                sent_at: Some(base_time - chrono::Duration::minutes(i as i64)),
+                read_at: if i % 2 == 0 { Some(base_time - chrono::Duration::minutes(i as i64 / 2)) } else { None },
+            });
+        }
+        
+        infos
+    }
+
+    // Utility methods for TextMessageInfo
+    pub fn with_id_info(mut info: TextMessageInfo, id: i32) -> TextMessageInfo {
+        info.id = id;
+        info
+    }
+
+    pub fn with_user_id_full_info(mut info: TextMessageInfo, user_id: i32) -> TextMessageInfo {
+        info.user_id = user_id;
+        info
+    }
+
+    pub fn with_text_message_id_full_info(mut info: TextMessageInfo, text_message_id: i32) -> TextMessageInfo {
+        info.text_message_id = text_message_id;
+        info
+    }
+
+    pub fn with_sent_at_info(mut info: TextMessageInfo, sent_at: Option<DateTime<Utc>>) -> TextMessageInfo {
+        info.sent_at = sent_at;
+        info
+    }
+
+    pub fn with_read_at_info(mut info: TextMessageInfo, read_at: Option<DateTime<Utc>>) -> TextMessageInfo {
+        info.read_at = read_at;
+        info
     }
 }

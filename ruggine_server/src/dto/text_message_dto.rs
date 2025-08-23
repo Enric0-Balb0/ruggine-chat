@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 use chrono::{DateTime, Utc};
-use crate::entity::text_message::TextMessage;
+use crate::entity::text_message::{TextMessage, TextMessageInfo};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate, PartialEq, Eq)]
 pub struct TextMessageCreateDto {
@@ -38,6 +38,49 @@ impl From<TextMessage> for TextMessageReadDto {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageInfoReadDto {
+    #[schema(example = 1)]
+    pub id: i32,
+    #[schema(example = 1)]
+    pub user_id: i32,
+    #[schema(example = 1)]
+    pub text_message_id: i32,
+    #[schema(example = "2025-08-12T10:30:00Z")]
+    pub sent_at: Option<DateTime<Utc>>,
+    #[schema(example = "2025-08-12T10:31:00Z")]
+    pub read_at: Option<DateTime<Utc>>,
+}
+
+impl From<TextMessageInfo> for TextMessageInfoReadDto {
+    fn from(info: TextMessageInfo) -> Self {
+        TextMessageInfoReadDto {
+            id: info.id,
+            user_id: info.user_id,
+            text_message_id: info.text_message_id,
+            sent_at: info.sent_at,
+            read_at: info.read_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageSentAtDto {
+    #[schema(example = 1)]
+    pub id: i32,
+    #[schema(example = "2025-08-12T10:30:00Z")]
+    pub sent_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageReadAtDto {
+    #[schema(example = 1)]
+    pub id: i32,
+    #[schema(example = "2025-08-12T10:30:00Z")]
+    pub read_at: DateTime<Utc>,
+}
+
 
 #[cfg(test)]
 mod tests {

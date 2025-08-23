@@ -1,4 +1,5 @@
 -- Drop della tabella se esiste già
+DROP TABLE IF EXISTS "text_message_info";
 DROP TABLE IF EXISTS "text_message";
 DROP TABLE IF EXISTS "group_membership";
 DROP TABLE IF EXISTS "invitation";
@@ -230,4 +231,46 @@ CREATE INDEX idx_text_message_group_chat_sent_at
 INSERT INTO text_message (content, sender_id, group_chat_id)
 VALUES
 ('Ciao a tutti!', 1, 1),
-('Benvenuti nel gruppo!', 1, 1)
+('Benvenuti nel gruppo!', 1, 1);
+
+CREATE TABLE text_message_info (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES "user"(id),
+    text_message_id INT NOT NULL REFERENCES text_message(id),
+    sent_at TIMESTAMPTZ NULL,
+    read_at TIMESTAMPTZ NULL,
+    CONSTRAINT unique_user_message UNIQUE (user_id, text_message_id)
+);
+
+INSERT INTO text_message_info (user_id, text_message_id, sent_at)
+VALUES
+(1, 1, DEFAULT),
+(1, 2, DEFAULT);
+
+-- Funzione di validazione per text_message_info
+CREATE OR REPLACE FUNCTION validate_text_message_info()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Caso: read_at viene aggiornato o inserito
+    IF NEW.read_at IS NOT NULL THEN
+
+        -- Se sent_at è NULL (sia nel nuovo valore sia nel vecchio in DB) -> errore
+        IF NEW.sent_at IS NULL THEN
+            RAISE EXCEPTION 'Non è possibile impostare read_at se sent_at è NULL (text_message_info.id=%)', NEW.id;
+END IF;
+
+        -- Vincolo: sent_at deve essere <= read_at
+        IF NEW.sent_at > NEW.read_at THEN
+            RAISE EXCEPTION 'sent_at deve essere <= read_at (text_message_info.id=%)', NEW.id;
+END IF;
+END IF;
+
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger su INSERT e UPDATE
+CREATE TRIGGER check_text_message_info
+BEFORE INSERT OR UPDATE ON text_message_info
+FOR EACH ROW
+EXECUTE FUNCTION validate_text_message_info();
