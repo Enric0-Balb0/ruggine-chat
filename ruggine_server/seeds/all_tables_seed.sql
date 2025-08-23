@@ -37,7 +37,7 @@ CREATE TABLE "user" (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(256) NOT NULL,
     last_name VARCHAR(256) NOT NULL,
-    username VARCHAR(64) NOT NULL UNIQUE,
+    username VARCHAR(256) NOT NULL UNIQUE,
     email VARCHAR(256) NOT NULL UNIQUE,
     password VARCHAR(256) NOT NULL,
     user_type user_type NOT NULL DEFAULT 'end_user',

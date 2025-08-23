@@ -3,6 +3,7 @@ mod verify_password_service;
 mod add_user;
 mod update_profile_service;
 mod find_by_id;
+mod find_by_username;
 pub mod user_service;
 pub mod user_service_trait;
 
@@ -32,5 +33,9 @@ impl UserServiceTrait for UserService {
 
     async fn find_by_id(&self, id: i32) -> Result<UserReadDto, ApiError> {
         self.find_by_id_internal(id).await
+    }
+
+    async fn find_by_username(&self, username: String) -> Result<Option<UserReadDto>, ApiError> {
+        self.find_by_username_internal(username).await
     }
 }

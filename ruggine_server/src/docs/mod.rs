@@ -5,6 +5,7 @@ use crate::{dto::{
         group_membership_dto::{LeaveGroupMembershipDto},
         ApiSuccessResponseTokenReadDto, 
         ApiSuccessResponseUserReadDto,
+        ApiSuccessResponseUserOptionReadDto,
         ApiSuccessResponseGroupChatReadDto,
         invitation_dto::{
             InvitationCreateDto,
@@ -46,6 +47,7 @@ use crate::handler::{
         user_handler::update_profile_handler::update_profile,
         user_handler::register_handler::register,
         user_handler::find_by_id_handler::find_by_id,
+        user_handler::find_by_username_handler::find_by_username,
         group_chat_handler::create::create,
         group_chat_handler::find_by_id::find_by_id,
         invitation_handler::send::send,
@@ -67,6 +69,7 @@ use crate::handler::{
             GroupChatCreateDto,
             LeaveGroupMembershipDto,
             ApiSuccessResponseUserReadDto,
+            ApiSuccessResponseUserOptionReadDto,
             ApiSuccessResponseTokenReadDto,
             ApiSuccessResponseGroupChatReadDto,
             UserType,

@@ -15,9 +15,9 @@ pub struct UserLoginDto {
     #[schema(example = "user@example.com")]
     pub email: String,
     #[validate(length(
-        min = 3,
-        max = 50,
-        message = "Password must be between 3 and 50 characters"
+        min = 1,
+        max = 256,
+        message = "Password must be between 1 and 256 characters"
     ))]
     #[schema(example = "securepassword123")]
     pub password: String,
@@ -39,9 +39,9 @@ pub struct UserRegisterDto {
     #[schema(example = "newuser@example.com")]
     pub email: String,
     #[validate(length(
-        min = 3,
-        max = 50,
-        message = "Password must be between 3 and 50 characters"
+        min = 1,
+        max = 256,
+        message = "Password must be between 1 and 256 characters"
     ))]
     #[schema(example = "securepassword123")]
     pub password: String,
@@ -60,9 +60,9 @@ pub struct UserRegisterDto {
     #[schema(example = "Doe")]
     pub last_name: String,
     #[validate(length(
-        min = 3,
-        max = 64,
-        message = "Username must be between 3 and 64 characters"
+        min = 1,
+        max = 256,
+        message = "Username must be between 1 and 256 characters"
     ))]
     #[schema(example = "johndoe")]
     pub username: String,
@@ -248,7 +248,7 @@ mod tests {
     fn test_user_login_dto_password_too_short() {
         let login_dto = UserLoginDto {
             email: "test@example.com".to_string(),
-            password: "12".to_string(), // Less than 3 characters
+            password: "".to_string(), // Less than 1 characters
         };
 
         let validation_result = login_dto.validate();
@@ -262,7 +262,7 @@ mod tests {
     fn test_user_login_dto_password_too_long() {
         let login_dto = UserLoginDto {
             email: "test@example.com".to_string(),
-            password: "a".repeat(51), // More than 50 characters
+            password: "a".repeat(257), // More than 256 characters
         };
 
         let validation_result = login_dto.validate();
@@ -320,7 +320,7 @@ mod tests {
     fn test_user_register_dto_password_too_short() {
         let register_dto = UserRegisterDto {
             email: "test@example.com".to_string(),
-            password: "12".to_string(), // Less than 3 characters
+            password: "".to_string(), // Less than 1 characters
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
             username: "johndoe".to_string(),
@@ -340,7 +340,7 @@ mod tests {
     fn test_user_register_dto_password_too_long() {
         let register_dto = UserRegisterDto {
             email: "test@example.com".to_string(),
-            password: "a".repeat(51), // More than 50 characters
+            password: "a".repeat(257), // More than 256 characters
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
             username: "johndoe".to_string(),
@@ -363,7 +363,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            username: "ab".to_string(), // Less than 3 characters
+            username: "".to_string(), // Less than 1 character
             birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
             address: "123 Main St".to_string(),
             gender: Gender::Male,
@@ -383,7 +383,7 @@ mod tests {
             password: "password123".to_string(),
             first_name: "John".to_string(),
             last_name: "Doe".to_string(),
-            username: "a".repeat(65), // More than 64 characters
+            username: "a".repeat(257), // More than 256 characters
             birthday: NaiveDate::from_ymd_opt(1990, 1, 1).unwrap(),
             address: "123 Main St".to_string(),
             gender: Gender::Male,

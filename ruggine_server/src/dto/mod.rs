@@ -16,6 +16,7 @@ pub mod text_message_dto;
 pub mod text_message_pagination_dto;
 
 api_success_response_alias!(ApiSuccessResponseUserReadDto, UserReadDto);
+api_success_response_alias!(ApiSuccessResponseUserOptionReadDto, Option<UserReadDto>);
 api_success_response_alias!(ApiSuccessResponseUserUpdateDto, ProfileUpdateDto);
 api_success_response_alias!(ApiSuccessResponseTokenReadDto, TokenReadDto);
 api_success_response_alias!(ApiSuccessResponseGroupChatReadDto, GroupChatReadDto);

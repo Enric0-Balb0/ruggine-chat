@@ -11,6 +11,6 @@ pub trait UserServiceTrait: Send + Sync {
     async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError>;
     fn verify_password(&self, user: &User, password: &str) -> bool;
     async fn update_user_profile(&self, user_id: i32, update_user: ProfileUpdateDto) -> Result<UserReadDto, ApiError>;
-
     async fn find_by_id(&self, id: i32) -> Result<UserReadDto, ApiError>;
+    async fn find_by_username(&self, username: String) -> Result<Option<UserReadDto>, ApiError>;
 }
