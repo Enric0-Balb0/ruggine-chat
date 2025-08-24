@@ -48,7 +48,7 @@ impl TextMessageService {
                             if db_err.message().contains("NULL") {
                                 ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt)
                             } else {
-                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAt)
+                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow)
                             }
                         }
                         _ => ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())),
@@ -67,7 +67,7 @@ impl TextMessageService {
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => {
-                    ApiError::TextMessageError(TextMessageError::MessageNotFound)
+                    ApiError::TextMessageError(TextMessageError::MessageNotFound)  // TODO: MESSANG INFO
                 }
                 _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
             })?;

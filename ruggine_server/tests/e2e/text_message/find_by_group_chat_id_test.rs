@@ -5,11 +5,11 @@ use axum::{
 use tower::ServiceExt;
 use axum::body::to_bytes;
 use crate::common::{
-    cleanup_user_by_email, cleanup_group_chat, cleanup_text_messages, 
-    create_text_message_router, create_login_and_get_token, 
+    cleanup_user_by_email, cleanup_group_chat, cleanup_text_messages,
+    create_text_message_router, create_login_and_get_token,
     create_test_group_chat_with_invitation_and_membership,
-    create_test_text_messages_for_group, create_test_users_for_a_group,
-    create_test_text_messages_multi_sender, cleanup_test_users_from_a_group_chat,
+    create_test_text_messages_for_group_without_message_info, create_test_users_for_a_group,
+    create_test_text_messages_multi_sender_without_message_info, cleanup_test_users_from_a_group_chat,
     cleanup_test_users, cleanup_test_user_from_a_group_chat
 };
 
@@ -24,7 +24,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, token) = create_login_and_get_token("e2e_text_msg_success".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_success", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 5).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 5).await;
 
         // Act: Send GET request to /{group_id}/messages with auth token
         let request = Request::builder()
@@ -79,7 +79,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, _token) = create_login_and_get_token("e2e_text_msg_no_auth".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_no_auth", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 3).await;
 
         // Act: Send GET request without auth token
         let request = Request::builder()
@@ -107,7 +107,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, _token) = create_login_and_get_token("e2e_text_msg_invalid_auth".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_invalid_auth", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 3).await;
 
         // Act: Send GET request with invalid auth token
         let request = Request::builder()
@@ -138,7 +138,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let (unauthorized_user, _password2, unauthorized_token) = create_login_and_get_token("e2e_text_msg_unauthorized".to_string()).await;
         
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_unauthorized_group", group_owner.id).await;
-        let messages = create_test_text_messages_for_group(group.id, group_owner.id, 3).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, group_owner.id, 3).await;
 
         // Act: Send GET request with unauthorized user's token
         let request = Request::builder()
@@ -208,7 +208,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, token) = create_login_and_get_token("e2e_text_msg_paginated".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_paginated", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 15).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 15).await;
 
         // Act: Send GET request with limit parameter
         let request = Request::builder()
@@ -249,7 +249,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, token) = create_login_and_get_token("e2e_text_msg_cursor".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_cursor", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 10).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 10).await;
 
         // First, get first page to obtain cursor
         let first_request = Request::builder()
@@ -309,7 +309,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         
         let users = create_test_users_for_a_group("e2e_text_msg_multi", 3, &group).await;
         let sender_ids: Vec<i32> = users.iter().map(|(user, _, _)| user.id).collect();
-        let messages = create_test_text_messages_multi_sender(group.id, sender_ids.clone()).await;
+        let messages = create_test_text_messages_multi_sender_without_message_info(group.id, sender_ids.clone()).await;
 
         // Act: Send GET request as creator (who has access)
         let request = Request::builder()
@@ -380,7 +380,7 @@ mod find_by_group_chat_id_text_message_e2e_tests {
         let app = create_text_message_router().await;
         let (user, _password, token) = create_login_and_get_token("e2e_text_msg_left_group".to_string()).await;
         let group = create_test_group_chat_with_invitation_and_membership("e2e_text_msg_left_group", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 3).await;
 
         // Act: User leaves the group first
         test_user_leave_from_a_group(user.id, group.id).await;

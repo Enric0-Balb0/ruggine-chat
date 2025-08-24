@@ -21,7 +21,7 @@ async fn test_find_info_by_id_checked_success() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for find info checked".to_string())
@@ -98,7 +98,7 @@ async fn test_find_info_by_id_checked_access_denied_not_member() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for access denied".to_string())
@@ -153,7 +153,7 @@ async fn test_find_info_by_id_checked_access_denied_left_member() {
     let _left_membership = common::add_test_user_to_a_group(left_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for left member".to_string())
@@ -219,7 +219,7 @@ async fn test_find_info_by_id_checked_member_access_allowed() {
     let _member_membership = common::add_test_user_to_a_group(member_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for member access".to_string())

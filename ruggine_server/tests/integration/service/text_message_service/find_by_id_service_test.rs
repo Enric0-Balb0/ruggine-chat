@@ -15,7 +15,7 @@ async fn test_find_by_id_existing_message() {
     let group_chat = common::create_test_group_chat("find_by_id_group", sender_user.id).await;
     
     // Create a message in the database
-    let test_message = common::create_test_text_message(
+    let test_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Integration test message for find_by_id".to_string())
@@ -76,13 +76,13 @@ async fn test_find_by_id_multiple_messages_same_group() {
     let group_chat = common::create_test_group_chat("multi_msg_group", sender_user.id).await;
     
     // Create multiple messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("First message".to_string())
     ).await;
     
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Second message".to_string())

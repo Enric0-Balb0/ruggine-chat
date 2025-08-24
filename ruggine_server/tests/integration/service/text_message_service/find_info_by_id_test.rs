@@ -21,7 +21,7 @@ async fn test_find_info_by_id_success() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for find info by id".to_string())
@@ -98,7 +98,7 @@ async fn test_find_info_by_id_multiple_infos_same_message() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for multiple infos".to_string())

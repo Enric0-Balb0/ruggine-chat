@@ -14,17 +14,17 @@ async fn test_find_info_last_read_success() {
     let group_chat = common::create_test_group_chat("last_read_group", sender_user.id).await;
     
     // Create multiple text messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("First message".to_string())
     ).await;
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Second message".to_string())
     ).await;
-    let message3 = common::create_test_text_message(
+    let message3 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Third message".to_string())
@@ -92,7 +92,7 @@ async fn test_find_info_last_read_single_message() {
     let group_chat = common::create_test_group_chat("single_read_group", sender_user.id).await;
     
     // Create single text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Only message".to_string())
@@ -139,7 +139,7 @@ async fn test_find_info_last_read_no_read_messages() {
     let group_chat = common::create_test_group_chat("no_read_group", sender_user.id).await;
     
     // Create text message but don't mark as read
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Unread message".to_string())
@@ -224,12 +224,12 @@ async fn test_find_info_last_read_different_users_same_group() {
     let group_chat = common::create_test_group_chat("multi_user_group", sender_user.id).await;
     
     // Create text messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message for recipient1".to_string())
     ).await;
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message for recipient2".to_string())

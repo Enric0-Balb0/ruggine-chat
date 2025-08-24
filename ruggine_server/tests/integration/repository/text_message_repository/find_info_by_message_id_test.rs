@@ -15,7 +15,7 @@ async fn test_find_info_by_message_id_success_multiple() {
     let group_chat = common::create_test_group_chat("message_id_group", sender_user.id).await;
     
     // Create a text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Test message for multiple recipients".to_string())
@@ -75,7 +75,7 @@ async fn test_find_info_by_message_id_success_single() {
     let group_chat = common::create_test_group_chat("single_info_group", sender_user.id).await;
     
     // Create a text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Test message for single recipient".to_string())
@@ -119,7 +119,7 @@ async fn test_find_info_by_message_id_empty_list() {
     let group_chat = common::create_test_group_chat("empty_list_group", sender_user.id).await;
     
     // Create a text message but no message infos
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message with no infos".to_string())
@@ -168,7 +168,7 @@ async fn test_find_info_by_message_id_with_read_and_unread() {
     let group_chat = common::create_test_group_chat("mixed_status_group", sender_user.id).await;
     
     // Create a text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message with mixed read status".to_string())

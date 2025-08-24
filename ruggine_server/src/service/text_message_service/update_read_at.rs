@@ -1,3 +1,4 @@
+use chrono::Utc;
 use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageReadAtDtoUpdate};
 use crate::entity::group_membership::MembershipStatus;
 use crate::entity::text_message::TextMessageInfoUpdate;
@@ -20,8 +21,8 @@ impl TextMessageService {
             return Err(ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt));
         }
 
-        if payload.read_at.clone().lt(&info.sent_at.unwrap()) {
-            return Err(ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAt))
+        if payload.read_at.clone().lt(&info.sent_at.unwrap()) || !payload.read_at.clone().le(&Utc::now()) {
+            return Err(ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow))
         }
 
         // Update read at

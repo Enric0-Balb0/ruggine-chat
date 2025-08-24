@@ -14,7 +14,7 @@ mod update_info_repository_tests {
         let (recipient, _) = common::create_test_user("update_full_recipient").await;
         let group_chat = common::create_test_group_chat("update_full_group", sender.id).await;
 
-        let text_message = common::create_test_text_message(sender.id, group_chat.id, Some("Message".to_string())).await;
+        let text_message = common::create_test_text_message_without_message_info(sender.id, group_chat.id, Some("Message".to_string())).await;
         let info = TextMessageFactory::fake_new_text_message_info_with_ids(recipient.id, text_message.id);
         let info_id = repository.insert_text_message_info(info).await.unwrap();
 
@@ -60,7 +60,7 @@ mod update_info_repository_tests {
         let (recipient, _) = common::create_test_user("update_partial_recipient").await;
         let group_chat = common::create_test_group_chat("update_partial_group", sender.id).await;
 
-        let text_message = common::create_test_text_message(sender.id, group_chat.id, Some("Message".to_string())).await;
+        let text_message = common::create_test_text_message_without_message_info(sender.id, group_chat.id, Some("Message".to_string())).await;
         let info = TextMessageFactory::fake_new_text_message_info_with_ids(recipient.id, text_message.id);
         let info_id = repository.insert_text_message_info(info).await.unwrap();
 
@@ -101,7 +101,7 @@ mod update_info_repository_tests {
         let (recipient, _) = common::create_test_user("update_none_recipient").await;
         let group_chat = common::create_test_group_chat("update_none_group", sender.id).await;
 
-        let text_message = common::create_test_text_message(sender.id, group_chat.id, Some("Message".to_string())).await;
+        let text_message = common::create_test_text_message_without_message_info(sender.id, group_chat.id, Some("Message".to_string())).await;
         let info = TextMessageFactory::fake_new_text_message_info_with_ids(recipient.id, text_message.id);
         let info_id = repository.insert_text_message_info(info).await.unwrap();
 
@@ -155,7 +155,7 @@ mod update_info_repository_tests {
         let (recipient, _) = common::create_test_user("trigger_recipient").await;
         let group_chat = common::create_test_group_chat("trigger_group", sender.id).await;
 
-        let text_message = common::create_test_text_message(sender.id, group_chat.id, Some("Message".to_string())).await;
+        let text_message = common::create_test_text_message_without_message_info(sender.id, group_chat.id, Some("Message".to_string())).await;
         let info = TextMessageFactory::fake_new_text_message_info_with_ids(recipient.id, text_message.id);
         let info_id = repository.insert_text_message_info(info).await.unwrap();
 

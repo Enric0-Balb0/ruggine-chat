@@ -3,7 +3,7 @@ use ruggine_server::dto::text_message_pagination_dto::TextMessagePaginationQuery
 use chrono::{Utc, TimeZone};
 use axum::{Extension, extract::{Path, Query, State}};
 use crate::common::{
-    cleanup_text_messages, create_test_text_messages_for_group, create_test_user,
+    cleanup_text_messages, create_test_text_messages_for_group_without_message_info, create_test_user,
     create_test_group_chat, cleanup_group_chat, cleanup_user, create_text_message_state
 };
 
@@ -22,7 +22,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         let group = create_test_group_chat("find_msgs_handler_unauthorized", owner_user.id).await;
         
         // Create some messages (but user is not authorized to see them)
-        let _messages = create_test_text_messages_for_group(group.id, owner_user.id, 3).await;
+        let _messages = create_test_text_messages_for_group_without_message_info(group.id, owner_user.id, 3).await;
         
         let state = create_text_message_state().await;
         let pagination_query = TextMessagePaginationQuery {
@@ -54,7 +54,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and messages
         let (user, _) = create_test_user("find_msgs_handler_existing").await;
         let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_existing", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 5).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 5).await;
         
         let state = create_text_message_state().await;
         let pagination_query = TextMessagePaginationQuery {
@@ -98,7 +98,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and more messages than limit
         let (user, _) = create_test_user("find_msgs_handler_paginated").await;
         let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_paginated", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 15).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 15).await;
         
         let state = create_text_message_state().await;
         let pagination_query = TextMessagePaginationQuery {
@@ -134,7 +134,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and messages
         let (user, _) = create_test_user("find_msgs_handler_cursor").await;
         let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_cursor", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 10).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 10).await;
         
         // Get a cursor timestamp from one of the messages (middle one)
         let cursor_time = messages[5].sent_at;
@@ -238,7 +238,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and messages
         let (user, _) = create_test_user("find_msgs_handler_custom_limit").await;
         let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_custom_limit", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 8).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 8).await;
         
         let state = create_text_message_state().await;
         let pagination_query = TextMessagePaginationQuery {
@@ -276,12 +276,12 @@ mod find_by_group_chat_id_handler_integration_tests {
         let group = create_test_group_chat_with_invitation_and_membership("handler_multi_sender_group", creator_user.id).await;
         
         // Create additional users for the group
-        use crate::common::{create_test_users_for_a_group, create_test_text_messages_multi_sender, cleanup_test_users_from_a_group_chat, cleanup_test_users};
+        use crate::common::{create_test_users_for_a_group, create_test_text_messages_multi_sender_without_message_info, cleanup_test_users_from_a_group_chat, cleanup_test_users};
         let users = create_test_users_for_a_group("handler_multi_sender", 3, &group).await;
         
         // Create messages from different senders
         let sender_ids: Vec<i32> = users.iter().map(|(user, _, _)| user.id).collect();
-        let messages = create_test_text_messages_multi_sender(group.id, sender_ids.clone()).await;
+        let messages = create_test_text_messages_multi_sender_without_message_info(group.id, sender_ids.clone()).await;
         
         let state = create_text_message_state().await;
         let pagination_query = TextMessagePaginationQuery {
@@ -329,7 +329,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and enough messages for multi-page pagination
         let (user, _) = create_test_user("handler_comprehensive_pagination").await;
         let group = create_test_group_chat_with_invitation_and_membership("handler_comprehensive_pagination", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 25).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 25).await;
         
         let state = create_text_message_state().await;
         
@@ -396,7 +396,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user, group and exactly enough messages to test boundary conditions
         let (user, _) = create_test_user("handler_boundary_conditions").await;
         let group = create_test_group_chat_with_invitation_and_membership("handler_boundary_conditions", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 10).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 10).await;
         
         let state = create_text_message_state().await;
 
@@ -469,7 +469,7 @@ mod find_by_group_chat_id_handler_integration_tests {
         // Arrange: Create user and group with membership, then user leaves
         let (user, _) = create_test_user("find_msgs_handler_left").await;
         let group = create_test_group_chat_with_invitation_and_membership("find_msgs_handler_left", user.id).await;
-        let messages = create_test_text_messages_for_group(group.id, user.id, 3).await;
+        let messages = create_test_text_messages_for_group_without_message_info(group.id, user.id, 3).await;
         
         let state = create_text_message_state().await;
         

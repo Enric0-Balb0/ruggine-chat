@@ -12,7 +12,7 @@ async fn test_find_by_group_chat_id_paginated_integration_first_page() {
     let group_chat = common::create_test_group_chat("paginated_group", sender_user.id).await;
 
     // Create multiple messages for the group
-    let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 5).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, sender_user.id, 5).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act
@@ -46,7 +46,7 @@ async fn test_find_by_group_chat_id_paginated_integration_with_cursor() {
     let group_chat = common::create_test_group_chat("cursor_group", sender_user.id).await;
 
     // Create messages with some delay to ensure different timestamps
-    let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 10).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, sender_user.id, 10).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Get first page
@@ -133,7 +133,7 @@ async fn test_find_by_group_chat_id_paginated_integration_multi_sender() {
 
     // Create messages from different senders
     let sender_ids: Vec<i32> = users.iter().map(|(user, _)| user.id).collect();
-    let messages = common::create_test_text_messages_multi_sender(group_chat.id, sender_ids.clone()).await;
+    let messages = common::create_test_text_messages_multi_sender_without_message_info(group_chat.id, sender_ids.clone()).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act

@@ -28,13 +28,13 @@ async fn test_find_info_last_sent_at_success() {
     let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
 
     // Create test messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("First message".to_string())
     ).await;
 
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Second message".to_string())
@@ -105,13 +105,13 @@ async fn test_find_info_last_sent_at_no_sent_messages() {
     let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
 
     // Create test messages but don't mark them as sent
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Unsent message 1".to_string())
     ).await;
 
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Unsent message 2".to_string())
@@ -257,19 +257,19 @@ async fn test_find_info_last_sent_at_mixed_sent_unsent() {
     let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
 
     // Create test messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("First message (sent)".to_string())
     ).await;
 
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Second message (unsent)".to_string())
     ).await;
 
-    let message3 = common::create_test_text_message(
+    let message3 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Third message (sent latest)".to_string())
@@ -348,13 +348,13 @@ async fn test_find_info_last_sent_at_both_sent_and_read() {
     let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
 
     // Create test messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("First message (sent and read)".to_string())
     ).await;
 
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Second message (sent only)".to_string())

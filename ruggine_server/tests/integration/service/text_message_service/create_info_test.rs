@@ -21,7 +21,7 @@ async fn test_create_info_success() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for info creation".to_string())
@@ -97,7 +97,7 @@ async fn test_create_info_user_not_creator() {
     ).await;
 
     // Create a test message by the creator
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         message_creator.id, 
         group_chat.id, 
         Some("Test message by creator".to_string())
@@ -141,7 +141,7 @@ async fn test_create_info_multiple_infos_same_message() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for multiple infos".to_string())
@@ -196,13 +196,13 @@ async fn test_create_info_with_complex_scenario() {
     let _membership = common::create_test_group_membership(invitation.id, message_sender.id).await;
 
     // Create multiple messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         message_sender.id, 
         group_chat.id, 
         Some("First message".to_string())
     ).await;
     
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         message_sender.id, 
         group_chat.id, 
         Some("Second message".to_string())

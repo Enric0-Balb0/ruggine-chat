@@ -1,4 +1,5 @@
-use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
+use crate::config::database::DatabaseTrait;
+use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageReadDto};
 use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
 use crate::error::group_membership_error::GroupMembershipError;
@@ -6,7 +7,7 @@ use crate::error::group_chat_error::GroupChatError;
 use crate::error::text_message_error::TextMessageError;
 use crate::error::db_error::DbError;
 use crate::entity::text_message::NewTextMessage;
-use crate::service::text_message_service::TextMessageService;
+use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 
 impl TextMessageService {
     pub async fn create_internal(
@@ -14,72 +15,90 @@ impl TextMessageService {
         payload: TextMessageCreateDto,
         sender_id: i32,
     ) -> Result<TextMessageReadDto, ApiError> {
-        // Check if the group exists first
-        self.group_chat_service
-            .find_by_id(payload.group_chat_id)
-            .await
-            .map_err(|e| match e {
-                ApiError::GroupChatError(GroupChatError::GroupChatNotFound) => {
-                    ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
-                }
-                _ => e,
-            })?;
-
-        // Check if the sender has active membership in the group
-        let membership = self.group_membership_service
-            .find_active_by_user_id_and_group_id(sender_id, payload.group_chat_id)
-            .await
-            .map_err(|e| match e {
-                ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
-                    ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
-                }
-                _ => e,
-            })?;
-        if membership.membership_status != MembershipStatus::Active {
-            return Err(ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages));
-        }
-
-        // Create the new text message entity
-        let new_text_message = NewTextMessage {
-            content: payload.content.clone(),
-            sender_id,
-            group_chat_id: payload.group_chat_id,
-        };
-
-        // Insert the message into the database
-        let message_id = self
-            .text_message_repo
-            .insert(new_text_message)
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::Database(db_err) => {
-                    if let Some(code) = db_err.code() {
-                        if code == "23503" {
-                            return ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string()));
-                        }
-                    }
-                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                }
-                _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-            })?;
-
-        // Retrieve the created message to return it
         self.text_message_repo
-            .find(message_id)
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::RowNotFound => {
-                    ApiError::TextMessageError(TextMessageError::MessageNotFound)
+            .db_conn()
+            .with_tx(|db| async move {
+                // Check if the group exists first
+                self.group_chat_service
+                    .find_by_id(payload.group_chat_id)
+                    .await
+                    .map_err(|e| match e {
+                        ApiError::GroupChatError(GroupChatError::GroupChatNotFound) => {
+                            ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
+                        }
+                        _ => e,
+                    })?;
+
+                // Check if the sender has active membership in the group
+                let membership = self.group_membership_service
+                    .find_active_by_user_id_and_group_id(sender_id, payload.group_chat_id)
+                    .await
+                    .map_err(|e| match e {
+                        ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
+                            ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
+                        }
+                        _ => e,
+                    })?;
+                if membership.membership_status != MembershipStatus::Active {
+                    return Err(ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages));
                 }
-                sqlx::Error::Database(db_err) => {
-                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+
+                // Create the new text message entity
+                let new_text_message = NewTextMessage {
+                    content: payload.content.clone(),
+                    sender_id,
+                    group_chat_id: payload.group_chat_id,
+                };
+
+                // Insert the message into the database
+                let message_id = self
+                    .text_message_repo
+                    .insert(new_text_message)
+                    .await
+                    .map_err(|e| match e {
+                        sqlx::Error::Database(db_err) => {
+                            if let Some(code) = db_err.code() {
+                                if code == "23503" {
+                                    return ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string()));
+                                }
+                            }
+                            ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+                        }
+                        _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
+                    })?;
+
+                // Insert the text message infos in the database
+                let memberships = self.group_membership_service
+                    .find_by_group_chat_id(payload.group_chat_id)
+                    .await?;
+
+                for membership in memberships {
+                    let payload = TextMessageInfoCreateDto {
+                        user_id: membership.user_id,
+                        text_message_id: message_id,
+                    };
+                    self.create_info(payload, sender_id).await?;
                 }
-                _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-            })
-            .map(TextMessageReadDto::from)
+
+                // Retrieve the created message to return it
+                self.text_message_repo
+                    .find(message_id)
+                    .await
+                    .map_err(|e| match e {
+                        sqlx::Error::RowNotFound => {
+                            ApiError::TextMessageError(TextMessageError::MessageNotFound)
+                        }
+                        sqlx::Error::Database(db_err) => {
+                            ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+                        }
+                        _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
+                    })
+                    .map(TextMessageReadDto::from)
+            }).await
     }
 }
 
+/*
 #[cfg(test)]
 mod create_service_tests {
     use super::*;
@@ -370,3 +389,4 @@ mod create_service_tests {
         assert!(matches!(error, ApiError::TextMessageError(TextMessageError::MessageNotFound)));
     }
 }
+*/

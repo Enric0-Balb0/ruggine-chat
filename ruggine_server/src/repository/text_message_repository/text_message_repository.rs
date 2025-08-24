@@ -74,4 +74,7 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
     async fn find_info_by_user_id_and_message_id(&self, user_id: i32, text_message_id: i32) -> Result<TextMessageInfo, Error> {
         self.find_info_by_user_id_and_message_id_inner(user_id, text_message_id).await
     }
+    fn db_conn(&self) -> Arc<Database> {
+        self.db_conn.clone()
+    }
 }

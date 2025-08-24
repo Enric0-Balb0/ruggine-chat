@@ -19,7 +19,7 @@ async fn test_find_by_group_chat_id_paginated_first_page() {
     // No need to manually create membership as the creator is automatically added
     
     // Create multiple messages for the group
-    let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 5).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, sender_user.id, 5).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act - use sender_user.id as auth_user_id since they have membership in the group
@@ -66,7 +66,7 @@ async fn test_find_by_group_chat_id_paginated_with_cursor() {
     let group_chat = common::create_test_group_chat_with_invitation_and_membership("cursor_group", sender_user.id).await;
     
     // Create messages with some delay to ensure different timestamps
-    let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 10).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, sender_user.id, 10).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Get first page
@@ -167,7 +167,7 @@ async fn test_find_by_group_chat_id_paginated_multi_sender() {
     
     // Create messages from different senders
     let sender_ids: Vec<i32> = users.iter().map(|(user, _, _)| user.id).collect();
-    let messages = common::create_test_text_messages_multi_sender(group_chat.id, sender_ids.clone()).await;
+    let messages = common::create_test_text_messages_multi_sender_without_message_info(group_chat.id, sender_ids.clone()).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act - use creator_id as auth user (they have membership as creator)
@@ -238,7 +238,7 @@ async fn test_find_by_group_chat_id_paginated_limit_handling() {
     let group_chat = common::create_test_group_chat_with_invitation_and_membership("limit_group", sender_user.id).await;
     
     // Create 7 messages
-    let messages = common::create_test_text_messages_for_group(group_chat.id, sender_user.id, 7).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, sender_user.id, 7).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act with limit of 3
@@ -276,7 +276,7 @@ async fn test_find_by_group_chat_id_paginated_unauthorized_user() {
     let group_chat = common::create_test_group_chat("restricted_group", creator_user.id).await;
     
     // Create messages in the group
-    let messages = common::create_test_text_messages_for_group(group_chat.id, creator_user.id, 3).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, creator_user.id, 3).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Act - unauthorized user tries to access messages
@@ -308,7 +308,7 @@ async fn test_find_by_group_chat_id_paginated_user_not_active_member() {
     let group_chat = common::create_test_group_chat_with_invitation_and_membership("not_active_group", user.id).await;
     
     // Create messages in the group
-    let messages = common::create_test_text_messages_for_group(group_chat.id, user.id, 3).await;
+    let messages = common::create_test_text_messages_for_group_without_message_info(group_chat.id, user.id, 3).await;
     let message_ids: Vec<i32> = messages.iter().map(|m| m.id).collect();
 
     // Make the user leave the group (set membership status to Left)

@@ -35,6 +35,9 @@ async fn test_create_message_success() {
     assert_eq!(created_message.group_chat_id, group_chat.id);
     assert!(created_message.id > 0);
 
+    let infos = service.find_info_by_message_id(sender_user.id, created_message.id).await.unwrap();
+    assert_eq!(infos.len(), 1);
+
     // Cleanup
     common::cleanup_text_message(created_message.id).await;
     common::cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
@@ -208,6 +211,12 @@ async fn test_create_message_multiple_users_same_group() {
     assert_eq!(owner_message.group_chat_id, group_chat.id);
     assert_eq!(member_message.group_chat_id, group_chat.id);
     assert_ne!(owner_message.id, member_message.id);
+
+    let mut infos = service.find_info_by_message_id(owner_user.id, owner_message.id).await.unwrap();
+    assert_eq!(infos.len(), 2);
+
+    infos = service.find_info_by_message_id(owner_user.id, member_message.id).await.unwrap();
+    assert_eq!(infos.len(), 2);
 
     // Cleanup
     common::cleanup_text_message(owner_message.id).await;

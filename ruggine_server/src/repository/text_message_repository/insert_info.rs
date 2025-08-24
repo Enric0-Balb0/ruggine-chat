@@ -4,7 +4,7 @@ use crate::config::database::DatabaseTrait;
 
 impl TextMessageRepository {
     pub async fn insert_text_message_info_inner(&self, text_message_info: NewTextMessageInfo) -> Result<i32, SqlxError> {
-        let rec = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             INSERT INTO text_message_info (user_id, text_message_id)
             VALUES ($1, $2)
@@ -12,11 +12,24 @@ impl TextMessageRepository {
             "#
         )
         .bind(text_message_info.user_id)
-        .bind(text_message_info.text_message_id)
-        .fetch_one(self.db_conn.get_pool())
-        .await?;
+        .bind(text_message_info.text_message_id);
 
-        Ok(rec)
+        let response;
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            response = query.fetch_one(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            response = query.fetch_one(self.db_conn.get_pool()).await
+        }
+
+        match response {
+            Ok(id) => Ok(id),
+            Err(err) => {
+                eprintln!("Failed to insert text message info repository: {:?}", err);
+                Err(err)
+            }
+        }
     }
 }
 

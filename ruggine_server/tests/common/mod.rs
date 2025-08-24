@@ -45,6 +45,7 @@ use tokio_tungstenite::connect_async;
 use tower::ServiceExt;
 use tungstenite::Message;
 use ruggine_server::config::database::DatabaseTrait;
+use ruggine_server::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -420,7 +421,7 @@ pub async fn cleanup_group_membership_by_invitation_id(invitation_id: i32) {
 }
 
 /// Helper function to create a test text message in the database
-pub async fn create_test_text_message(sender_id: i32, group_chat_id: i32, content: Option<String>) -> TextMessage {
+pub async fn create_test_text_message_without_message_info(sender_id: i32, group_chat_id: i32, content: Option<String>) -> TextMessage {
     let db = get_database().await;
     let repository = TextMessageRepository::new(&db);
 
@@ -439,7 +440,39 @@ pub async fn create_test_text_message(sender_id: i32, group_chat_id: i32, conten
 }
 
 /// Helper function to create multiple test text messages for a group
-pub async fn create_test_text_messages_for_group(group_chat_id: i32, sender_id: i32, count: usize) -> Vec<TextMessage> {
+pub async fn create_test_text_messages_for_group_without_message_info(group_chat_id: i32, sender_id: i32, count: usize) -> Vec<TextMessage> {
+    let mut messages = Vec::new();
+    for i in 0..count {
+        let content = format!("Test message {} for group {}", i + 1, group_chat_id);
+        let message = create_test_text_message_without_message_info(sender_id, group_chat_id, Some(content)).await;
+        messages.push(message);
+        // Small delay to ensure different timestamps
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    }
+    messages
+}
+
+/// Helper function to create multiple test text messages with different senders
+pub async fn create_test_text_messages_multi_sender_without_message_info(group_chat_id: i32, sender_ids: Vec<i32>) -> Vec<TextMessage> {
+    let mut messages = Vec::new();
+    for (_i, sender_id) in sender_ids.iter().enumerate() {
+        let content = format!("Message from user {} in group {}", sender_id, group_chat_id);
+        let message = create_test_text_message_without_message_info(*sender_id, group_chat_id, Some(content)).await;
+        messages.push(message);
+        // Small delay to ensure different timestamps
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    }
+    messages
+}
+
+pub async fn create_test_text_message(sender_id: i32, group_chat_id: i32, content: Option<String>) -> TextMessageReadDto {
+    let db = get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let text_message_service = service_init.text_message_service();
+    text_message_service.create(TextMessageCreateDto {content: content.unwrap_or_else(|| "Test message content".to_string()), group_chat_id}, sender_id).await.unwrap()
+}
+
+pub async fn create_test_text_messages_for_group(group_chat_id: i32, sender_id: i32, count: usize) -> Vec<TextMessageReadDto> {
     let mut messages = Vec::new();
     for i in 0..count {
         let content = format!("Test message {} for group {}", i + 1, group_chat_id);
@@ -451,8 +484,7 @@ pub async fn create_test_text_messages_for_group(group_chat_id: i32, sender_id: 
     messages
 }
 
-/// Helper function to create multiple test text messages with different senders
-pub async fn create_test_text_messages_multi_sender(group_chat_id: i32, sender_ids: Vec<i32>) -> Vec<TextMessage> {
+pub async fn create_test_text_messages_multi_sender(group_chat_id: i32, sender_ids: Vec<i32>) -> Vec<TextMessageReadDto> {
     let mut messages = Vec::new();
     for (_i, sender_id) in sender_ids.iter().enumerate() {
         let content = format!("Message from user {} in group {}", sender_id, group_chat_id);
@@ -513,6 +545,7 @@ pub async fn cleanup_test_users_from_a_group_chat(user_ids: Vec<i32>, group_chat
 pub async fn cleanup_text_message(message_id: i32) {
     let db = get_database().await;
     let repository = TextMessageRepository::new(&db);
+    cleanup_text_message_info_by_message_id_without_panic(message_id).await;
     if let Err(e) = repository.delete_by_id(message_id).await {
         panic!("Cleanup failed for {}: {:?}", message_id, e);
     }
@@ -541,11 +574,22 @@ pub async fn cleanup_text_message_info(info_id: i32) {
 pub async fn cleanup_text_message_info_by_message_id(message_id: i32) {
     let db = get_database().await;
     let pool = db.get_pool();
-    if let Err(e) = sqlx::query("DELETE FROM text_message_info WHERE message_id = $1")
+    if let Err(e) = sqlx::query("DELETE FROM text_message_info WHERE text_message_id = $1")
         .bind(message_id)
         .execute(pool)
         .await {
         panic!("Cleanup failed for text_message_info {} message_id: {:?}", message_id, e);
+    }
+}
+
+pub async fn cleanup_text_message_info_by_message_id_without_panic(message_id: i32) {
+    let db = get_database().await;
+    let pool = db.get_pool();
+    if let Err(_e) = sqlx::query("DELETE FROM text_message_info WHERE text_message_id = $1")
+        .bind(message_id)
+        .execute(pool)
+        .await {
+
     }
 }
 

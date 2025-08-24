@@ -1,9 +1,11 @@
+use std::sync::Arc;
 use crate::entity::text_message::{TextMessage, NewTextMessage, TextMessageInfoUpdate, TextMessageInfo, NewTextMessageInfo};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Error;
 use sqlx::Error as SqlxError;
 use mockall::automock;
+use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::text_message_dto::TextMessageInfoReadDto;
 
 #[async_trait]
@@ -19,4 +21,5 @@ pub trait TextMessageRepositoryTrait: Send + Sync {
     async fn find_info_last_sent(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessageInfo>, Error>;
     async fn update_info(&self, text_message_info_update: TextMessageInfoUpdate) -> Result<(), Error>;
     async fn find_info_by_user_id_and_message_id(&self, user_id: i32, text_message_id: i32) -> Result<TextMessageInfo, Error>;
+    fn db_conn(&self) -> Arc<Database>;
 }

@@ -26,7 +26,7 @@ async fn test_update_read_at_success() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message from sender
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for update read at".to_string())
@@ -132,7 +132,7 @@ async fn test_update_read_at_unauthorized_user() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for unauthorized read update".to_string())
@@ -195,7 +195,7 @@ async fn test_update_read_at_already_set() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for already set read_at".to_string())
@@ -264,7 +264,7 @@ async fn test_update_read_at_preserves_sent_at() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for preserving sent_at".to_string())
@@ -338,7 +338,7 @@ async fn test_update_read_at_multiple_users_same_message() {
     let _recipient2_membership = common::add_test_user_to_a_group(recipient2_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for multiple recipients read update".to_string())
@@ -433,7 +433,7 @@ async fn test_update_read_at_cannot_update_again() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for cannot update read_at again".to_string())
@@ -514,7 +514,7 @@ async fn test_update_read_at_cannot_set_before_sent_at() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for cannot set read_at before sent_at".to_string())
@@ -580,7 +580,7 @@ async fn test_update_read_at_must_be_greater_or_equal_to_sent_at() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for read_at must be greater than sent_at".to_string())
@@ -616,7 +616,7 @@ async fn test_update_read_at_must_be_greater_or_equal_to_sent_at() {
     assert!(result.is_err(), "Read_at update should fail when read_at is before sent_at");
 
     match result.unwrap_err() {
-        ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAt) => {
+        ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow) => {
             // Expected error type
         }
         e => panic!("Expected ReadAtMustBeGreaterOrEqualsToSentAt error, got {:?}", e),
@@ -652,7 +652,7 @@ async fn test_update_read_at_exactly_equal_to_sent_at() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for read_at equal to sent_at".to_string())
@@ -697,6 +697,78 @@ async fn test_update_read_at_exactly_equal_to_sent_at() {
         updated_info.sent_at.unwrap().trunc_subsecs(6),
         "read_at should equal sent_at"
     );
+
+    // Cleanup
+    common::cleanup_text_message_info(created_info.id).await;
+    common::cleanup_text_message(text_message.id).await;
+    common::cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
+    common::cleanup_test_user_from_a_group_chat(recipient_user.id, group_chat.id).await;
+    common::cleanup_group_chat(group_chat.id).await;
+    common::cleanup_user(sender_user.id).await;
+    common::cleanup_user(recipient_user.id).await;
+}
+
+#[tokio_shared_rt::test(shared)]
+async fn test_update_read_at_must_be_less_or_equal_to_now() {
+    // Arrange
+    let db = common::get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
+
+    let (recipient_user, _) = common::create_test_user("update_read_at_future").await;
+    let (sender_user, _) = common::create_test_user("update_read_at_sender_future").await;
+    
+    // Create a test group with invitation and membership for the sender
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership(
+        "update_read_at_group_future",
+        sender_user.id,
+    ).await;
+
+    // Add recipient to the group
+    let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
+
+    // Create a test message
+    let text_message = common::create_test_text_message_without_message_info(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Test message for future read_at".to_string())
+    ).await;
+
+    // Create text message info
+    let create_payload = TextMessageFactory::fake_text_message_info_create_dto_with_ids(
+        recipient_user.id, 
+        text_message.id
+    );
+    let created_info = service.create_info(create_payload, sender_user.id).await.unwrap();
+
+    // First, set sent_at (required before setting read_at)
+    let sent_at = Utc::now();
+    let sent_update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
+        text_message.id,
+        sent_at
+    );
+    let sent_result = service.update_sent_at(recipient_user.id, sent_update_payload).await;
+    assert!(sent_result.is_ok(), "Sent at update should succeed");
+
+    // Attempt to set read_at to a future time
+    let future_read_at = Utc::now() + chrono::Duration::hours(1);
+    let update_payload = TextMessageFactory::fake_text_message_read_at_dto_update_with_ids(
+        text_message.id,
+        future_read_at
+    );
+
+    // Act
+    let result = service.update_read_at(recipient_user.id, update_payload).await;
+
+    // Assert
+    assert!(result.is_err(), "Read_at update should fail when read_at is in the future");
+
+    match result.unwrap_err() {
+        ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow) => {
+            // Expected error type
+        }
+        e => panic!("Expected ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow error, got {:?}", e),
+    }
 
     // Cleanup
     common::cleanup_text_message_info(created_info.id).await;

@@ -1,3 +1,4 @@
+use chrono::Utc;
 use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageSentAtDtoUpdate};
 use crate::entity::group_membership::MembershipStatus;
 use crate::entity::text_message::TextMessageInfoUpdate;
@@ -14,6 +15,10 @@ impl TextMessageService {
         let info = self.find_info_by_id(text_message_info.id).await?;
         if info.sent_at.is_some() {
             return Err(ApiError::TextMessageError(TextMessageError::CannotUpdateSentAtAgain));
+        }
+
+        if !payload.sent_at.clone().le(&Utc::now()) {
+            return Err(ApiError::TextMessageError(TextMessageError::SentAtMustBeLessOrEqualsToNow));
         }
 
         // Update sent at

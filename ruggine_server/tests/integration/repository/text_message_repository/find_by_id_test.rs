@@ -12,7 +12,7 @@ async fn test_find_success() {
     let group_chat = common::create_test_group_chat("find_group", sender_user.id).await;
     
     // Create a message in the database
-    let test_message = common::create_test_text_message(
+    let test_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Integration test message".to_string())

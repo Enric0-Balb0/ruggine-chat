@@ -14,7 +14,7 @@ async fn test_insert_text_message_info_success() {
     let group_chat = common::create_test_group_chat("text_msg_info_group", sender_user.id).await;
     
     // Create a text message first
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for info".to_string())
@@ -51,7 +51,7 @@ async fn test_insert_text_message_info_foreign_key_violation_user() {
     let (sender_user, _) = common::create_test_user("text_msg_fk_sender").await;
     let group_chat = common::create_test_group_chat("text_msg_fk_group", sender_user.id).await;
     
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for FK violation".to_string())
@@ -122,7 +122,7 @@ async fn test_insert_text_message_info_multiple_users_same_message() {
     let (recipient2, _) = common::create_test_user("multi_info_recipient2").await;
     let group_chat = common::create_test_group_chat("multi_info_group", sender_user.id).await;
     
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Message with multiple info records".to_string())
@@ -174,7 +174,7 @@ async fn test_insert_text_message_info_with_factory_utility_methods() {
     let (recipient_user, _) = common::create_test_user("factory_util_recipient").await;
     let group_chat = common::create_test_group_chat("factory_util_group", sender_user.id).await;
     
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for factory utilities".to_string())

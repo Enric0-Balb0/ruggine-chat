@@ -6,7 +6,7 @@ use crate::repository::text_message_repository::TextMessageRepository;
 impl TextMessageRepository {
     pub async fn insert_inner(&self, new_text_message: NewTextMessage) -> Result<i32, Error> {
         let now = chrono::Utc::now();
-        let rec = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             INSERT INTO text_message (content, sender_id, group_chat_id, sent_at)
             VALUES ($1, $2, $3, $4)
@@ -16,11 +16,26 @@ impl TextMessageRepository {
         .bind(new_text_message.content)
         .bind(new_text_message.sender_id)
         .bind(new_text_message.group_chat_id)
-        .bind(now)
-        .fetch_one(self.db_conn.get_pool())
-        .await?;
+        .bind(now);
 
-        Ok(rec)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        let response;
+
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            response = query.fetch_one(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            response = query.fetch_one(self.db_conn.get_pool()).await
+        }
+
+        match response {
+            Ok(id) => Ok(id),
+            Err(err) => {
+                eprintln!("Failed to insert text message repository: {:?}", err);
+                Err(err)
+            }
+        }
     }
 }
 

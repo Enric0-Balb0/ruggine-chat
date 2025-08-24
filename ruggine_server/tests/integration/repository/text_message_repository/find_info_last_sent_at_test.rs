@@ -14,17 +14,17 @@ async fn test_find_info_last_sent_success() {
     let group_chat = common::create_test_group_chat("last_sent_group", sender_user.id).await;
     
     // Create multiple text messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("First message".to_string())
     ).await;
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Second message".to_string())
     ).await;
-    let message3 = common::create_test_text_message(
+    let message3 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Third message".to_string())
@@ -90,7 +90,7 @@ async fn test_find_info_last_sent_single_message() {
     let group_chat = common::create_test_group_chat("single_sent_group", sender_user.id).await;
     
     // Create single text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Only message".to_string())
@@ -205,12 +205,12 @@ async fn test_find_info_last_sent_different_users_same_group() {
     let group_chat = common::create_test_group_chat("multi_user_group", sender_user.id).await;
     
     // Create text messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message for recipient1".to_string())
     ).await;
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message for recipient2".to_string())
@@ -268,7 +268,7 @@ async fn test_find_info_last_sent_with_chronological_order() {
     let group_chat = common::create_test_group_chat("chrono_group", sender_user.id).await;
     
     // Create multiple text messages with slight delays to ensure different timestamps
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("First message".to_string())
@@ -277,7 +277,7 @@ async fn test_find_info_last_sent_with_chronological_order() {
     // Small delay to ensure different timestamps
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Second message".to_string())
@@ -285,7 +285,7 @@ async fn test_find_info_last_sent_with_chronological_order() {
     
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     
-    let message3 = common::create_test_text_message(
+    let message3 = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Third message".to_string())

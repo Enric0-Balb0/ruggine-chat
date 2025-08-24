@@ -26,7 +26,7 @@ async fn test_find_info_by_message_id_success() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for find info by message id".to_string())
@@ -87,7 +87,7 @@ async fn test_find_info_by_message_id_empty_result() {
     ).await;
 
     // Create a test message but no message info
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message with no info".to_string())
@@ -154,7 +154,7 @@ async fn test_find_info_by_message_id_access_denied_not_member() {
     ).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for access denied".to_string())
@@ -201,7 +201,7 @@ async fn test_find_info_by_message_id_access_denied_left_member() {
     let _left_membership = common::add_test_user_to_a_group(left_user.id, &group_chat).await;
 
     // Create a test message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Test message for left member".to_string())
@@ -252,13 +252,13 @@ async fn test_find_info_by_message_id_multiple_messages() {
     let _recipient_membership = common::add_test_user_to_a_group(recipient_user.id, &group_chat).await;
 
     // Create multiple test messages
-    let message1 = common::create_test_text_message(
+    let message1 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("First test message".to_string())
     ).await;
 
-    let message2 = common::create_test_text_message(
+    let message2 = common::create_test_text_message_without_message_info(
         sender_user.id, 
         group_chat.id, 
         Some("Second test message".to_string())

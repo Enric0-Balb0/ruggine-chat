@@ -14,7 +14,7 @@ async fn test_find_info_by_id_success() {
     let group_chat = common::create_test_group_chat("info_find_group", sender_user.id).await;
     
     // Create a text message first
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Test message for find info".to_string())
@@ -75,7 +75,7 @@ async fn test_find_info_by_id_multiple_infos_same_message() {
     let group_chat = common::create_test_group_chat("multi_info_group", sender_user.id).await;
     
     // Create a text message
-    let text_message = common::create_test_text_message(
+    let text_message = common::create_test_text_message_without_message_info(
         sender_user.id,
         group_chat.id,
         Some("Message for multiple recipients".to_string())
