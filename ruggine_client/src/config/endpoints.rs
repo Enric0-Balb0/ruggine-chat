@@ -82,8 +82,8 @@ impl WebSocketEndpoints {
     pub const CHAT_WEBSOCKET: &'static str = "/ws/chat";
     pub const NOTIFICATIONS_WEBSOCKET: &'static str = "/ws/notifications";
 
-    /// The correct group WebSocket endpoint as used by the server
-    pub const GROUP_WEBSOCKET: &'static str = "/api/ws/group";
+    /// L'endpoint corretto per la connessione WebSocket universale gruppi
+    pub const GROUP_WEBSOCKET: &'static str = "/api/ws/chat";
 
     /// Returns the full WebSocket URL for group messaging, including the token as a query parameter
     pub fn group_websocket_url(base_url: &str, token: &str) -> String {

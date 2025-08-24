@@ -85,17 +85,17 @@ pub fn HomePage() -> impl IntoView {
 
     view! {
         <>
-            <div class="h-screen w-screen overflow-hidden bg-white dark:bg-bg-main-dark flex">
+            <div class="h-screen w-screen bg-white dark:bg-bg-main-dark flex">
                 // Left Sidebar - Occupa tutto il lato sinistro dall'alto in basso
                 <Sidebar on_create_group_click=handle_create_group_click />
 
                 // Main Content Area - Include navbar + content
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col min-h-0">
                     // Top Header/Navbar - Solo nella parte destra
                     <AppNavbar />
 
                     // Main Content Area
-                    <div class="flex-1 bg-white dark:bg-bg-main-dark">
+                    <div class="flex-1 bg-white dark:bg-bg-main-dark min-h-0 flex flex-col">
                         {move || {
                             if let Some(active_id) = active_group_id.get() {
                                 // Find the selected group in the groups list

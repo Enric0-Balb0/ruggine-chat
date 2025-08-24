@@ -3,6 +3,7 @@ use leptos_router::*;
 use crate::api::services::AuthService;
 use crate::utils::{StorageService, auth_error_to_login_message};
 use crate::api::client::ApiClient;
+use crate::context::auth_context::use_auth_context;
 use crate::config::constants::AppConstants;
 use crate::components::{ThemeToggle, use_toast};
 
@@ -10,6 +11,7 @@ use crate::components::{ThemeToggle, use_toast};
 pub fn LandingPage() -> impl IntoView {
     let navigate = use_navigate();
     let toast = use_toast();
+    let auth_ctx = use_auth_context();
     
     // Form signals
     let (email, set_email) = create_signal(String::new());
@@ -45,6 +47,10 @@ pub fn LandingPage() -> impl IntoView {
                 
                 match auth_service.login(email_val, password_val).await {
                     Ok(user_profile) => {
+                        // Aggiorna il segnale globale con il nuovo token
+                        if let Some(token) = auth_service.get_storage_service().get_token() {
+                            auth_ctx.token.set(Some(token.token));
+                        }
                         let success_message = format!("Login effettuato con successo! {}", user_profile.welcome_message_success());
                         toast.success(&success_message);
                         set_loading.set(false);
