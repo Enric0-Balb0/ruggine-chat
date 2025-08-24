@@ -113,12 +113,12 @@ pub fn AppNavbar() -> impl IntoView {
     };
 
     view! {
-        <header class="h-16 bg-brand-primary dark:bg-brand-primary-dark text-white flex items-center justify-between pl-2 pr-6 border-b border-border dark:border-border-dark flex-shrink-0 relative">
+    <header class="h-12 bg-brand-primary dark:bg-brand-primary-dark text-white flex items-center justify-between pl-2 pr-6 border-b border-border dark:border-border-dark flex-shrink-0 relative">
             <div class="flex items-center gap-4">
                 <img 
                     src="public/logos/logo-full-white.png" 
                     alt="Ruggine" 
-                    class="h-10 w-auto"
+                    class="h-8 w-auto"
                 />
             </div>
 
@@ -127,10 +127,10 @@ pub fn AppNavbar() -> impl IntoView {
                 <div class="relative">
                     <button 
                         on:click=toggle_menu
-                        class="p-2 rounded-lg hover:bg-white/10 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/20"
+                        class="p-1 rounded-lg hover:bg-white/10 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white/20"
                         aria-label="Open menu"
                     >
-                        <LucideIcon name="menu" size=IconSize::LARGE class="text-white" />
+                        <LucideIcon name="menu" size=IconSize::MEDIUM class="text-white" />
                     </button>
                     
                     // Dropdown menu

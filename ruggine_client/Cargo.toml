@@ -14,6 +14,7 @@ chrono = { version = "0.4", features = ["serde", "wasm-bindgen"] }
 thiserror = "1.0"
 web-sys = "0.3"
 gloo-storage = "0.3"
+gloo-timers = "0.3"
 log = "0.4"
 async-trait = "0.1"
 uuid = { version = "1.0", features = ["v4", "js"] }
