@@ -1,3 +1,4 @@
+use crate::types::user::ApiSuccessResponseUserOptionReadDto;
 use crate::api::client::ApiClient;
 use crate::utils::storage::StorageService;
 use crate::error::AuthError;
@@ -36,6 +37,18 @@ impl From<UserReadDto> for UserSearchResult {
 }
 
 impl UserService {
+
+    /// Get user profile by username (new OpenAPI)
+    pub async fn get_user_by_username(&self, username: &str) -> Result<UserSearchResult, AuthError> {
+        let response: ApiSuccessResponseUserReadDto = self.http_client
+            .get(&ApiEndpoints::user_by_username(username))
+            .await
+            .map_err(AuthError::from)?;
+
+
+        Ok(UserSearchResult::from(response.data))
+    }
+
     /// Create new user service
     pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
         Self {
@@ -46,12 +59,11 @@ impl UserService {
 
     /// Get user profile by ID
     pub async fn get_user_by_id(&self, user_id: &str) -> Result<UserSearchResult, AuthError> {
-        let profile_response: ApiSuccessResponseUserReadDto = self.http_client
+        let response: crate::types::user::ApiSuccessResponseUserReadDto = self.http_client
             .get(&ApiEndpoints::user_by_id(user_id))
             .await
             .map_err(AuthError::from)?;
-
-        Ok(UserSearchResult::from(profile_response.data))
+        Ok(UserSearchResult::from(response.data))
     }
 
     /// Update current user profile

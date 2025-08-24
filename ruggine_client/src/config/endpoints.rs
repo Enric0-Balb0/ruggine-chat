@@ -15,6 +15,7 @@ impl ApiEndpoints {
     pub const USER_CHANGE_PASSWORD: &'static str = "/user/password";
     pub const USER_GROUPS: &'static str = "/user/groups";
     pub const USER_BY_ID: &'static str = "/user"; // + /{id}
+    pub const USER_BY_USERNAME: &'static str = "/user/username"; // + /{username}
     
     // Group chat endpoints
     pub const GROUP_CREATE: &'static str = "/group_chat/create";
@@ -30,17 +31,14 @@ impl ApiEndpoints {
     pub const GROUP_MEMBERSHIP_BY_GROUP_CHAT: &'static str = "/group_membership/group_chat"; // + /{group_id}
     pub const GROUP_MEMBERSHIP_LEAVE: &'static str = "/group_membership/leave";
 
-
     // Invitation endpoints
     pub const INVITATION_SEND: &'static str = "/invitation/send";
-    pub const INVITATION_UPDATE: &'static str = "/invitation/update_status";
+    pub const INVITATION_UPDATE: &'static str = "/invitation/update-status";
     pub const INVITATION_BY_USER: &'static str = "/invitation/user";
     pub const INVITATION_BY_ID: &'static str = "/invitation"; // + /{id}
     
-    // Message endpoints (future)
-    pub const MESSAGE_SEND: &'static str = "/messages";
-    pub const MESSAGE_HISTORY: &'static str = "/messages/history";
-    pub const MESSAGE_UNREAD_COUNTS: &'static str = "/messages/unread_counts";
+    // Message endpoints
+    pub const TEXT_MESSAGE_CREATE: &'static str = "/messages";
     
     // Utility methods for dynamic endpoints
     pub fn group_by_id(group_id: &str) -> String {
@@ -64,9 +62,16 @@ impl ApiEndpoints {
     }
     
 
-    
     pub fn user_by_id(user_id: &str) -> String {
         format!("{}/{}", Self::USER_BY_ID, user_id)
+    }
+
+    pub fn user_by_username(username: &str) -> String {
+        format!("{}/{}", Self::USER_BY_USERNAME, username)
+    }
+
+    pub fn text_messages_by_group(group_id: &str) -> String {
+        format!("/messages/group/{}", group_id)
     }
 }
 
@@ -76,7 +81,21 @@ pub struct WebSocketEndpoints;
 impl WebSocketEndpoints {
     pub const CHAT_WEBSOCKET: &'static str = "/ws/chat";
     pub const NOTIFICATIONS_WEBSOCKET: &'static str = "/ws/notifications";
-    
+
+    /// The correct group WebSocket endpoint as used by the server
+    pub const GROUP_WEBSOCKET: &'static str = "/api/ws/group";
+
+    /// Returns the full WebSocket URL for group messaging, including the token as a query parameter
+    pub fn group_websocket_url(base_url: &str, token: &str) -> String {
+        // base_url should be like http://127.0.0.1:8002 or https://...
+        let ws_base = if base_url.starts_with("https") {
+            base_url.replacen("https", "wss", 1)
+        } else {
+            base_url.replacen("http", "ws", 1)
+        };
+        format!("{}{}?token={}", ws_base, Self::GROUP_WEBSOCKET, token)
+    }
+
     pub fn chat_websocket_url(base_url: &str, group_id: &str) -> String {
         format!("{}{}/group/{}", base_url.replace("http", "ws"), Self::CHAT_WEBSOCKET, group_id)
     }

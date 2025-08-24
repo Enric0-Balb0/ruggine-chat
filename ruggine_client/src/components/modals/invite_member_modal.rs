@@ -1,6 +1,10 @@
-﻿use leptos::*;
+﻿use crate::components::use_toast;
+use leptos::*;
 use leptos::wasm_bindgen::JsCast;
+
 use crate::components::LucideIcon;
+use crate::api::services::{UserService, InvitationService};
+use crate::types::invitation::{InvitationCreateRequest, MemberRole as ApiMemberRole};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MemberRole {
@@ -41,13 +45,19 @@ pub struct InviteMemberRequest {
 pub fn InviteMemberModal(
     #[prop(into)] is_open: ReadSignal<bool>,
     #[prop(into)] on_close: Callback<()>,
-    #[prop(into)] on_invite: Callback<InviteMemberRequest>,
+    #[prop(into)] group_chat_id: i32,
     #[prop(into, optional)] is_loading: Option<ReadSignal<bool>>,
     #[prop(into, optional)] group_name: Option<String>,
 ) -> impl IntoView {
     let (username, set_username) = create_signal(String::new());
     let (selected_role, set_selected_role) = create_signal(MemberRole::Member);
     let (error_message, set_error_message) = create_signal(Option::<String>::None);
+    let (_internal_is_inviting, _set_internal_is_inviting) = create_signal(false);
+    let is_inviting = if let Some(external_loading) = is_loading {
+        external_loading
+    } else {
+        _internal_is_inviting.into()
+    };
 
     // Store group name in a signal to avoid move issues
     let group_name_signal = create_signal(group_name.clone()).0;
@@ -93,39 +103,117 @@ pub fn InviteMemberModal(
         !username.trim().is_empty() && username.len() >= 3 && username.len() <= 50
     });
 
+    // Toast notification
+    let toast = use_toast();
+
     // Handle form submission
-    let handle_submit = move |_| {
-        if !is_form_valid.get() || is_inviting.get() {
-            return;
-        }
+    use std::rc::Rc;
+    let handle_submit: Rc<dyn Fn()> = {
+        let set_error_message = set_error_message.clone();
+        let username = username.clone();
+        let selected_role = selected_role.clone();
+        let group_chat_id = group_chat_id;
+        let toast = toast.clone();
+        let group_name = group_name.clone();
+        Rc::new(move || {
+            if !is_form_valid.get() || is_inviting.get() {
+                return;
+            }
 
-        let username_value = username.get().trim().to_string();
+            let username_value = username.get().trim().to_string();
 
-        // Validate username length
-        if username_value.len() < 3 {
-            set_error_message.set(Some("L'username deve essere almeno di 3 caratteri".to_string()));
-            return;
-        }
+            // Validate username length
+            if username_value.len() < 3 {
+                set_error_message.set(Some("L'username deve essere almeno di 3 caratteri".to_string()));
+                return;
+            }
 
-        if username_value.len() > 50 {
-            set_error_message.set(Some("L'username non può superare i 50 caratteri".to_string()));
-            return;
-        }
+            if username_value.len() > 50 {
+                set_error_message.set(Some("L'username non può superare i 50 caratteri".to_string()));
+                return;
+            }
 
-        // Basic username validation (alphanumeric and underscore)
-        if !username_value.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-            set_error_message.set(Some("L'username può contenere solo lettere, numeri, _ e -".to_string()));
-            return;
-        }
+            // Basic username validation (alphanumeric and underscore)
+            if !username_value.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+                set_error_message.set(Some("L'username può contenere solo lettere, numeri, _ e -".to_string()));
+                return;
+            }
 
-        set_error_message.set(None);
+            set_error_message.set(None);
 
-        let invite_request = InviteMemberRequest {
-            username: username_value,
-            role: selected_role.get(),
-        };
+            // Async logic: cerca user_id e invia invito
+            let set_error_message = set_error_message.clone();
+            let _set_internal_is_inviting = _set_internal_is_inviting.clone();
+            let selected_role = selected_role.get();
+            let toast = toast.clone();
+            let group_name = group_name.clone();
+            let on_close = on_close.clone();
+            spawn_local(async move {
+                _set_internal_is_inviting.set(true);
+                let storage_service = crate::utils::storage::StorageService::new();
+                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                if let Some(token_response) = storage_service.get_token() {
+                    http_client.set_auth_token(Some(token_response.token));
+                }
+                let user_service = UserService::new(http_client.clone(), storage_service.clone());
+                let invitation_service = InvitationService::new(http_client, storage_service);
 
-        on_invite.call(invite_request);
+                match user_service.get_user_by_username(&username_value).await {
+                    Ok(user) => {
+                        let req = InvitationCreateRequest {
+                            to_user_id: user.id.parse().unwrap_or(0),
+                            group_chat_id,
+                            role_at_join: match selected_role {
+                                MemberRole::Member => ApiMemberRole::Member,
+                                MemberRole::Admin => ApiMemberRole::Admin,
+                            },
+                        };
+                        match invitation_service.send_invitation(&req).await {
+                            Ok(_) => {
+                                set_error_message.set(None);
+                                // Toast di successo
+                                let group = group_name.clone().unwrap_or_else(|| "gruppo".to_string());
+                                toast.success(&format!("Invito inviato con successo per {}!", group));
+                                // Chiudi modal
+                                on_close.call(());
+                            },
+                            Err(e) => {
+                                let err_str = format!("{}", e);
+                                if err_str.contains("409") || err_str.contains("Already an invitation pending") {
+                                    set_error_message.set(Some("Utente già invitato o invito già in sospeso".to_string()));
+                                } else {
+                                    set_error_message.set(Some(format!("Errore invio invito: {}", e)));
+                                }
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        if let crate::error::AuthError::Http(http_err) = &e {
+                            match http_err {
+                                crate::api::http_error::HttpError::NotFound => {
+                                    set_error_message.set(Some("Utente non trovato".to_string()));
+                                    _set_internal_is_inviting.set(false);
+                                    return;
+                                },
+                                crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
+                                    set_error_message.set(Some("Utente non trovato".to_string()));
+                                    _set_internal_is_inviting.set(false);
+                                    return;
+                                },
+                                _ => {}
+                            }
+                        }
+                        let err_str = format!("{}", e);
+                        if err_str.contains("invalid type: null") || err_str.contains("expected struct UserReadDto") {
+                            set_error_message.set(Some("Utente non trovato".to_string()));
+                        } else {
+                            set_error_message.set(Some(format!("Errore ricerca utente: {}", e)));
+                        }
+                    }
+                }
+                _set_internal_is_inviting.set(false);
+            });
+        })
     };
 
     // Handle close
@@ -236,9 +324,12 @@ pub fn InviteMemberModal(
 
                             // Form
                             <form 
-                                on:submit=move |e| {
-                                    e.prevent_default();
-                                    handle_submit(());
+                                on:submit={
+                                    let handle_submit = handle_submit.clone();
+                                    move |e| {
+                                        e.prevent_default();
+                                        handle_submit();
+                                    }
                                 }
                             >
                                 // Username Field

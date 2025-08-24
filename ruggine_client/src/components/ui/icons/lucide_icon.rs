@@ -44,7 +44,7 @@ pub fn LucideIcon(
 /// Common icon sizes as constants
 pub mod IconSize {
     pub const SMALL: u32 = 16;
-    pub const MEDIUM: u32 = 20;
-    pub const LARGE: u32 = 24;
+    pub const MEDIUM: u32 = 22;
+    pub const LARGE: u32 = 26;
     pub const XLARGE: u32 = 32;
 }

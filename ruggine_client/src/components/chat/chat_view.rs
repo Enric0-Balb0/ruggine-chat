@@ -1,8 +1,15 @@
 use leptos::*;
 use leptos::html::Div;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsValue;
+// use web_sys::MutationObserver;
 use crate::hooks::GroupMembershipWithDetails;
 use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
+use leptos::use_context;
+use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
+use crate::types::message::Message;
+use chrono::{TimeZone, Utc};
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -130,8 +137,41 @@ pub fn ChatView(
         set_view_members_modal_open.set(false);
     };
     
+    // Signal reattiva per il background in base al tema
+    let (bg_url, set_bg_url) = create_signal(String::new());
+    // Funzione per aggiornare il background
+    let update_bg = {
+        let set_bg_url = set_bg_url.clone();
+        move || {
+            let is_dark = leptos::window().document().unwrap().document_element().unwrap().class_list().contains("dark");
+            if is_dark {
+                set_bg_url.set("background-image: url('/public/images/bg-chat-dark.png'); background-size: cover; background-position: center; background-repeat: no-repeat;".to_string());
+            } else {
+                set_bg_url.set("background-image: url('/public/images/bg-chat-light.png'); background-size: cover; background-position: center; background-repeat: no-repeat;".to_string());
+            }
+        }
+    };
+    // Aggiorna subito
+    update_bg();
+    // Polling reattivo per aggiornare il background quando cambia il tema
+    {
+        use gloo_timers::callback::Interval;
+        let update_bg_cb = update_bg.clone();
+        create_effect(move |_| {
+            // Aggiorna subito
+            update_bg_cb();
+            // Poll ogni 300ms
+            let interval = Interval::new(300, move || {
+                update_bg_cb();
+            });
+            // Cleanup: ferma il polling quando l'effetto viene droppato
+            on_cleanup(move || {
+                drop(interval);
+            });
+        });
+    }
     view! {
-        <div class="flex flex-col h-full bg-white dark:bg-surface-dark">
+    <div class="flex flex-col h-full bg-white dark:bg-surface-dark">
             // Chat Header - usando solo Tailwind
             <div class="px-6 py-4 border-b border-gray-200 dark:border-border-dark bg-gray-50 dark:bg-surface-dark flex justify-between items-center">
                 <div class="flex-1">
@@ -204,14 +244,47 @@ pub fn ChatView(
                 </div>
             </div>
 
+
             // Content area - struttura base chat
-            <div class="flex-1 bg-white dark:bg-surface-dark flex flex-col">
+            <div class="flex-1 flex flex-col">
                 {/* Qui andranno i messaggi */}
-                <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div
+                    class="flex-1 overflow-y-auto px-12 py-4 space-y-4"
+                    style=move || bg_url.get()
+                >
                     {/* Esempio messaggio di sistema */}
                     <div class="text-center text-gray-500 text-xs italic py-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 mx-auto max-w-[80%] shadow-sm">
                         Benvenuto nella chat di gruppo!
                     </div>
+                    {/* Messaggi statici di esempio */}
+                    <ChatMessage
+                        message=Message {
+                            id: 1,
+                            content: "Ciao a tutti! Questo è un messaggio di esempio.".to_string(),
+                            sender_id: 42,
+                            group_chat_id: group_data.membership.group_chat_id,
+                            sent_at: Utc.ymd(2025, 8, 24).and_hms(15, 30, 0),
+                        }
+                        sender_username="alice".to_string()
+                        sender_name="Alice".to_string()
+                        sender_surname="Rossi".to_string()
+                        status=MessageStatus::Delivered
+                        is_own=false
+                    />
+                    <ChatMessage
+                        message=Message {
+                            id: 2,
+                            content: "Messaggio inviato da me!".to_string(),
+                            sender_id: 99,
+                            group_chat_id: group_data.membership.group_chat_id,
+                            sent_at: Utc.ymd(2025, 8, 24).and_hms(15, 31, 0),
+                        }
+                        sender_username="io".to_string()
+                        sender_name="Enrico".to_string()
+                        sender_surname="Bianchi".to_string()
+                        status=MessageStatus::Sent
+                        is_own=true
+                    />
                 </div>
 
                 <MessageInputArea />
@@ -222,7 +295,7 @@ pub fn ChatView(
             <InviteMemberModal
                 is_open=invite_modal_open
                 on_close=handle_invite_modal_close
-                on_invite=handle_invite_member
+                group_chat_id=group_data.membership.group_chat_id
                 group_name=group_name.clone()
             />
 

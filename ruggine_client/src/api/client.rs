@@ -74,8 +74,9 @@ impl ApiClient {
     /// Gestisce la risposta HTTP e deserializza
     /// Automaticamente gestisce il logout su 401 Unauthorized
     async fn handle_response<T: DeserializeOwned>(&self, response: Response) -> Result<T, HttpError> {
-        let status = response.status();
-        let text = response.text().await?;
+    let status = response.status();
+    let text = response.text().await?;
+    // ...
 
         if status.is_success() {
             // Prova prima a deserializzare come ApiResponse<T> (formato client)

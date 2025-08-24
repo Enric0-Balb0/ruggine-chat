@@ -77,7 +77,7 @@ pub fn Sidebar(
     };
 
     view! {
-        <div class="w-[280px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col h-full">
+    <div class="w-[320px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col h-full">
             {/* Sezione gruppi scrollabile */}
             <div class="flex-1 p-4 flex flex-col">
                 <div class="text-xs font-semibold text-text-secondary dark:text-text-secondary-dark uppercase tracking-wide mb-3">

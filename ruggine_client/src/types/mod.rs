@@ -20,6 +20,12 @@ pub mod invitation;
 /// Group membership types and utilities
 pub mod membership;
 
+/// Message types and utilities
+pub mod message;
+
+/// WebSocket message types
+pub mod message_ws;
+
 // =============================================================================
 // RE-EXPORTS - Public API
 // =============================================================================
@@ -48,6 +54,18 @@ pub use invitation::{
 pub use membership::{
     GroupMembership, ApiSuccessResponseGroupMembershipReadDto,
     ApiSuccessResponseVecGroupMembershipReadDto, GroupMembershipReadDto
+};
+
+
+// Message types
+pub use message::{
+    TextMessageCreateRequest, TextMessageReadDto, PaginatedTextMessageResponse, PaginationMetadataDto,
+    Message, MessagePage, PaginationMetadata
+};
+
+// WebSocket message types
+pub use crate::types::message_ws::{
+    WebSocketMessage, ClientAction, GroupAction, ServerEvent, GroupEvent, NotificationEvent, ControlMessage, WsError
 };
 
 // Common types
