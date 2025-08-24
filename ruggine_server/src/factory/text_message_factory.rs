@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use chrono::{DateTime, Utc};
 use crate::entity::text_message::{TextMessage, NewTextMessage, NewTextMessageInfo, TextMessageInfo};
-use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
+use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageReadDto};
 
 // Counter per generare dati unici nei test
 static TEST_COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -252,9 +252,19 @@ impl TextMessageFactory {
         }
     }
 
-    pub fn fake_text_message_info_read(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfo {
-        let now = Utc::now();
+    pub fn fake_text_message_info_with_ids_and_read_at(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfo {
         TextMessageInfo {
+            id,
+            user_id,
+            text_message_id,
+            sent_at: Some(Utc::now()),
+            read_at: Some(Utc::now()),
+        }
+    }
+
+    pub fn fake_text_message_info_read_dto_with_ids_and_read_at(id: i32, user_id: i32, text_message_id: i32) -> TextMessageInfoReadDto {
+        let now = Utc::now();
+        TextMessageInfoReadDto {
             id,
             user_id,
             text_message_id,
@@ -314,5 +324,52 @@ impl TextMessageFactory {
     pub fn with_read_at_info(mut info: TextMessageInfo, read_at: Option<DateTime<Utc>>) -> TextMessageInfo {
         info.read_at = read_at;
         info
+    }
+
+    pub fn fake_text_message_info_create_dto() -> TextMessageInfoCreateDto {
+        TextMessageInfoCreateDto {
+            user_id: 1,
+            text_message_id: 1,
+        }
+    }
+
+    pub fn fake_text_message_info_create_dto_with_ids(user_id: i32, text_message_id: i32) -> TextMessageInfoCreateDto {
+        TextMessageInfoCreateDto {
+            user_id,
+            text_message_id,
+        }
+    }
+
+    // Update DTO factory methods
+    pub fn fake_text_message_read_at_dto_update() -> crate::dto::text_message_dto::TextMessageReadAtDtoUpdate {
+        use crate::dto::text_message_dto::TextMessageReadAtDtoUpdate;
+        TextMessageReadAtDtoUpdate {
+            text_message_id: 1,
+            read_at: Utc::now(),
+        }
+    }
+
+    pub fn fake_text_message_read_at_dto_update_with_ids(text_message_id: i32, read_at: DateTime<Utc>) -> crate::dto::text_message_dto::TextMessageReadAtDtoUpdate {
+        use crate::dto::text_message_dto::TextMessageReadAtDtoUpdate;
+        TextMessageReadAtDtoUpdate {
+            text_message_id,
+            read_at,
+        }
+    }
+
+    pub fn fake_text_message_sent_at_dto_update() -> crate::dto::text_message_dto::TextMessageSentAtDtoUpdate {
+        use crate::dto::text_message_dto::TextMessageSentAtDtoUpdate;
+        TextMessageSentAtDtoUpdate {
+            text_message_id: 1,
+            sent_at: Utc::now(),
+        }
+    }
+
+    pub fn fake_text_message_sent_at_dto_update_with_ids(text_message_id: i32, sent_at: DateTime<Utc>) -> crate::dto::text_message_dto::TextMessageSentAtDtoUpdate {
+        use crate::dto::text_message_dto::TextMessageSentAtDtoUpdate;
+        TextMessageSentAtDtoUpdate {
+            text_message_id,
+            sent_at,
+        }
     }
 }

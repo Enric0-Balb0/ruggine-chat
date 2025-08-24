@@ -66,17 +66,38 @@ impl From<TextMessageInfo> for TextMessageInfoReadDto {
 }
 
 #[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
-pub struct TextMessageSentAtDto {
+pub struct TextMessageInfoCreateDto {
     #[schema(example = 1)]
-    pub id: i32,
+    pub user_id: i32,
+    #[schema(example = 1)]
+    pub text_message_id: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageLastReadAtDto {
+    #[schema(example = 1)]
+    pub group_chat_id: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageLastSentAtDto {
+    #[schema(example = 1)]
+    pub group_chat_id: i32,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageSentAtDtoUpdate {
+    #[schema(example = 1)]
+    pub text_message_id: i32,
     #[schema(example = "2025-08-12T10:30:00Z")]
     pub sent_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, ToSchema, PartialEq, Eq)]
-pub struct TextMessageReadAtDto {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+pub struct TextMessageReadAtDtoUpdate {
     #[schema(example = 1)]
-    pub id: i32,
+    pub text_message_id: i32,
     #[schema(example = "2025-08-12T10:30:00Z")]
     pub read_at: DateTime<Utc>,
 }

@@ -1,3 +1,12 @@
 pub mod find_by_id_service_test;
 pub mod find_by_group_chat_id_paginated_service_test;
 pub mod create_test;
+pub mod create_info_test;
+pub mod find_info_by_id_test;
+pub mod find_info_by_id_checked_test;
+pub mod find_info_by_message_id_test;
+pub mod find_info_by_user_id_and_message_id_test;
+pub mod find_info_last_read_at_test;
+pub mod find_info_last_sent_at_test;
+pub mod update_sent_at_test;
+pub mod update_read_at_test;

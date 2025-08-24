@@ -62,7 +62,7 @@ async fn test_find_info_last_read_success() {
 
     // Assert
     assert!(result.is_ok(), "Failed to find last read info: {:?}", result.err());
-    let last_read_info = result.unwrap();
+    let last_read_info = result.unwrap().unwrap();
     
     assert_eq!(last_read_info.user_id, recipient_user.id);
     assert_eq!(last_read_info.text_message_id, message2.id, "Should return the most recently read message");
@@ -113,7 +113,7 @@ async fn test_find_info_last_read_single_message() {
 
     // Assert
     assert!(result.is_ok(), "Failed to find last read info for single message");
-    let last_read_info = result.unwrap();
+    let last_read_info = result.unwrap().unwrap();
     
     assert_eq!(last_read_info.user_id, recipient_user.id);
     assert_eq!(last_read_info.text_message_id, text_message.id);
@@ -156,8 +156,8 @@ async fn test_find_info_last_read_no_read_messages() {
     let result = repository.find_info_last_read(recipient_user.id, group_chat.id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result when no messages are read");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected okay result when no messages exist");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_text_message_info(info_id).await;
@@ -182,8 +182,8 @@ async fn test_find_info_last_read_user_not_in_group() {
     let result = repository.find_info_last_read(other_user.id, group_chat.id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result for user not in group");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected success empty result for non-existent group");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_group_chat(group_chat.id).await;
@@ -204,8 +204,8 @@ async fn test_find_info_last_read_nonexistent_group() {
     let result = repository.find_info_last_read(user.id, non_existent_group_id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result for non-existent group");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected success empty result for non-existent group");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_user(user.id).await;
@@ -259,8 +259,8 @@ async fn test_find_info_last_read_different_users_same_group() {
     assert!(result1.is_ok(), "Failed to find last read for recipient1");
     assert!(result2.is_ok(), "Failed to find last read for recipient2");
     
-    let last_read1 = result1.unwrap();
-    let last_read2 = result2.unwrap();
+    let last_read1 = result1.unwrap().unwrap();
+    let last_read2 = result2.unwrap().unwrap();
     
     assert_eq!(last_read1.user_id, recipient1.id);
     assert_eq!(last_read1.text_message_id, message1.id);

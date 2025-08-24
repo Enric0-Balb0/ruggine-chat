@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::dto::text_message_dto::{TextMessageReadDto, TextMessageCreateDto};
+use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageReadAtDtoUpdate, TextMessageReadDto, TextMessageSentAtDtoUpdate};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::paginated_response::PaginatedResponse;
@@ -28,4 +28,56 @@ pub trait TextMessageServiceTrait: Send + Sync {
         payload: TextMessageCreateDto,
         sender_id: i32,
     ) -> Result<TextMessageReadDto, ApiError>;
+
+     async fn create_info(
+        &self,
+        payload: TextMessageInfoCreateDto,
+        sender_id: i32,
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn find_info_by_id(
+        &self,
+        id: i32
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn find_info_by_id_checked(
+        &self,
+        id: i32,
+        auth_user_id: i32
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn find_info_last_read_at(
+        &self,
+        auth_user_id: i32,
+        payload: TextMessageLastReadAtDto
+    ) -> Result<Option<TextMessageInfoReadDto>, ApiError>;
+
+    async fn find_info_last_sent_at(
+        &self,
+        auth_user_id: i32,
+        payload: TextMessageLastSentAtDto
+    ) -> Result<Option<TextMessageInfoReadDto>, ApiError>;
+
+    async fn find_info_by_message_id(
+        &self,
+        auth_user_id: i32,
+        message_id: i32
+    ) -> Result<Vec<TextMessageInfoReadDto>, ApiError>;
+
+    async fn find_info_by_user_id_and_message_id(
+        &self,
+        auth_user_id: i32,
+        message_id: i32
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn update_read_at(&self,
+        auth_user_id: i32,
+        payload: TextMessageReadAtDtoUpdate
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn update_sent_at(
+        &self,
+        auth_user_id: i32,
+        payload: TextMessageSentAtDtoUpdate
+    ) -> Result<TextMessageInfoReadDto, ApiError>;
 }

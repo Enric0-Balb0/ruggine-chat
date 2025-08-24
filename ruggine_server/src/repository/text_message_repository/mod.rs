@@ -9,6 +9,7 @@ pub mod find_info_by_id;
 pub mod find_info_by_message_id;
 pub mod find_info_last_read_at;
 pub mod find_info_last_sent_at;
+mod find_info_by_user_id_and_message_id;
 
 pub use text_message_repository::TextMessageRepository;
 pub use text_message_repository_trait::TextMessageRepositoryTrait;

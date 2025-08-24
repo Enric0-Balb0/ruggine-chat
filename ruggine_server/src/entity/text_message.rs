@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::dto::text_message_dto::{TextMessageReadAtDto, TextMessageSentAtDto};
+use crate::dto::text_message_dto::{TextMessageReadAtDtoUpdate, TextMessageSentAtDtoUpdate};
 
 #[derive(Clone, Debug, Deserialize, Serialize, sqlx::FromRow, Default, PartialEq, Eq)]
 pub struct TextMessage {
@@ -50,26 +50,6 @@ pub struct TextMessageInfoUpdate {
 }
 
 
-impl From<TextMessageSentAtDto> for TextMessageInfoUpdate {
-    fn from(dto: TextMessageSentAtDto) -> Self {
-        Self {
-            id: dto.id,
-            sent_at: Some(dto.sent_at),
-            read_at: None,
-        }
-    }
-}
-
-impl From<TextMessageReadAtDto> for TextMessageInfoUpdate {
-    fn from(dto: TextMessageReadAtDto) -> Self {
-        Self {
-            id: dto.id,
-            sent_at: None,
-            read_at: Some(dto.read_at),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use chrono::NaiveDate;
@@ -104,43 +84,5 @@ mod tests {
         assert_eq!(new_message.content, "Another test message");
         assert_eq!(new_message.sender_id, sender_id);
         assert_eq!(new_message.group_chat_id, 10);
-    }
-
-    #[test]
-    fn test_text_message_info_from_sent_at_dto() {
-        let sent_at = {
-            let naive = NaiveDate::from_ymd_opt(2025, 8, 23).unwrap()
-                .and_hms_opt(15, 30, 45).unwrap();
-            DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
-        };
-        let dto = TextMessageSentAtDto {
-            id: 5,
-            sent_at,
-        };
-
-        let info = TextMessageInfoUpdate::from(dto.clone());
-
-        assert_eq!(info.id, dto.id);
-        assert_eq!(info.sent_at, Some(sent_at));
-        assert_eq!(info.read_at, None);
-    }
-
-    #[test]
-    fn test_text_message_info_from_read_at_dto() {
-        let read_at = {
-            let naive = NaiveDate::from_ymd_opt(2025, 8, 23).unwrap()
-                .and_hms_opt(15, 30, 45).unwrap();
-            DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
-        };
-        let dto = TextMessageReadAtDto {
-            id: 5,
-            read_at,
-        };
-
-        let info = TextMessageInfoUpdate::from(dto.clone());
-
-        assert_eq!(info.id, dto.id);
-        assert_eq!(info.read_at, Some(read_at));
-        assert_eq!(info.sent_at, None);
     }
 }

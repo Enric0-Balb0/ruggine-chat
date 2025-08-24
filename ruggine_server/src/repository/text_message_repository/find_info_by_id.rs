@@ -70,9 +70,14 @@ mod text_message_repository_find_info_by_id_tests {
         let info_id = 321i32;
         let user_id = 654i32;
         let text_message_id = 987i32;
-        let expected_info = TextMessageFactory::fake_text_message_info_read(
+        let expected_info = TextMessageFactory::fake_text_message_info_read_dto_with_ids_and_read_at(
             info_id, 
             user_id, 
+            text_message_id
+        );
+        let expected_info_entity = TextMessageFactory::fake_text_message_info_with_ids(
+            info_id,
+            user_id,
             text_message_id
         );
 
@@ -81,7 +86,7 @@ mod text_message_repository_find_info_by_id_tests {
             .with(eq(info_id))
             .times(1)
             .returning(move |_| Box::pin({
-                let value = expected_info.clone();
+                let value = expected_info_entity.clone();
                 async move { Ok(value.clone()) }
             }));
 
@@ -95,7 +100,7 @@ mod text_message_repository_find_info_by_id_tests {
         assert_eq!(info.user_id, user_id);
         assert_eq!(info.text_message_id, text_message_id);
         assert!(info.sent_at.is_some());
-        assert!(info.read_at.is_some());
+        assert!(info.read_at.is_none());
     }
 
     #[tokio_shared_rt::test(shared)]

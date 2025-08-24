@@ -60,15 +60,18 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
         self.find_info_by_message_id_inner(message_id).await
     }
 
-    async fn find_info_last_read(&self, user_id: i32, group_chat_id: i32) -> Result<TextMessageInfo, Error> {
+    async fn find_info_last_read(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessageInfo>, Error> {
         self.find_info_last_read_inner(user_id, group_chat_id).await
     }
 
-    async fn find_info_last_sent(&self, user_id: i32, group_chat_id: i32) -> Result<TextMessageInfo, Error> {
+    async fn find_info_last_sent(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessageInfo>, Error> {
         self.find_info_last_sent_inner(user_id, group_chat_id).await
     }
 
     async fn update_info(&self, text_message_info_update: TextMessageInfoUpdate) -> Result<(), Error> {
         self.update_info_inner(text_message_info_update).await
+    }
+    async fn find_info_by_user_id_and_message_id(&self, user_id: i32, text_message_id: i32) -> Result<TextMessageInfo, Error> {
+        self.find_info_by_user_id_and_message_id_inner(user_id, text_message_id).await
     }
 }

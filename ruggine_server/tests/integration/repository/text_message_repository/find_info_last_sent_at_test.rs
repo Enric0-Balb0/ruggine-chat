@@ -56,7 +56,7 @@ async fn test_find_info_last_sent_success() {
 
     // Assert
     assert!(result.is_ok(), "Failed to find last sent info: {:?}", result.err());
-    let last_sent_info = result.unwrap();
+    let last_sent_info = result.unwrap().unwrap();
     
     assert_eq!(last_sent_info.user_id, recipient_user.id);
     assert!(last_sent_info.sent_at.is_some(), "Last sent info should have sent_at timestamp");
@@ -110,7 +110,7 @@ async fn test_find_info_last_sent_single_message() {
 
     // Assert
     assert!(result.is_ok(), "Failed to find last sent info for single message");
-    let last_sent_info = result.unwrap();
+    let last_sent_info = result.unwrap().unwrap();
     
     assert_eq!(last_sent_info.user_id, recipient_user.id);
     assert_eq!(last_sent_info.text_message_id, text_message.id);
@@ -139,8 +139,8 @@ async fn test_find_info_last_sent_no_messages() {
     let result = repository.find_info_last_sent(recipient_user.id, group_chat.id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result when no messages exist");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected okay result when no messages exist");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_group_chat(group_chat.id).await;
@@ -163,8 +163,8 @@ async fn test_find_info_last_sent_user_not_in_group() {
     let result = repository.find_info_last_sent(other_user.id, group_chat.id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result for user not in group");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected success empty result for non-existent group");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_group_chat(group_chat.id).await;
@@ -185,8 +185,8 @@ async fn test_find_info_last_sent_nonexistent_group() {
     let result = repository.find_info_last_sent(user.id, non_existent_group_id).await;
 
     // Assert
-    assert!(result.is_err(), "Expected no result for non-existent group");
-    assert!(matches!(result.unwrap_err(), sqlx::Error::RowNotFound));
+    assert!(result.is_ok(), "Expected success empty result for non-existent group");
+    assert!(result.unwrap().is_none());
 
     // Cleanup
     common::cleanup_user(user.id).await;
@@ -233,8 +233,8 @@ async fn test_find_info_last_sent_different_users_same_group() {
     assert!(result1.is_ok(), "Failed to find last sent for recipient1");
     assert!(result2.is_ok(), "Failed to find last sent for recipient2");
     
-    let last_sent1 = result1.unwrap();
-    let last_sent2 = result2.unwrap();
+    let last_sent1 = result1.unwrap().unwrap();
+    let last_sent2 = result2.unwrap().unwrap();
     
     assert_eq!(last_sent1.user_id, recipient1.id);
     assert_eq!(last_sent1.text_message_id, message1.id);
@@ -320,7 +320,7 @@ async fn test_find_info_last_sent_with_chronological_order() {
 
     // Assert
     assert!(result.is_ok(), "Failed to find last sent info");
-    let last_sent_info = result.unwrap();
+    let last_sent_info = result.unwrap().unwrap();
     
     assert_eq!(last_sent_info.user_id, recipient_user.id);
     // Should return the most recently sent (last inserted) message

@@ -13,6 +13,18 @@ pub enum TextMessageError {
     MessageNotFound,
     #[error("User can not access messages")]
     UserCannotAccessMessages,
+    #[error("User is not the creator of the message")]
+    UserIsNotCreator,
+    #[error("Cannot set read at before sent at")]
+    CannotSetReadAtBeforeSentAt,
+    #[error("Read at must be greater or equals to sent at")]
+    ReadAtMustBeGreaterOrEqualsToSentAt,
+    #[error("Message info not found")]
+    MessageInfoNotFound,
+    #[error("Cannot update read at again")]
+    CannotUpdateReadAtAgain,
+    #[error("Cannot update sent at again")]
+    CannotUpdateSentAtAgain,
 }
 
 impl IntoResponse for TextMessageError {
@@ -21,6 +33,12 @@ impl IntoResponse for TextMessageError {
             TextMessageError::GroupChatNotFound => StatusCode::NOT_FOUND,
             TextMessageError::MessageNotFound => StatusCode::NOT_FOUND,
             TextMessageError::UserCannotAccessMessages => StatusCode::FORBIDDEN,
+            TextMessageError::UserIsNotCreator => StatusCode::FORBIDDEN,
+            TextMessageError::CannotSetReadAtBeforeSentAt => StatusCode::BAD_REQUEST,
+            TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAt => StatusCode::BAD_REQUEST,
+            TextMessageError::MessageInfoNotFound => StatusCode::NOT_FOUND,
+            TextMessageError::CannotUpdateReadAtAgain => StatusCode::BAD_REQUEST,
+            TextMessageError::CannotUpdateSentAtAgain => StatusCode::BAD_REQUEST,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))
