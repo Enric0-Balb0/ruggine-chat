@@ -12,7 +12,7 @@ pub enum WsStatus {
     Error(String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
     pub status: ReadSignal<WsStatus>,
     pub send_message: WriteSignal<Option<WebSocketMessage>>,
@@ -29,21 +29,55 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     // Use a RefCell to hold the service instance
     let ws_service = std::rc::Rc::new(std::cell::RefCell::new(MessageWsService::new()));
 
-    // Connect on mount
+    // Callback per ricezione messaggi
     {
-        let ws_service = ws_service.clone();
-        let set_status = set_status.clone();
-        let url = WebSocketEndpoints::group_websocket_url(AppConstants::DEFAULT_SERVER_URL, &token);
-        create_effect(move |_| {
-            ws_service.borrow_mut().connect(&url);
-            set_status.set(WsStatus::Connecting);
-            let ws_service_cleanup = ws_service.clone();
-            let set_status_cleanup = set_status.clone();
-            on_cleanup(move || {
-                ws_service_cleanup.borrow_mut().disconnect();
-                set_status_cleanup.set(WsStatus::Closed);
+        let set_messages = set_messages.clone();
+        ws_service.borrow_mut().set_on_message(move |msg: WebSocketMessage| {
+            set_messages.update(|msgs| {
+                msgs.push(msg);
             });
         });
+    }
+
+    // Connect on mount e auto-reconnect
+    {
+        let url = WebSocketEndpoints::group_websocket_url(AppConstants::DEFAULT_SERVER_URL, &token);
+
+        // Effetto di connessione iniziale e cleanup
+        {
+            let ws_service = ws_service.clone();
+            let set_status = set_status.clone();
+            let url = url.clone();
+            create_effect(move |_| {
+                ws_service.borrow_mut().connect(&url);
+                set_status.set(WsStatus::Connecting);
+                let ws_service_cleanup = ws_service.clone();
+                let set_status_cleanup = set_status.clone();
+                on_cleanup(move || {
+                    ws_service_cleanup.borrow_mut().disconnect();
+                    set_status_cleanup.set(WsStatus::Closed);
+                });
+            });
+        }
+
+        // Effetto di auto-reconnect
+        {
+            let ws_service = ws_service.clone();
+            let set_status = set_status.clone();
+            let url = url.clone();
+            create_effect(move |_| {
+                let status_now = status.get();
+                if matches!(status_now, WsStatus::Closed | WsStatus::Error(_)) {
+                    let ws_service = ws_service.clone();
+                    let set_status = set_status.clone();
+                    let url = url.clone();
+                    set_timeout(move || {
+                        ws_service.borrow_mut().connect(&url);
+                        set_status.set(WsStatus::Connecting);
+                    }, std::time::Duration::from_millis(500));
+                }
+            });
+        }
     }
 
     // Send message effect

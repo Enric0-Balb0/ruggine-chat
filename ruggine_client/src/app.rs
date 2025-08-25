@@ -1,10 +1,16 @@
+
 use leptos::*;
 use crate::router::AppRouter;
-use crate::utils::{ThemeProvider, use_theme, Theme};
+use crate::utils::{ThemeProvider, use_theme, Theme, storage::StorageService};
 use crate::components::ToastProvider;
+use crate::hooks::use_app_group_ws::use_app_group_ws;
+use crate::context::auth_context::{provide_auth_context, use_auth_context};
+use crate::types::WebSocketMessage;
 
 #[component]
 pub fn App() -> impl IntoView {
+    // Fornisci il context di autenticazione globale
+    provide_auth_context();
     view! {
         <ThemeProvider>
             <ToastProvider>
@@ -17,20 +23,10 @@ pub fn App() -> impl IntoView {
 #[component]
 pub fn AppContent() -> impl IntoView {
     let theme_ctx = use_theme();
-    
-    // Applica dinamicamente la classe del tema al body/html
-    create_effect(move |_| {
-        if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-            if let Some(html_element) = document.document_element() {
-                let class_name = match theme_ctx.theme.get() {
-                    Theme::Dark => "dark",
-                    Theme::Light => "",
-                };
-                let _ = html_element.set_class_name(class_name);
-            }
-        }
-    });
-    
+    let auth_ctx = use_auth_context();
+    // Gestione WebSocket centralizzata tramite hook dedicato
+    let _ws = use_app_group_ws(auth_ctx.token.read_only());
+
     view! {
         <main>
             <AppRouter />

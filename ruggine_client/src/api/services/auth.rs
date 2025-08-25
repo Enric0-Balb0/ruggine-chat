@@ -124,20 +124,9 @@ impl AuthService {
 
     /// Logout current user
     pub async fn logout(&self) -> Result<(), AuthError> {
-        if self.storage_service.get_token().is_some() {
-            // Direct API call
-            let _: serde_json::Value = self.http_client
-                .post(ApiEndpoints::AUTH_LOGOUT, &())
-                .await
-                .unwrap_or_else(|_| {
-                    leptos::logging::warn!("API logout failed, proceeding with local cleanup");
-                    serde_json::Value::Null
-                });
-        }
-
+        // Just clear the session/token locally, no API call needed
         self.storage_service.clear_session()
             .map_err(AuthError::from)?;
-
         Ok(())
     }
 
