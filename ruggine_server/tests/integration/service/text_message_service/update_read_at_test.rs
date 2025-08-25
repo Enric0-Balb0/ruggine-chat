@@ -42,6 +42,8 @@ async fn test_update_read_at_success() {
     // Verify initial state (read_at should be None)
     assert!(created_info.read_at.is_none(), "Initial read_at should be None");
 
+    tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
     // Prepare update payload
     let new_read_at = Utc::now();
     let update_read_at_payload = TextMessageFactory::fake_text_message_read_at_dto_update_with_ids(
@@ -50,7 +52,7 @@ async fn test_update_read_at_success() {
     );
     let update_sent_at_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        new_read_at - chrono::Duration::minutes(15)
+        new_read_at - chrono::Duration::milliseconds(100)
     );
     service.update_sent_at(recipient_user.id, update_sent_at_payload.clone()).await.unwrap();
     // Act

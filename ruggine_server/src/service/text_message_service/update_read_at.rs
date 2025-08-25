@@ -1,5 +1,5 @@
 use chrono::Utc;
-use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageReadAtDtoUpdate};
+use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageInfoReadAtDtoUpdate};
 use crate::entity::group_membership::MembershipStatus;
 use crate::entity::text_message::TextMessageInfoUpdate;
 use crate::error::api_error::ApiError;
@@ -9,7 +9,7 @@ use crate::error::text_message_error::TextMessageError;
 use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 
 impl TextMessageService {
-    pub async fn update_read_at_internal(&self, auth_user_id: i32, payload: TextMessageReadAtDtoUpdate) -> Result<TextMessageInfoReadDto, ApiError> {
+    pub async fn update_read_at_internal(&self, auth_user_id: i32, payload: TextMessageInfoReadAtDtoUpdate) -> Result<TextMessageInfoReadDto, ApiError> {
         let text_message_info = self.find_info_by_user_id_and_message_id(auth_user_id, payload.text_message_id).await?;
 
         let info = self.find_info_by_id(text_message_info.id).await?;

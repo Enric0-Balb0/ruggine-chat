@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::dto::text_message_dto::{TextMessageReadAtDtoUpdate, TextMessageSentAtDtoUpdate};
+use crate::dto::text_message_dto::{TextMessageInfoReadAtDtoUpdate, TextMessageInfoSentAtDtoUpdate};
 
 #[derive(Clone, Debug, Deserialize, Serialize, sqlx::FromRow, Default, PartialEq, Eq)]
 pub struct TextMessage {

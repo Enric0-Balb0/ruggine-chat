@@ -1,14 +1,15 @@
-use crate::dto::text_message_dto::TextMessageReadDto;
+use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageLastSentAtDto, TextMessageReadDto, TextMessageInfoSentAtDtoUpdate};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
-use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::group_chat_error::GroupChatError;
+use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::text_message_error::TextMessageError;
-use crate::response::paginated_response::{PaginatedResponse, PaginationMetadata};
+use crate::response::paginated_response::PaginationMetadata;
 use crate::response::PaginatedTextMessageResponse;
-use crate::service::text_message_service::TextMessageService;
+use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
+use chrono::{DateTime, Utc};
 
 impl TextMessageService {
     pub async fn find_by_group_chat_id_paginated_internal(
@@ -54,11 +55,6 @@ impl TextMessageService {
             .map_err(|e| {
                 let db_error = match e {
                     sqlx::Error::Database(db_err) => {
-                        if let Some(code) = db_err.code() {
-                            if code == "23503" {
-                                return ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string()));
-                            }
-                        }
                         ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
                     }
                     _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
@@ -99,22 +95,17 @@ impl TextMessageService {
 #[cfg(test)]
 mod find_by_group_chat_id_paginated_service_tests {
     use super::*;
-    use crate::factory::text_message_factory::TextMessageFactory;
-    use crate::factory::group_membership_factory::GroupMembershipFactory;
-    use crate::factory::group_chat_factory::GroupChatFactory;
-    use crate::repository::text_message_repository::text_message_repository_trait::MockTextMessageRepositoryTrait;
-    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
-    use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
-    use crate::service::text_message_service::text_message_service_trait::TextMessageServiceTrait;
-    use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
-    use mockall::predicate::*;
-    use std::sync::Arc;
     use crate::dto::group_chat_dto::GroupChatReadDto;
     use crate::dto::group_membership_dto::GroupMembershipReadDto;
-    use crate::entity::invitation::Invitation;
-    use crate::factory::invitation_factory::InvitationFactory;
-    use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
-    use crate::utils::mock_database_error::MockDatabaseError;
+    use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
+    use crate::factory::group_chat_factory::GroupChatFactory;
+    use crate::factory::group_membership_factory::GroupMembershipFactory;
+    use crate::factory::text_message_factory::TextMessageFactory;
+    use crate::repository::text_message_repository::text_message_repository_trait::MockTextMessageRepositoryTrait;
+    use crate::service::group_chat_service::group_chat_service_trait::MockGroupChatServiceTrait;
+    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
+    use mockall::predicate::*;
+    use std::sync::Arc;
 
     // Helper function to create a mock service with successful membership check
     fn create_mock_service_with_membership(
@@ -127,7 +118,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         let mut membership = GroupMembershipFactory::fake_group_membership_with_invitation_row();
         membership.user_id = auth_user_id;
         membership.group_chat_id = group_chat_id;
-        
+
         // Mock successful group chat lookup
         let group_chat = GroupChatFactory::fake_group_chat_read_dto();
         mock_group_chat_service
@@ -140,7 +131,7 @@ mod find_by_group_chat_id_paginated_service_tests {
                     async move { Ok(group_chat) }
                 })
             });
-        
+
         mock_membership_service
             .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))
@@ -151,7 +142,7 @@ mod find_by_group_chat_id_paginated_service_tests {
                     async move { Ok(membership.into()) }
                 })
             });
-        
+
         TextMessageService::new(Arc::new(mock_repo), Arc::new(mock_membership_service), Arc::new(mock_group_chat_service))
     }
 
@@ -165,7 +156,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         let auth_user_id = 1;
         let limit = 10;
         let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
+
         // Mock successful membership check
         let mut group_chat = GroupChatFactory::fake_group_chat();
         group_chat.id = group_chat_id;
@@ -194,14 +185,14 @@ mod find_by_group_chat_id_paginated_service_tests {
                     async move { Ok(GroupMembershipReadDto::from(membership)) }
                 })
             });
-        
+
         // Create test messages
         let messages = vec![
             TextMessageFactory::fake_text_message_with_ids(1, 1, group_chat_id),
             TextMessageFactory::fake_text_message_with_ids(2, 2, group_chat_id),
             TextMessageFactory::fake_text_message_with_ids(3, 1, group_chat_id),
         ];
-        
+
         mock_repo
             .expect_find_by_group_chat_id_paginated()
             .with(eq(group_chat_id), eq(None), eq(limit + 1))
@@ -226,7 +217,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         assert_eq!(paginated_response.pagination.has_more, false);
         assert_eq!(paginated_response.pagination.next_cursor, None);
         assert_eq!(paginated_response.pagination.page_size, 3);
-        
+
         // Verify all messages belong to the correct group
         for message_dto in &paginated_response.data {
             assert_eq!(message_dto.group_chat_id, group_chat_id);
@@ -243,7 +234,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         let auth_user_id = 999; // User not in the group
         let limit = 10;
         let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
+
         // Mock successful group chat lookup
         let group_chat = GroupChatFactory::fake_group_chat_read_dto();
         mock_group_chat_service
@@ -256,7 +247,7 @@ mod find_by_group_chat_id_paginated_service_tests {
                     async move { Ok(group_chat) }
                 })
             });
-        
+
         // Mock failed membership check
         mock_membership_service
             .expect_find_active_by_user_id_and_group_id()
@@ -285,14 +276,14 @@ mod find_by_group_chat_id_paginated_service_tests {
         let limit = 2;
         let cursor = Some(chrono::DateTime::parse_from_rfc3339("2024-01-01T12:00:00Z").unwrap().with_timezone(&chrono::Utc));
         let pagination_query = TextMessagePaginationQuery::new(cursor.clone(), limit);
-        
+
         // Create test messages (limit + 1 to test has_more)
         let messages = vec![
             TextMessageFactory::fake_text_message_with_ids(1, 1, group_chat_id),
             TextMessageFactory::fake_text_message_with_ids(2, 2, group_chat_id),
             TextMessageFactory::fake_text_message_with_ids(3, 1, group_chat_id),
         ];
-        
+
         mock_repo
             .expect_find_by_group_chat_id_paginated()
             .with(eq(group_chat_id), eq(cursor.clone()), eq(limit + 1))
@@ -326,7 +317,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         let group_chat_id = 999;
         let limit = 10;
         let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
+
         mock_repo
             .expect_find_by_group_chat_id_paginated()
             .with(eq(group_chat_id), eq(None), eq(limit + 1))
@@ -353,12 +344,12 @@ mod find_by_group_chat_id_paginated_service_tests {
         let group_chat_id = 1;
         let limit = 10;
         let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
+
         mock_repo
             .expect_find_by_group_chat_id_paginated()
             .with(eq(group_chat_id), eq(None), eq(limit + 1))
             .times(1)
-            .returning(|_, _, _| Box::pin(async move { 
+            .returning(|_, _, _| Box::pin(async move {
                 Err(sqlx::Error::Configuration("Database connection failed".into()))
             }));
 
@@ -378,37 +369,6 @@ mod find_by_group_chat_id_paginated_service_tests {
     }
 
     #[tokio::test]
-    async fn test_find_by_group_chat_id_paginated_foreign_key_error() {
-        // Arrange
-        let mut mock_repo = MockTextMessageRepositoryTrait::new();
-        let group_chat_id = 1;
-        let limit = 10;
-        let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
-        mock_repo
-            .expect_find_by_group_chat_id_paginated()
-            .with(eq(group_chat_id), eq(None), eq(limit + 1))
-            .times(1)
-            .returning(move |_, _, _| Box::pin(async move { 
-                Err(MockDatabaseError::foreign_key_violation())
-            }));
-
-        let service = create_mock_service_with_membership(mock_repo, 1, group_chat_id);
-
-        // Act
-        let result = service.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query, 1).await;
-
-        // Assert
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            ApiError::DbError(DbError::ForeignKeyViolation(_)) => {
-                // Expected error type
-            }
-            _ => panic!("Expected ForeignKeyViolation error"),
-        }
-    }
-
-    #[tokio::test]
     async fn test_find_by_group_chat_id_paginated_user_not_active_member() {
         // Arrange
         let mock_repo = MockTextMessageRepositoryTrait::new();
@@ -418,7 +378,7 @@ mod find_by_group_chat_id_paginated_service_tests {
         let auth_user_id = 1;
         let limit = 10;
         let pagination_query = TextMessagePaginationQuery::new(None, limit);
-        
+
         // Mock successful group chat lookup
         let group_chat = GroupChatFactory::fake_group_chat_read_dto();
         mock_group_chat_service
@@ -431,13 +391,13 @@ mod find_by_group_chat_id_paginated_service_tests {
                     async move { Ok(group_chat) }
                 })
             });
-        
+
         // Mock membership with Left status
         let mut membership = GroupMembershipFactory::fake_group_membership_with_invitation_row();
         membership.user_id = auth_user_id;
         membership.group_chat_id = group_chat_id;
         membership.membership_status = MembershipStatus::Left;
-        
+
         mock_membership_service
             .expect_find_active_by_user_id_and_group_id()
             .with(eq(auth_user_id), eq(group_chat_id))

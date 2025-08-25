@@ -87,7 +87,7 @@ pub struct TextMessageLastSentAtDto {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
-pub struct TextMessageSentAtDtoUpdate {
+pub struct TextMessageInfoSentAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,
     #[schema(example = "2025-08-12T10:30:00Z")]
@@ -95,7 +95,7 @@ pub struct TextMessageSentAtDtoUpdate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
-pub struct TextMessageReadAtDtoUpdate {
+pub struct TextMessageInfoReadAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,
     #[schema(example = "2025-08-12T10:30:00Z")]

@@ -51,12 +51,14 @@ async fn test_find_info_last_read_at_success() {
         sender_user.id
     ).await.unwrap();
 
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
     // Mark messages as read at different times
-    let read_time1 = Utc::now() - chrono::Duration::minutes(10);
-    let read_time2 = Utc::now() - chrono::Duration::minutes(5);
+    let read_time1 = Utc::now() - chrono::Duration::milliseconds(10);
+    let read_time2 = Utc::now() - chrono::Duration::milliseconds(5);
     
-    common::mark_message_as_sent_and_read(info1.id, read_time1).await;
-    common::mark_message_as_sent_and_read(info2.id, read_time2).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id, read_time1).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message2.id, read_time2).await;
 
     let payload = TextMessageLastReadAtDto {
         group_chat_id: group_chat.id,
@@ -292,12 +294,14 @@ async fn test_find_info_last_read_at_mixed_read_unread() {
         sender_user.id
     ).await.unwrap();
 
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
     // Mark only message1 and message3 as read, message2 remains unread
-    let read_time1 = Utc::now() - chrono::Duration::minutes(10);
-    let read_time3 = Utc::now() - chrono::Duration::minutes(2);
+    let read_time1 = Utc::now() - chrono::Duration::milliseconds(10);
+    let read_time3 = Utc::now() - chrono::Duration::milliseconds(2);
     
-    common::mark_message_as_sent_and_read(info1.id, read_time1).await;
-    common::mark_message_as_sent_and_read(info3.id, read_time3).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id, read_time1).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message3.id, read_time3).await;
     // info2 (message2) is not marked as read
 
     let payload = TextMessageLastReadAtDto {

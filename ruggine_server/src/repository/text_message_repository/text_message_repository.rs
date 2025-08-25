@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use crate::config::database::{Database, DatabaseTrait};
 use crate::entity::text_message::{NewTextMessage, NewTextMessageInfo, TextMessage, TextMessageInfo, TextMessageInfoUpdate};
 use crate::repository::text_message_repository::text_message_repository_trait::TextMessageRepositoryTrait;
-use sqlx::Error;
 use async_trait::async_trait;
-use crate::dto::text_message_dto::TextMessageInfoReadDto;
+use chrono::{DateTime, Utc};
+use sqlx::Error;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct TextMessageRepository {
@@ -73,6 +73,10 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
     }
     async fn find_info_by_user_id_and_message_id(&self, user_id: i32, text_message_id: i32) -> Result<TextMessageInfo, Error> {
         self.find_info_by_user_id_and_message_id_inner(user_id, text_message_id).await
+    }
+
+    async fn find_by_group_chat_id_datetime_range(&self, group_chat_id: i32, min_datetime: DateTime<Utc>, max_datetime: DateTime<Utc>) -> Result<Vec<TextMessage>, Error> {
+        self.find_by_group_chat_id_datetime_range_inner(group_chat_id, min_datetime, max_datetime).await
     }
     fn db_conn(&self) -> Arc<Database> {
         self.db_conn.clone()

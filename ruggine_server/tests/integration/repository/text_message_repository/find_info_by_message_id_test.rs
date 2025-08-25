@@ -1,3 +1,4 @@
+use ruggine_server::entity::text_message::TextMessageInfoUpdate;
 use crate::{common, mark_message_as_sent_and_read};
 use ruggine_server::factory::text_message_factory::TextMessageFactory;
 use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
@@ -188,8 +189,13 @@ async fn test_find_info_by_message_id_with_read_and_unread() {
     let info2_id = repository.insert_text_message_info(info2).await.unwrap();
     
     // Mark one as read
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     let now = chrono::Utc::now();
-    mark_message_as_sent_and_read(info1_id, now).await;
+    repository.update_info(TextMessageInfoUpdate {
+        id: info1_id,
+        sent_at: Some(now),
+        read_at: Some(now),
+    }).await.unwrap();
 
     // Act
     let result = repository.find_info_by_message_id(text_message.id).await;

@@ -1,3 +1,4 @@
+use ruggine_server::entity::text_message::TextMessageInfoUpdate;
 use crate::{common, mark_message_as_sent_and_read};
 use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
 use ruggine_server::factory::text_message_factory::TextMessageFactory;
@@ -47,15 +48,25 @@ async fn test_find_info_last_read_success() {
     let info1_id = repository.insert_text_message_info(info1).await.unwrap();
     let info2_id = repository.insert_text_message_info(info2).await.unwrap();
     let info3_id = repository.insert_text_message_info(info3).await.unwrap();
-    
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
     // Mark messages as read with different timestamps
     let base_time = chrono::Utc::now();
-    let read_time1 = base_time - chrono::Duration::minutes(10);
-    let read_time2 = base_time - chrono::Duration::minutes(5);
+    let read_time1 = base_time - chrono::Duration::milliseconds(10);
+    let read_time2 = base_time - chrono::Duration::milliseconds(5);
+
     // Leave message3 unread
-    
-    mark_message_as_sent_and_read(info1_id, read_time1).await;
-    mark_message_as_sent_and_read(info2_id, read_time2).await;
+    repository.update_info(TextMessageInfoUpdate {
+        id: info1_id,
+        sent_at: Some(read_time1),
+        read_at: Some(read_time1),
+    }).await.unwrap();
+    repository.update_info(TextMessageInfoUpdate {
+        id: info2_id,
+        sent_at: Some(read_time2),
+        read_at: Some(read_time2),
+    }).await.unwrap();
 
     // Act
     let result = repository.find_info_last_read(recipient_user.id, group_chat.id).await;
@@ -105,8 +116,13 @@ async fn test_find_info_last_read_single_message() {
     );
     
     let info_id = repository.insert_text_message_info(info).await.unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     let read_time = chrono::Utc::now();
-    mark_message_as_sent_and_read(info_id, read_time).await;
+    repository.update_info(TextMessageInfoUpdate {
+        id: info_id,
+        sent_at: Some(read_time),
+        read_at: Some(read_time),
+    }).await.unwrap();
 
     // Act
     let result = repository.find_info_last_read(recipient_user.id, group_chat.id).await;
@@ -245,11 +261,21 @@ async fn test_find_info_last_read_different_users_same_group() {
     let info1_2_id = repository.insert_text_message_info(info1_2).await.unwrap();
     let info2_1_id = repository.insert_text_message_info(info2_1).await.unwrap();
     let info2_2_id = repository.insert_text_message_info(info2_2).await.unwrap();
-    
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
     // Mark different messages as read for each user
     let base_time = chrono::Utc::now();
-    mark_message_as_sent_and_read(info1_1_id, base_time - chrono::Duration::minutes(10)).await;
-    mark_message_as_sent_and_read(info2_2_id, base_time - chrono::Duration::minutes(5)).await;
+    repository.update_info(TextMessageInfoUpdate {
+        id: info1_1_id,
+        sent_at: Some(base_time - chrono::Duration::milliseconds(10)),
+        read_at: Some(base_time - chrono::Duration::milliseconds(10)),
+    }).await.unwrap();
+    repository.update_info(TextMessageInfoUpdate {
+        id: info2_2_id,
+        sent_at: Some(base_time - chrono::Duration::milliseconds(5)),
+        read_at: Some(base_time - chrono::Duration::milliseconds(5)),
+    }).await.unwrap();
 
     // Act - Get last read for each user
     let result1 = repository.find_info_last_read(recipient1.id, group_chat.id).await;

@@ -315,7 +315,7 @@ async fn test_update_sent_at_must_be_less_or_equal_to_now() {
     assert!(result.is_err(), "Sent_at update should fail when sent_at is in the future");
 
     match result.unwrap_err() {
-        ApiError::TextMessageError(TextMessageError::SentAtMustBeLessOrEqualsToNow) => {
+        ApiError::TextMessageError(TextMessageError::SentAtMustBeLessOrEqualsToNowAndGreaterThanMessageCreation) => {
             // Expected error type
         }
         e => panic!("Expected SentAtMustBeLessOrEqualsToNow error, got {:?}", e),

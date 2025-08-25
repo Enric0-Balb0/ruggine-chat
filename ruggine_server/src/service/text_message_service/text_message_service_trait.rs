@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageReadAtDtoUpdate, TextMessageReadDto, TextMessageSentAtDtoUpdate};
+use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageInfoReadAtDtoUpdate, TextMessageReadDto, TextMessageInfoSentAtDtoUpdate};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::paginated_response::PaginatedResponse;
@@ -19,6 +19,12 @@ pub trait TextMessageServiceTrait: Send + Sync {
         group_chat_id: i32,
         auth_user_id: i32,
         pagination_query: TextMessagePaginationQuery,
+    ) -> Result<PaginatedTextMessageResponse, ApiError>;
+
+    async fn find_messages_not_sent_yet(
+        &self,
+        group_chat_id: i32,
+        auth_user_id: i32
     ) -> Result<PaginatedTextMessageResponse, ApiError>;
     
     /// Create a new text message
@@ -72,12 +78,12 @@ pub trait TextMessageServiceTrait: Send + Sync {
 
     async fn update_read_at(&self,
         auth_user_id: i32,
-        payload: TextMessageReadAtDtoUpdate
+        payload: TextMessageInfoReadAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError>;
 
     async fn update_sent_at(
         &self,
         auth_user_id: i32,
-        payload: TextMessageSentAtDtoUpdate
+        payload: TextMessageInfoSentAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError>;
 }

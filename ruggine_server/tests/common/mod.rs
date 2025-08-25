@@ -45,7 +45,7 @@ use tokio_tungstenite::connect_async;
 use tower::ServiceExt;
 use tungstenite::Message;
 use ruggine_server::config::database::DatabaseTrait;
-use ruggine_server::dto::text_message_dto::{TextMessageCreateDto, TextMessageReadDto};
+use ruggine_server::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoReadAtDtoUpdate, TextMessageInfoSentAtDtoUpdate, TextMessageReadDto};
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -658,47 +658,41 @@ pub async fn send_websocket_message_and_get_response(
     }
 }
 
-pub async fn mark_message_as_read(text_message_info_id: i32, read_at: DateTime<Utc>) {
-    let update_text_message_info = TextMessageInfoUpdate {
-        id: text_message_info_id,
-        read_at: Some(read_at),
-        sent_at: None,
-    };
-
+pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32, read_at: DateTime<Utc>) {
     let db = get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    if let Err(e) = repository.update_info(update_text_message_info).await {
-        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
+    let service_init = ServiceInitializer::new(&db);
+    let text_message_service = service_init.text_message_service();
+    match text_message_service.update_read_at(
+        auth_user_id,
+        TextMessageInfoReadAtDtoUpdate {
+            text_message_id,
+            read_at
+        }
+    ).await {
+        Ok(_) => {}
+        Err(e) => panic!("Failed mark message as sent: {:?}", e),
     }
 }
 
-pub async fn mark_message_as_sent_and_read(text_message_info_id: i32, time: DateTime<Utc>) {
-    let update_text_message_info = TextMessageInfoUpdate {
-        id: text_message_info_id,
-        read_at: Some(time),
-        sent_at: Some(time),
-    };
-
-    let db = get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    if let Err(e) = repository.update_info(update_text_message_info).await {
-        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
-    }
+pub async fn mark_message_as_sent_and_read(auth_user_id: i32, text_message_id: i32, time: DateTime<Utc>) {
+    mark_message_as_sent(auth_user_id, text_message_id, time).await;
+    mark_message_as_read(auth_user_id, text_message_id, time).await;
 }
 
-pub async fn mark_message_as_sent(text_message_info_id: i32, read_at: DateTime<Utc>) {
-    let update_text_message_info = TextMessageInfoUpdate {
-        id: text_message_info_id,
-        sent_at: Some(read_at),
-        read_at: None,
-    };
-
+pub async fn mark_message_as_sent(auth_user_id: i32, text_message_id: i32, sent_at: DateTime<Utc>) {
     let db = get_database().await;
-    let repository = TextMessageRepository::new(&db);
-    if let Err(e) = repository.update_info(update_text_message_info).await {
-        panic!("Failed mark message as read for {} text_message_info: {:?}", text_message_info_id, e);
+    let service_init = ServiceInitializer::new(&db);
+    let text_message_service = service_init.text_message_service();
+    match text_message_service.update_sent_at(
+        auth_user_id,
+        TextMessageInfoSentAtDtoUpdate {
+            text_message_id,
+            sent_at
+        }
+    ).await {
+        Ok(_) => {}
+        Err(e) => panic!("Failed mark message as sent: {:?}", e),
     }
-
 }
 fn init_test_logging() {
     INIT_LOG.call_once(|| {

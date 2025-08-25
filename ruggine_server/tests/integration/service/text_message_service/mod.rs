@@ -1,5 +1,6 @@
 pub mod find_by_id_service_test;
 pub mod find_by_group_chat_id_paginated_service_test;
+pub mod find_messages_not_sent_yet_test;
 pub mod create_test;
 pub mod create_info_test;
 pub mod find_info_by_id_test;

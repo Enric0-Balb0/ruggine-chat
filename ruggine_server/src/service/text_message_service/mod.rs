@@ -12,8 +12,9 @@ pub mod text_message_service_trait;
 mod find_info_by_id_checked;
 mod update_sent_at;
 mod find_info_by_user_id_and_message_id;
+mod find_messages_not_sent_yet;
 
-use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageReadAtDtoUpdate, TextMessageReadDto, TextMessageSentAtDtoUpdate};
+use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageInfoReadAtDtoUpdate, TextMessageReadDto, TextMessageInfoSentAtDtoUpdate};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
 use crate::error::api_error::ApiError;
 use crate::response::PaginatedTextMessageResponse;
@@ -34,6 +35,14 @@ impl TextMessageServiceTrait for TextMessageService {
         pagination_query: TextMessagePaginationQuery,
     ) -> Result<PaginatedTextMessageResponse, ApiError> {
         self.find_by_group_chat_id_paginated_internal(group_chat_id, pagination_query, auth_user_id).await
+    }
+
+    async fn find_messages_not_sent_yet(
+        &self,
+        group_chat_id: i32,
+        auth_user_id: i32
+    ) -> Result<PaginatedTextMessageResponse, ApiError> {
+        self.find_messages_not_sent_yet_internal(group_chat_id, auth_user_id).await
     }
 
     async fn create(
@@ -101,7 +110,7 @@ impl TextMessageServiceTrait for TextMessageService {
 
     async fn update_read_at(&self,
         auth_user_id: i32,
-        payload: TextMessageReadAtDtoUpdate
+        payload: TextMessageInfoReadAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError> {
         self.update_read_at_internal(auth_user_id, payload).await
     }
@@ -109,7 +118,7 @@ impl TextMessageServiceTrait for TextMessageService {
     async fn update_sent_at(
         &self,
         auth_user_id: i32,
-        payload: TextMessageSentAtDtoUpdate
+        payload: TextMessageInfoSentAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError> {
         self.update_sent_at_internal(auth_user_id, payload).await
     }
