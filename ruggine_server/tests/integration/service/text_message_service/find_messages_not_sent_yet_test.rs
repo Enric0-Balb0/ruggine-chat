@@ -68,6 +68,147 @@ async fn test_find_messages_not_sent_yet_success_no_previous_sent() {
 }
 
 #[tokio_shared_rt::test(shared)]
+async fn test_find_messages_not_sent_yet_user_left_and_rejoined_group() {
+    // Arrange - Test scenario where user leaves group, messages are created, then user rejoins
+    let db = common::get_database().await;
+    let service_init = ServiceInitializer::new(&db);
+    let service = service_init.text_message_service();
+
+    let (group_owner, _) = common::create_test_user("not_sent_rejoined_owner").await;
+    let (reader_user, _) = common::create_test_user("not_sent_rejoined_reader").await;
+    let (sender_user, _) = common::create_test_user("not_sent_rejoined_sender").await;
+    
+    // Create a test group with invitation and membership for the owner
+    let group_chat = common::create_test_group_chat_with_invitation_and_membership(
+        "not_sent_rejoined_group",
+        group_owner.id,
+    ).await;
+
+    // Add reader and sender to the group
+    let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
+    let _sender_membership = common::add_test_user_to_a_group(sender_user.id, &group_chat).await;
+
+    // Phase 1: Create initial messages while reader is in the group
+    let initial_message1 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Initial message 1".to_string())
+    ).await;
+
+    let initial_message2 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Initial message 2".to_string())
+    ).await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Reader marks the initial messages as sent
+    let sent_time = Utc::now() - chrono::Duration::milliseconds(30);
+    common::mark_message_as_sent(reader_user.id, initial_message1.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, initial_message2.id, sent_time).await;
+
+    // Phase 2: Create some messages that reader doesn't mark as sent
+    let unsent_message1 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Unsent message 1".to_string())
+    ).await;
+
+    let unsent_message2 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Unsent message 2".to_string())
+    ).await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Phase 3: Reader leaves the group
+    common::test_user_leave_from_a_group(reader_user.id, group_chat.id).await;
+
+    // Phase 4: Create messages while reader is NOT in the group (these won't have TextMessageInfo for reader)
+    let missing_message1 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Message while user was absent 1".to_string())
+    ).await;
+
+    let missing_message2 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Message while user was absent 2".to_string())
+    ).await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Phase 5: Reader rejoins the group
+    let _reader_membership_new = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
+
+    // Phase 6: Create more messages after rejoining
+    let after_rejoin_message1 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Message after rejoin 1".to_string())
+    ).await;
+
+    let after_rejoin_message2 = common::create_test_text_message(
+        sender_user.id, 
+        group_chat.id, 
+        Some("Message after rejoin 2".to_string())
+    ).await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Act - Call find_messages_not_sent_yet which should handle missing TextMessageInfo gracefully
+    let result = service.find_messages_not_sent_yet(group_chat.id, reader_user.id).await;
+
+    // Assert
+    assert!(result.is_ok(), "Failed to find messages not sent yet: {:?}", result.err());
+    let response = result.unwrap();
+    
+    // Should return all unsent messages (both before leaving and after rejoining)
+    // The messages created while user was absent should trigger MessageInfoNotFound errors 
+    // but the function should handle them gracefully and include them in the response
+    assert_eq!(response.data.len(), 6, "Expected 6 unsent messages (2 unsent + 2 after left + 2 after rejoin), got: {}", response.data.len());
+    
+    // Verify that at least the messages we expect are included
+    let message_ids: Vec<i32> = response.data.iter().map(|m| m.id).collect();
+    
+    // These should definitely be included
+    assert!(message_ids.contains(&unsent_message1.id), "Expected unsent_message1 to be processed");
+    assert!(message_ids.contains(&unsent_message2.id), "Expected unsent_message2 to be processed");
+    assert!(message_ids.contains(&missing_message1.id), "Expected missing_message1 to be processed");
+    assert!(message_ids.contains(&missing_message2.id), "Expected missing_message2 to be processed");
+    assert!(message_ids.contains(&after_rejoin_message1.id), "Expected after_rejoin_message1 to be processed");
+    assert!(message_ids.contains(&after_rejoin_message2.id), "Expected after_rejoin_message2 to be processed");
+    
+    // The initial messages should NOT be included as they were already sent
+    assert!(!message_ids.contains(&initial_message1.id), "Initial_message1 should not be processed as it was already sent");
+    assert!(!message_ids.contains(&initial_message2.id), "Initial_message2 should not be processed as it was already sent");
+
+    // Find again with no not sent messages
+    let result = service.find_messages_not_sent_yet(group_chat.id, reader_user.id).await;
+    assert_eq!(result.unwrap().data.len(), 0, "there should not be other not sent messages");
+
+    // Cleanup
+    common::cleanup_text_message(initial_message1.id).await;
+    common::cleanup_text_message(initial_message2.id).await;
+    common::cleanup_text_message(missing_message1.id).await;
+    common::cleanup_text_message(missing_message2.id).await;
+    common::cleanup_text_message(unsent_message1.id).await;
+    common::cleanup_text_message(unsent_message2.id).await;
+    common::cleanup_text_message(after_rejoin_message1.id).await;
+    common::cleanup_text_message(after_rejoin_message2.id).await;
+    common::cleanup_test_user_from_a_group_chat(reader_user.id, group_chat.id).await;
+    common::cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
+    common::cleanup_test_user_from_a_group_chat(group_owner.id, group_chat.id).await;
+    common::cleanup_group_chat(group_chat.id).await;
+    common::cleanup_user(group_owner.id).await;
+    common::cleanup_user(reader_user.id).await;
+    common::cleanup_user(sender_user.id).await;
+}
+
+#[tokio_shared_rt::test(shared)]
 async fn test_find_messages_not_sent_yet_success_with_previous_sent() {
     // Arrange
     let db = common::get_database().await;
@@ -155,6 +296,13 @@ async fn test_find_messages_not_sent_yet_empty_result() {
         sender_user.id,
     ).await;
 
+    // Create also a message not sent to reader user
+    let old_message = common::create_test_text_message(
+        sender_user.id,
+        group_chat.id,
+        Some("Message not for reader user".to_string())
+    ).await;
+
     // Add reader to the group
     let _reader_membership = common::add_test_user_to_a_group(reader_user.id, &group_chat).await;
 
@@ -180,6 +328,7 @@ async fn test_find_messages_not_sent_yet_empty_result() {
     assert_eq!(response.pagination.page_size, 0);
 
     // Cleanup
+    common::cleanup_text_message(old_message.id).await;
     common::cleanup_text_message(message.id).await;
     common::cleanup_test_user_from_a_group_chat(reader_user.id, group_chat.id).await;
     common::cleanup_test_user_from_a_group_chat(sender_user.id, group_chat.id).await;
@@ -204,7 +353,7 @@ async fn test_find_messages_not_sent_yet_group_not_found() {
     // Assert
     assert!(result.is_err(), "Should fail when group doesn't exist");
     let error = result.unwrap_err();
-    assert!(matches!(error, ApiError::TextMessageError(TextMessageError::GroupChatNotFound)));
+    assert!(matches!(error, ApiError::TextMessageError(TextMessageError::GroupChatNotFound)), "Expected GroupChatNotFound, got {:?}", error);
 
     // Cleanup
     common::cleanup_user(user.id).await;

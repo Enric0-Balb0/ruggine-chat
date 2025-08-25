@@ -21,5 +21,7 @@ pub trait TextMessageRepositoryTrait: Send + Sync {
     async fn update_info(&self, text_message_info_update: TextMessageInfoUpdate) -> Result<(), Error>;
     async fn find_info_by_user_id_and_message_id(&self, user_id: i32, text_message_id: i32) -> Result<TextMessageInfo, Error>;
     async fn find_by_group_chat_id_datetime_range(&self, group_chat_id: i32, min_datetime: DateTime<Utc>, max_datetime: DateTime<Utc>) -> Result<Vec<TextMessage>, Error>;
+    async fn find_first_message_with_no_sent_at(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessage>, Error>;
+    async fn find_first_message_with_no_read_at(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessage>, Error>;
     fn db_conn(&self) -> Arc<Database>;
 }

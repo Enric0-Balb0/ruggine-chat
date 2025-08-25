@@ -26,7 +26,12 @@ pub trait TextMessageServiceTrait: Send + Sync {
         group_chat_id: i32,
         auth_user_id: i32
     ) -> Result<PaginatedTextMessageResponse, ApiError>;
-    
+
+    async fn find_messages_not_read_yet(
+        &self,
+        group_chat_id: i32,
+        auth_user_id: i32
+    ) -> Result<PaginatedTextMessageResponse, ApiError>;
     /// Create a new text message
     /// Verifies that the sender has active membership in the group
     async fn create(
@@ -86,4 +91,16 @@ pub trait TextMessageServiceTrait: Send + Sync {
         auth_user_id: i32,
         payload: TextMessageInfoSentAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError>;
+
+    async fn find_first_message_with_no_sent_at(
+        &self,
+        auth_user_id: i32,
+        group_chat_id: i32
+    ) -> Result<Option<TextMessageReadDto>, ApiError>;
+
+    async fn find_first_message_with_no_read_at(
+        &self,
+        auth_user_id: i32,
+        group_chat_id: i32
+    ) -> Result<Option<TextMessageReadDto>, ApiError>;
 }

@@ -9,3 +9,5 @@ pub mod find_info_last_read_at_test;
 pub mod find_info_last_sent_at_test;
 mod update_info_test;
 mod find_info_by_user_id_and_message_id_test;
+pub mod find_first_message_with_no_sent_at_test;
+pub mod find_first_message_with_no_read_at_test;

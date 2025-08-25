@@ -78,6 +78,12 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
     async fn find_by_group_chat_id_datetime_range(&self, group_chat_id: i32, min_datetime: DateTime<Utc>, max_datetime: DateTime<Utc>) -> Result<Vec<TextMessage>, Error> {
         self.find_by_group_chat_id_datetime_range_inner(group_chat_id, min_datetime, max_datetime).await
     }
+    async fn find_first_message_with_no_sent_at(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessage>, Error> {
+        self.find_first_message_with_no_sent_at_inner(user_id, group_chat_id).await
+    }
+    async fn find_first_message_with_no_read_at(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessage>, Error> {
+        self.find_first_message_with_no_read_at_inner(user_id, group_chat_id).await
+    }
     fn db_conn(&self) -> Arc<Database> {
         self.db_conn.clone()
     }

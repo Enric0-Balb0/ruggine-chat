@@ -39,6 +39,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Once;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
+use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, OnceCell};
 use tokio_tungstenite::connect_async;
@@ -61,7 +62,11 @@ pub async fn get_database() -> Arc<Database> {
             let database_url = std::env::var("TEST_DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://testuser:testpass@localhost/ruggine_test".to_string());
 
-            PgPool::connect(&database_url)
+            PgPoolOptions::new()
+                .max_connections(50)         // 👈 aumenta qui il numero massimo di connessioni
+                .min_connections(5)          // opzionale: connessioni tenute sempre pronte
+                .acquire_timeout(std::time::Duration::from_secs(5)) // timeout attesa connessione
+                .connect(&database_url)
                 .await
                 .expect("Failed to connect to test database")
         })

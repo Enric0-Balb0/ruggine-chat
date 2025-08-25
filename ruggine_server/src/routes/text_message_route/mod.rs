@@ -1,6 +1,7 @@
 pub mod create;
 pub mod find_by_group_chat_id;
 mod find_messages_not_sent_yet;
+mod find_messages_not_read_yet;
 
 use axum::Router;
 use crate::entity::user::all_user_types;
@@ -23,6 +24,27 @@ pub fn routes(
                     ),
                 ))
         )
+
+        .merge(
+            find_messages_not_sent_yet::routes()
+                .with_state(text_message_state.clone())
+                .layer(ServiceBuilder::new().layer(
+                    middleware::from_fn_with_state(
+                        token_state.clone(),
+                        crate::middleware::auth_middleware::auth(all_user_types()),
+                    ),
+                ))
+        )
+        .merge(
+            find_messages_not_read_yet::routes()
+                .with_state(text_message_state.clone())
+                .layer(ServiceBuilder::new().layer(
+                    middleware::from_fn_with_state(
+                        token_state.clone(),
+                        crate::middleware::auth_middleware::auth(all_user_types()),
+                    ),
+                ))
+        )
         .merge(
             find_by_group_chat_id::routes()
                 .with_state(text_message_state.clone())
@@ -33,14 +55,5 @@ pub fn routes(
                     ),
                 ))
         )
-        .merge(
-            find_messages_not_sent_yet::routes()
-                .with_state(text_message_state.clone())
-                .layer(ServiceBuilder::new().layer(
-                    middleware::from_fn_with_state(
-                        token_state,
-                        crate::middleware::auth_middleware::auth(all_user_types()),
-                    ),
-                ))
-        )
+
 }

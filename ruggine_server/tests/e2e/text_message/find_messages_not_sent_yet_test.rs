@@ -28,6 +28,7 @@ async fn mark_message_as_sent_for_user(message_id: i32, user_id: i32, sent_time:
 
 #[cfg(test)]
 mod find_messages_not_sent_yet_text_message_e2e_tests {
+    use crate::{cleanup_text_message, common};
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -38,6 +39,14 @@ mod find_messages_not_sent_yet_text_message_e2e_tests {
         let (reader, _password, reader_token) = create_login_and_get_token("e2e_not_sent_reader".to_string()).await;
         
         let group = create_test_group_chat_with_invitation_and_membership("e2e_not_sent_group", sender.id).await;
+
+        // Create a message and mark it as sent, so there are no unsent messages
+        let old_message = common::create_test_text_message(
+            sender.id,
+            group.id,
+            Some("Old sent message should not be displayed by /group/{}/messages/not-sent-yet".to_string())
+        ).await;
+
         let _reader_membership = add_test_user_to_a_group(reader.id, &group).await;
 
         // Create test messages that haven't been sent yet
@@ -96,7 +105,7 @@ mod find_messages_not_sent_yet_text_message_e2e_tests {
         }
 
         // Cleanup
-        cleanup_text_messages(vec![message1.id, message2.id]).await;
+        cleanup_text_messages(vec![old_message.id, message1.id, message2.id]).await;
         cleanup_test_user_from_a_group_chat(reader.id, group.id).await;
         cleanup_test_user_from_a_group_chat(sender.id, group.id).await;
         cleanup_group_chat(group.id).await;

@@ -13,6 +13,9 @@ mod find_info_by_id_checked;
 mod update_sent_at;
 mod find_info_by_user_id_and_message_id;
 mod find_messages_not_sent_yet;
+mod find_messages_not_read_yet;
+mod find_first_message_with_no_sent_at;
+mod find_first_message_with_no_read_at;
 
 use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageInfoReadDto, TextMessageLastReadAtDto, TextMessageLastSentAtDto, TextMessageInfoReadAtDtoUpdate, TextMessageReadDto, TextMessageInfoSentAtDtoUpdate};
 use crate::dto::text_message_pagination_dto::TextMessagePaginationQuery;
@@ -43,6 +46,14 @@ impl TextMessageServiceTrait for TextMessageService {
         auth_user_id: i32
     ) -> Result<PaginatedTextMessageResponse, ApiError> {
         self.find_messages_not_sent_yet_internal(group_chat_id, auth_user_id).await
+    }
+
+    async fn find_messages_not_read_yet(
+        &self,
+        group_chat_id: i32,
+        auth_user_id: i32
+    ) -> Result<PaginatedTextMessageResponse, ApiError> {
+        self.find_messages_not_read_yet_internal(group_chat_id, auth_user_id).await
     }
 
     async fn create(
@@ -121,5 +132,20 @@ impl TextMessageServiceTrait for TextMessageService {
         payload: TextMessageInfoSentAtDtoUpdate
     ) -> Result<TextMessageInfoReadDto, ApiError> {
         self.update_sent_at_internal(auth_user_id, payload).await
+    }
+
+    async fn find_first_message_with_no_sent_at(
+        &self,
+        auth_user_id: i32,
+        group_chat_id: i32
+    ) -> Result<Option<TextMessageReadDto>, ApiError> {
+        self.find_first_message_with_no_sent_at_inner(auth_user_id, group_chat_id).await
+    }
+    async fn find_first_message_with_no_read_at(
+        &self,
+        auth_user_id: i32,
+        group_chat_id: i32
+    ) -> Result<Option<TextMessageReadDto>, ApiError> {
+        self.find_first_message_with_no_read_at_inner(auth_user_id, group_chat_id).await
     }
 }
