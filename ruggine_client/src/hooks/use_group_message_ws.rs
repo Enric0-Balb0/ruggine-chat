@@ -3,14 +3,7 @@ use crate::api::MessageWsService;
 use crate::config::endpoints::WebSocketEndpoints;
 use crate::config::constants::AppConstants;
 use crate::types::WebSocketMessage;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum WsStatus {
-    Connecting,
-    Open,
-    Closed,
-    Error(String),
-}
+use crate::types::message_ws::WsStatus;
 
 #[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
@@ -21,66 +14,26 @@ pub struct UseGroupMessageWs {
 }
 
 pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
-    let (status, set_status) = create_signal(WsStatus::Connecting);
-    let (messages, set_messages) = create_signal(Vec::new());
+    // Basic version: no polling, no auto-reconnect, just instantiation and direct management
+    let status = leptos::create_rw_signal(WsStatus::Connecting);
+    let (messages, set_messages) = create_signal(Vec::<WebSocketMessage>::new());
     let (send_message, set_send_message) = create_signal(None::<WebSocketMessage>);
     let (disconnect, set_disconnect) = create_signal(false);
 
-    // Use a RefCell to hold the service instance
-    let ws_service = std::rc::Rc::new(std::cell::RefCell::new(MessageWsService::new()));
-
-    // Callback per ricezione messaggi
-    {
-        let set_messages = set_messages.clone();
-        ws_service.borrow_mut().set_on_message(move |msg: WebSocketMessage| {
-            set_messages.update(|msgs| {
-                msgs.push(msg);
-            });
+    // Clone the signal to ensure it is shared between closures and the hook
+    let set_messages_shared = set_messages.clone();
+    let ws_service = std::rc::Rc::new(std::cell::RefCell::new(MessageWsService::new(status)));
+    ws_service.borrow_mut().set_on_message(move |msg: WebSocketMessage| {
+        set_messages_shared.update(|msgs| {
+            msgs.push(msg.clone());
         });
-    }
+    });
 
-    // Connect on mount e auto-reconnect
-    {
-        let url = WebSocketEndpoints::group_websocket_url(AppConstants::DEFAULT_SERVER_URL, &token);
+    // Manual connection on mount and cleanup
+    let url = WebSocketEndpoints::group_websocket_url(AppConstants::DEFAULT_SERVER_URL, &token);
+    ws_service.borrow_mut().connect(&url);
 
-        // Effetto di connessione iniziale e cleanup
-        {
-            let ws_service = ws_service.clone();
-            let set_status = set_status.clone();
-            let url = url.clone();
-            create_effect(move |_| {
-                ws_service.borrow_mut().connect(&url);
-                set_status.set(WsStatus::Connecting);
-                let ws_service_cleanup = ws_service.clone();
-                let set_status_cleanup = set_status.clone();
-                on_cleanup(move || {
-                    ws_service_cleanup.borrow_mut().disconnect();
-                    set_status_cleanup.set(WsStatus::Closed);
-                });
-            });
-        }
-
-        // Effetto di auto-reconnect
-        {
-            let ws_service = ws_service.clone();
-            let set_status = set_status.clone();
-            let url = url.clone();
-            create_effect(move |_| {
-                let status_now = status.get();
-                if matches!(status_now, WsStatus::Closed | WsStatus::Error(_)) {
-                    let ws_service = ws_service.clone();
-                    let set_status = set_status.clone();
-                    let url = url.clone();
-                    set_timeout(move || {
-                        ws_service.borrow_mut().connect(&url);
-                        set_status.set(WsStatus::Connecting);
-                    }, std::time::Duration::from_millis(500));
-                }
-            });
-        }
-    }
-
-    // Send message effect
+    // Effect for sending messages
     {
         let ws_service = ws_service.clone();
         let set_send_message = set_send_message.clone();
@@ -92,22 +45,25 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
         });
     }
 
-    // Disconnect effect
+    // Effect for manual disconnection
     {
         let ws_service = ws_service.clone();
-        let set_status = set_status.clone();
         let set_disconnect = set_disconnect.clone();
         create_effect(move |_| {
             if disconnect.get() {
                 ws_service.borrow_mut().disconnect();
-                set_status.set(WsStatus::Closed);
                 set_disconnect.set(false);
             }
         });
     }
 
+    // Cleanup on unmount
+    on_cleanup(move || {
+        ws_service.borrow_mut().disconnect();
+    });
+
     UseGroupMessageWs {
-        status,
+        status: status.read_only(),
         send_message: set_send_message,
         messages,
         disconnect: set_disconnect,

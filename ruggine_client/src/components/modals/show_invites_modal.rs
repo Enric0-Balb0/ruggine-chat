@@ -49,7 +49,7 @@ pub fn ShowInvitesModal(
         if !missing_group_ids.is_empty() {
             let mut names_map = names_map.clone();
             let storage_service = StorageService::new();
-            let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage_service.get_token() {
                 http_client.set_auth_token(Some(token_response.token));
             }
@@ -90,7 +90,7 @@ pub fn ShowInvitesModal(
         let toast = toast.clone();
         spawn_local(async move {
             let storage_service = StorageService::new();
-            let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage_service.get_token() {
                 http_client.set_auth_token(Some(token_response.token));
             }

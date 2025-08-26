@@ -9,7 +9,6 @@ use crate::types::WebSocketMessage;
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Fornisci il context di autenticazione globale
     provide_auth_context();
     view! {
         <ThemeProvider>
@@ -23,10 +22,6 @@ pub fn App() -> impl IntoView {
 #[component]
 pub fn AppContent() -> impl IntoView {
     let theme_ctx = use_theme();
-    let auth_ctx = use_auth_context();
-    // Gestione WebSocket centralizzata tramite hook dedicato
-    let _ws = use_app_group_ws(auth_ctx.token.read_only());
-
     view! {
         <main>
             <AppRouter />

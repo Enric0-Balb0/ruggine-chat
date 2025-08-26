@@ -38,7 +38,7 @@ impl ApiEndpoints {
     pub const INVITATION_BY_ID: &'static str = "/invitation"; // + /{id}
     
     // Message endpoints
-    pub const TEXT_MESSAGE_CREATE: &'static str = "/messages";
+    pub const TEXT_MESSAGE_CREATE: &'static str = "/text_message/create";
     
     // Utility methods for dynamic endpoints
     pub fn group_by_id(group_id: &str) -> String {
