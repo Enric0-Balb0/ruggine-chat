@@ -31,7 +31,7 @@ impl TextMessageService {
                         };
 
                         match self.update_sent_at(auth_user_id, payload).await {
-                            Ok(_) => valid_messages.push(message.clone()),
+                            Ok(_) => { },
                             Err(e) => match e {
                                 ApiError::TextMessageError(TextMessageError::CannotUpdateSentAtAgain) => {
                                     // It can happen if many tasks retrieve messages
@@ -39,12 +39,12 @@ impl TextMessageService {
                                 },
                                 ApiError::TextMessageError(TextMessageError::MessageInfoNotFound) => {
                                     // It can happen if user has left the group and then rejoined
-                                    valid_messages.push(message.clone());
                                     warn!("Tried to set sent at, but it was not found");
                                 },
                                 other => return Err(ApiError::DbError(DbError::SomethingWentWrong(other.to_string()))),
                             },
                         }
+                        valid_messages.push(message.clone());
                     }
 
                     valid_messages

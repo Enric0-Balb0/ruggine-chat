@@ -5,10 +5,12 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use async_trait::async_trait;
 use crate::dto::group_membership_dto::GroupMembershipReadDto;
+use crate::dto::text_message_dto::{TextMessageInfoSentAtDtoUpdate, TextMessageReadDto};
 use crate::entity::group_membership::GroupMembership;
 use crate::error::group_chat_error::GroupChatError;
 use crate::error::web_socket_error::WebSocketError;
 use crate::service::group_membership_service::GroupMembershipServiceTrait;
+use crate::service::text_message_service::TextMessageServiceTrait;
 use crate::service::websocket::websocket_group_service_trait::WebSocketGroupServiceTrait;
 use crate::websocket::core::manager::WebSocketManager;
 use crate::websocket::message::{WebSocketMessage, ServerEvent, WsError};
@@ -17,15 +19,18 @@ use crate::websocket::message::{WebSocketMessage, ServerEvent, WsError};
 #[derive(Clone)]
 pub struct WebSocketGroupService {
     group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
+    text_message_service: Arc<dyn TextMessageServiceTrait>,
     group_subscriptions: Arc<RwLock<HashMap<i32, HashSet<String>>>>, // user_id -> connection_ids
 }
 
 impl WebSocketGroupService {
     pub fn new(
         group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
+        text_message_service: Arc<dyn TextMessageServiceTrait>,
     ) -> Self {
         Self {
             group_membership_service,
+            text_message_service,
             group_subscriptions: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -61,10 +66,10 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     }
 
     /// Invia un messaggio a tutti i membri di un gruppo
-    async fn broadcast_to_group(
+    async fn connections_to_broadcast_new_message(
         &self,
         group_id: i32,
-    ) -> Result<Vec<String>, WebSocketError> {
+    ) -> Result<Vec<(i32, String)>, WebSocketError> {
         let members = self
             .group_membership_service
             .find_by_group_chat_id(group_id)
@@ -77,7 +82,7 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
             // Se l’utente ha una sottoscrizione WebSocket attiva → recupero connection_id
             if let Some(connnections) = self.group_subscriptions.read().await.get(&member.user_id).cloned() {
                 for conn_id in connnections {
-                    connection_ids.push(conn_id);
+                    connection_ids.push((member.user_id, conn_id));
                 }
             }
         }
@@ -88,6 +93,17 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     /// Statistiche sulle sottoscrizioni
     async fn get_stats(&self) -> usize {
         self.group_subscriptions.read().await.len()
+    }
+
+    async fn update_sent_at_for_a_user(&self, user_id: i32, message_id: i32) {
+        let payload = TextMessageInfoSentAtDtoUpdate {
+            text_message_id: message_id,
+            sent_at: Utc::now(),
+        };
+        match self.text_message_service.update_sent_at(user_id, payload).await {
+            Ok(_) => (),
+            Err(e) => warn!("Failed to update sent_at for {} in the ws service: {}", user_id, e),
+        }
     }
 }
 
@@ -101,16 +117,19 @@ mod tests {
     use crate::factory::user_factory::UserFactory;
     use crate::factory::group_chat_factory::GroupChatFactory;
     use crate::entity::group_membership::{CurrentAction, MembershipStatus};
+    use crate::service::text_message_service::text_message_service_trait::MockTextMessageServiceTrait;
 
-    fn create_mock_group_membership_service() -> MockGroupMembershipServiceTrait {
-        MockGroupMembershipServiceTrait::new()
+    fn create_mock_group_membership_service() -> (MockGroupMembershipServiceTrait, MockTextMessageServiceTrait) {
+        (MockGroupMembershipServiceTrait::new(), MockTextMessageServiceTrait::new())
     }
 
     fn create_test_service_with_mock(
         mock_service: MockGroupMembershipServiceTrait,
+        mock_text_message_service: MockTextMessageServiceTrait,
     ) -> WebSocketGroupService {
         let group_membership_service = Arc::new(mock_service);
-        WebSocketGroupService::new(group_membership_service)
+        let text_message_service = Arc::new(mock_text_message_service);
+        WebSocketGroupService::new(group_membership_service, text_message_service)
     }
 
     fn create_test_group_membership_dto(user_id: i32, group_id: i32) -> GroupMembershipReadDto {
@@ -131,7 +150,7 @@ mod tests {
     async fn test_subscribe_success() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 1;
         let connection_id = "conn_123";
 
@@ -147,7 +166,7 @@ mod tests {
     async fn test_subscribe_multiple_users() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
         let _ = service.subscribe(1, "conn_1").await;
@@ -162,7 +181,7 @@ mod tests {
     async fn test_subscribe_multiple_connections_same_user() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 1;
 
         // Act
@@ -183,7 +202,7 @@ mod tests {
     async fn test_unsubscribe_success() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 1;
         let connection_id = "conn_123";
 
@@ -203,7 +222,7 @@ mod tests {
     async fn test_unsubscribe_nonexistent_user() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 999;
 
         // Act
@@ -218,7 +237,7 @@ mod tests {
     async fn test_cleanup_connection_removes_matching_connections() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let connection_to_remove = "conn_remove";
 
         // Setup multiple subscriptions
@@ -243,7 +262,7 @@ mod tests {
     async fn test_cleanup_connection_partial_removal_multiple_connections() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 1;
 
         // Setup user with multiple connections
@@ -274,7 +293,7 @@ mod tests {
     async fn test_cleanup_connection_no_matches() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Setup subscriptions
         let _ = service.subscribe(1, "conn_1").await;
@@ -306,6 +325,7 @@ mod tests {
         ];
 
         mock_service
+            .0
             .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
@@ -318,7 +338,7 @@ mod tests {
                 Box::pin(async move { Ok(members) })
             });
 
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Subscribe some users (not all group members have active connections)
         let _ = service.subscribe(user1_id, "conn_1").await;
@@ -326,14 +346,14 @@ mod tests {
         // user2 is not subscribed
 
         // Act
-        let result = service.broadcast_to_group(group_id).await;
+        let result = service.connections_to_broadcast_new_message(group_id).await;
 
         // Assert
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 2);
-        assert!(connection_ids.contains(&"conn_1".to_string()));
-        assert!(connection_ids.contains(&"conn_3".to_string()));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_1"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_3"));
     }
 
     #[tokio::test]
@@ -346,6 +366,7 @@ mod tests {
 
         // Setup mock to return group members
         mock_service
+            .0
             .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
@@ -357,7 +378,7 @@ mod tests {
                 Box::pin(async move { Ok(members) })
             });
 
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Subscribe users with multiple connections each
         let _ = service.subscribe(user1_id, "conn_1a").await;
@@ -367,17 +388,17 @@ mod tests {
         let _ = service.subscribe(user2_id, "conn_2c").await;
 
         // Act
-        let result = service.broadcast_to_group(group_id).await;
+        let result = service.connections_to_broadcast_new_message(group_id).await;
 
         // Assert
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 5); // 2 connections for user1 + 3 for user2
-        assert!(connection_ids.contains(&"conn_1a".to_string()));
-        assert!(connection_ids.contains(&"conn_1b".to_string()));
-        assert!(connection_ids.contains(&"conn_2a".to_string()));
-        assert!(connection_ids.contains(&"conn_2b".to_string()));
-        assert!(connection_ids.contains(&"conn_2c".to_string()));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_1a"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_1b"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2a"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2b"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2c"));
     }
 
     #[tokio::test]
@@ -390,6 +411,7 @@ mod tests {
 
         // Setup mock to return group members
         mock_service
+            .0
             .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
@@ -401,12 +423,12 @@ mod tests {
                 Box::pin(async move { Ok(members) })
             });
 
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Don't subscribe any users
 
         // Act
-        let result = service.broadcast_to_group(group_id).await;
+        let result = service.connections_to_broadcast_new_message(group_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -422,6 +444,7 @@ mod tests {
 
         // Setup mock to return error
         mock_service
+            .0
             .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
@@ -431,10 +454,10 @@ mod tests {
                 })
             });
 
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
-        let result = service.broadcast_to_group(group_id).await;
+        let result = service.connections_to_broadcast_new_message(group_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -454,15 +477,16 @@ mod tests {
 
         // Setup mock to return empty group
         mock_service
+            .0
             .expect_find_by_group_chat_id()
             .with(eq(group_id))
             .times(1)
             .returning(|_| Box::pin(async move { Ok(vec![]) }));
 
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
-        let result = service.broadcast_to_group(group_id).await;
+        let result = service.connections_to_broadcast_new_message(group_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -474,7 +498,7 @@ mod tests {
     async fn test_get_stats_empty() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
         let stats = service.get_stats().await;
@@ -487,7 +511,7 @@ mod tests {
     async fn test_get_stats_with_subscriptions() {
         // Arrange
         let mock_service = create_mock_group_membership_service();
-        let service = create_test_service_with_mock(mock_service);
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Setup subscriptions
         let _ = service.subscribe(1, "conn_1").await;

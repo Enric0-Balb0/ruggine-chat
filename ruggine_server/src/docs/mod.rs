@@ -26,6 +26,7 @@ use crate::{dto::{
         text_message_dto::{
             TextMessageCreateDto,
             TextMessageReadDto,
+            TextMessageInfoReadAtDtoUpdate,
         },
     },
     entity::{user::{Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole, CurrentAction}},
@@ -62,6 +63,7 @@ use crate::handler::{
         text_message_handler::create::create,
         text_message_handler::find_messages_not_sent_yet::find_messages_not_sent_yet,
         text_message_handler::find_messages_not_read_yet::find_messages_not_read_yet,
+        text_message_handler::update_read_at::update_read_at,
     ),
     components(
         schemas(
@@ -94,7 +96,8 @@ use crate::handler::{
             TextMessagePaginationQuery,
             TextMessageCreateDto,
             TextMessageReadDto,
-            ApiSuccessResponseTextMessageReadDto
+            ApiSuccessResponseTextMessageReadDto,
+            TextMessageInfoReadAtDtoUpdate,
         )
     ),
     modifiers(&SecurityAddon),

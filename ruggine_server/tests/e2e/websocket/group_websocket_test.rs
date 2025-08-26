@@ -593,6 +593,32 @@ mod group_websocket_e2e_tests {
             let _ = handle.await;
         }
 
+        // Assert no unsent messages left
+        for user_token in user_tokens {
+            let client = reqwest::Client::new();
+            let response = client
+                .get(format!("http://{}/api/text_message/group/{}/messages/not-sent-yet", addr, group.id))
+                .bearer_auth(&user_token)
+                .send()
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::OK);
+
+            let response_json: serde_json::Value = response.json().await.unwrap();
+
+            assert!(
+                response_json
+                    .get("data")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.is_empty())
+                    .unwrap_or(true),
+                "There should not be unsent messages, got {}",
+                response_json.get("data").unwrap()
+            );
+        }
+
+
         // Cleanup
         let user_ids: Vec<i32> = test_users.iter().map(|(user, _, _)| user.id).collect();
         let mut all_user_ids = user_ids;

@@ -37,7 +37,7 @@ pub trait DatabaseTrait {
         F: FnOnce(&Database) -> Fut + Send,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
-        E: Send + From<ApiError>;
+        E: Send + From<ApiError> + std::fmt::Debug;
 
     fn get_tx_mut(
         &self,
@@ -64,10 +64,12 @@ impl DatabaseTrait for Database {
         F: FnOnce(&Database) -> Fut + Send,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
-        E: Send + From<ApiError>,
+        E: Send + From<ApiError> + std::fmt::Debug,
     {
+        info!("Trying to start a new transaction");
         // 0. verify no transaction already open
         if self.get_tx_mut().is_some() {
+            error!("Transaction already exists");
             return Err(ApiError::DbError(DbError::SomethingWentWrong(
                 "Transaction already open".to_string(),
             ))
@@ -78,12 +80,14 @@ impl DatabaseTrait for Database {
         let tx = match self.pool.begin().await {
             Ok(tx) => tx,
             Err(e) => {
+                error!("Failed to start transaction: {}", e);
                 return Err(ApiError::DbError(DbError::SomethingWentWrong(
                     "Impossible to create the transaction".to_string(),
                 ))
                 .into())
             }
         };
+        info!("Started transaction");
         let task_id = self.task_counter.fetch_add(1, Ordering::SeqCst);
 
         self.tx_map.insert(task_id, tx);
@@ -98,15 +102,18 @@ impl DatabaseTrait for Database {
             Ok(val) => {
                 if let Some((_, mut tx)) = self.tx_map.remove(&task_id) {
                     if let Err(e) = tx.commit().await {
+                        error!("Failed to commit transaction: {:?}", e);
                         return Err(ApiError::DbError(DbError::SomethingWentWrong(
                             "Impossible to commit the transaction".to_string(),
                         ))
                         .into());
                     }
+                    info!("Transaction commited successfully");
                 }
                 Ok(val)
             }
             Err(err) => {
+                error!("Failed to complete transaction: {:?}", err);
                 if let Some((_, mut tx)) = self.tx_map.remove(&task_id) {
                     let _ = tx.rollback().await;
                 }
@@ -138,6 +145,7 @@ impl Database {
 use dashmap::mapref::one::RefMut;
 use futures::Stream;
 use sqlx::postgres::{PgQueryResult, PgRow, PgTypeInfo};
+use tracing::{error, info};
 
 pub enum DbConn<'a> {
     Tx(RefMut<'a, TaskId, Transaction<'static, Postgres>>),

@@ -41,23 +41,12 @@ pub async fn create(
     
     // Invia notifica WebSocket ai membri del gruppo se il servizio è disponibile
     if let Some(websocket_service) = &state.websocket_group_service {
-        let notification = WebSocketMessage::Event {
-            event: ServerEvent::Groups(GroupEvent::NewMessage {
-                message_id: text_message.id,
-                group_id: payload.group_chat_id,
-                sender_id: current_user.id,
-                sender_username: current_user.username.clone(),
-                content: text_message.content.clone(),
-                sent_at: text_message.sent_at,
-            }),
-            timestamp: Utc::now(),
-        };
-        
         crate::handler::websocket::chat_handler::handle_new_group_message(
-            state.websocket_group_service.clone().unwrap().clone(),
+            websocket_service.clone(),
             state.ws_manager.clone().unwrap().clone(),
             payload.group_chat_id,
-            notification
+            text_message.clone(),
+            current_user.username.clone(),
         ).await;
     } else {
         warn!("WebSocket group service not available for sending notifications");

@@ -86,7 +86,7 @@ pub struct TextMessageLastSentAtDto {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
 pub struct TextMessageInfoSentAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,
@@ -94,7 +94,7 @@ pub struct TextMessageInfoSentAtDtoUpdate {
     pub sent_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
 pub struct TextMessageInfoReadAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,

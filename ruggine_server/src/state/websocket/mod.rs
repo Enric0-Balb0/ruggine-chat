@@ -7,12 +7,13 @@ use crate::{
     service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait},
     config::database::Database,
 };
+use crate::utils::service_initializer::ServiceInitializer;
 
 #[derive(Clone)]
 pub struct WebSocketState {
     pub manager: Arc<WebSocketManager>,
     pub token_state: Arc<TokenState>,
-    pub group_service: Arc<WebSocketGroupService>,
+    pub group_service: Arc<dyn WebSocketGroupServiceTrait>,
 }
 
 impl WebSocketState {
@@ -20,12 +21,9 @@ impl WebSocketState {
         let manager = Arc::new(WebSocketManager::new());
         
         // Crea il servizio per i gruppi WebSocket
-        let group_membership_service: Arc<dyn GroupMembershipServiceTrait> = 
-            Arc::new(GroupMembershipService::new(db_conn));
+        let service_init = ServiceInitializer::new(db_conn);
         
-        let group_service = Arc::new(WebSocketGroupService::new(
-            group_membership_service,
-        ));
+        let group_service = service_init.websocket_group_service();
         
         Self {
             manager,

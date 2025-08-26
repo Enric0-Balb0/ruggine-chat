@@ -7,7 +7,7 @@ use crate::websocket::message::WebSocketQuery;
 use crate::websocket::group_message::GroupAction::{Join, Leave};
 use crate::websocket::group_message::GroupEvent::NewMessage;
 use crate::websocket::message::{ControlMessage, ServerEvent, WsError};
-use crate::websocket::{ClientAction, WebSocketConnection, WebSocketManager, WebSocketMessage};
+use crate::websocket::{ClientAction, GroupEvent, WebSocketConnection, WebSocketManager, WebSocketMessage};
 use crate::websocket::core::manager_trait::WebSocketManagerTrait;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Query, State, WebSocketUpgrade};
@@ -16,8 +16,10 @@ use axum::response::Response;
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
 use axum::Extension;
+use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
+use crate::dto::text_message_dto::TextMessageReadDto;
 use crate::entity::user::User;
 
 pub async fn chat_websocket_handler(
@@ -213,10 +215,43 @@ pub async fn handle_new_group_message(
     group_service: Arc<dyn WebSocketGroupServiceTrait>,
     manager: Arc<dyn WebSocketManagerTrait>,
     group_id: i32,
-    message: WebSocketMessage,
+    text_message: TextMessageReadDto,
+    sender_user_username: String,
 ) {
+    /* match message.unwrap() {
+        tungstenite::Message::Text(text) => {
+            let parsed: WebSocketMessage = serde_json::from_str(&text).unwrap();
+            match parsed {
+                WebSocketMessage::Event { event, timestamp } => {
+                    // Success
+                    match event {
+                        crate::websocket::ServerEvent::Groups(NewMessage {
+                                                                           message_id,
+                                                                           group_id,
+                                                                           sender_id,
+                                                                           sender_username,
+                                                                           content,
+                                                                           sent_at,
+                                                                       }) => {
+                            assert_eq!(content, "Test message from e2e test");
+                            break; // Exit after receiving the expected message
+                        }
+                        _ => {
+                            panic!("Unexpected event type");
+                        }
+                    }
+                }
+                _ => {
+                    panic!("Unexpected WS message type");
+                }
+            }
+        }
+        _ => {
+            panic!("Unexpected WS message type");
+        }
+    } */
     // Search for active connections in the group
-    let connection_ids = match group_service.broadcast_to_group(group_id).await {
+    let connection_ids = match group_service.connections_to_broadcast_new_message(group_id).await {
         Ok(res) => res,
         Err(e) => {
             warn!("Errore broadcast group {}: {:?}", group_id, e);
@@ -224,9 +259,23 @@ pub async fn handle_new_group_message(
         }
     };
 
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::NewMessage {
+            message_id: text_message.id,
+            group_id,
+            sender_id: text_message.sender_id,
+            sender_username: sender_user_username.clone(),
+            content: text_message.content.clone(),
+            sent_at: text_message.sent_at,
+        }),
+        timestamp: Utc::now(),
+    };
+
     for conn_id in connection_ids {
-        if let Err(e) = manager.send_to_connection(&conn_id, message.clone()).await {
-            warn!("Failed to send to connection {}: {}", conn_id, e);
+        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id.1, e);
+            continue;
         }
+        group_service.update_sent_at_for_a_user(conn_id.0, text_message.id).await;
     }
 }

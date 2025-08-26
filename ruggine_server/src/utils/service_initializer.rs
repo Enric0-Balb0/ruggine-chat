@@ -49,7 +49,8 @@ impl ServiceInitializer {
 
         // Create WebSocket group service
         let websocket_group_service = Arc::new(WebSocketGroupService::new(
-            group_membership_service.clone()
+            group_membership_service.clone(),
+            text_message_service.clone(),
         ));
 
         Self {

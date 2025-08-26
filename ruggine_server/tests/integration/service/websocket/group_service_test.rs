@@ -86,7 +86,7 @@ mod websocket_group_service_integration_tests {
         // member2 is not subscribed
 
         // Act
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
 
         // Assert
         assert!(result.is_ok(), "Failed to broadcast to group: {:?}", result);
@@ -94,9 +94,9 @@ mod websocket_group_service_integration_tests {
         
         // Should return connections for admin, member1, and member3 (3 connections)
         assert_eq!(connection_ids.len(), 3);
-        assert!(connection_ids.contains(&"admin_conn".to_string()));
-        assert!(connection_ids.contains(&"member1_conn".to_string()));
-        assert!(connection_ids.contains(&"member3_conn".to_string()));
+        assert!(connection_ids.iter().any(|(_, s)| s == "admin_conn"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "member1_conn"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "member3_conn"));
 
         // Cleanup
         cleanup_test_user_from_a_group_chat(member1.id, group_chat.id).await;
@@ -114,7 +114,7 @@ mod websocket_group_service_integration_tests {
         let nonexistent_group_id = 999999;
 
         // Act
-        let result = service.broadcast_to_group(nonexistent_group_id).await;
+        let result = service.connections_to_broadcast_new_message(nonexistent_group_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -136,7 +136,7 @@ mod websocket_group_service_integration_tests {
         let empty_group = create_test_group_chat_with_invitation_and_membership("ws_empty_group", admin_user.id).await;
 
         // Act
-        let result = service.broadcast_to_group(empty_group.id).await;
+        let result = service.connections_to_broadcast_new_message(empty_group.id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -181,7 +181,7 @@ mod websocket_group_service_integration_tests {
         assert_eq!(service.get_stats().await, 3);
 
         // Test broadcast
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 3);
@@ -191,7 +191,7 @@ mod websocket_group_service_integration_tests {
         assert_eq!(service.get_stats().await, 2);
 
         // Test broadcast again
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 2); // Only member2 now and admin
@@ -202,7 +202,7 @@ mod websocket_group_service_integration_tests {
         assert_eq!(service.get_stats().await, 0);
 
         // Test broadcast to group with no active connections
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 0);
@@ -256,7 +256,7 @@ mod websocket_group_service_integration_tests {
         assert_eq!(service.get_stats().await, 2); // Two users
 
         // Act
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -264,15 +264,15 @@ mod websocket_group_service_integration_tests {
         
         // Should return 4 connections total (3 for admin + 1 for member1)
         assert_eq!(connection_ids.len(), 4);
-        assert!(connection_ids.contains(&"admin_conn_1".to_string()));
-        assert!(connection_ids.contains(&"admin_conn_2".to_string()));
-        assert!(connection_ids.contains(&"admin_conn_3".to_string()));
-        assert!(connection_ids.contains(&"member1_conn".to_string()));
+        assert!(connection_ids.iter().any(|(_, s)| s == "admin_conn_1"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "admin_conn_2"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "admin_conn_3"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "member1_conn"));
 
         // Test cleanup of one connection for admin
         service.cleanup_connection("admin_conn_2").await;
         
-        let result = service.broadcast_to_group(group_chat.id).await;
+        let result = service.connections_to_broadcast_new_message(group_chat.id).await;
         assert!(result.is_ok());
         let connection_ids = result.unwrap();
         assert_eq!(connection_ids.len(), 3); // Should have 3 connections left
