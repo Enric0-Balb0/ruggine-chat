@@ -9,9 +9,6 @@ use crate::types::{
 };
 use serde::{Deserialize, Serialize};
 
-use leptos::*;
-
-
 /// Invitation management service
 #[derive(Clone)]
 pub struct InvitationService {

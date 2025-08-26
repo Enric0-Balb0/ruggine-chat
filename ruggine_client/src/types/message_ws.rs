@@ -1,3 +1,11 @@
+// Stato della connessione WebSocket condiviso tra client e hooks
+#[derive(Debug, Clone, PartialEq)]
+pub enum WsStatus {
+    Connecting,
+    Open,
+    Closed,
+    Error(String),
+}
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use serde_json::Value;
@@ -42,6 +50,10 @@ pub enum ClientAction {
 pub enum GroupAction {
     Join {},
     Leave {},
+    NewMessage {
+        group_id: i32,
+        content: String,
+    },
 }
 
 // =============

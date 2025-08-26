@@ -1091,6 +1091,10 @@ select {
   min-height: 0px;
 }
 
+.min-h-\[44px\] {
+  min-height: 44px;
+}
+
 .w-10 {
   width: 2.5rem;
 }
@@ -1238,6 +1242,10 @@ select {
 
 .resize-none {
   resize: none;
+}
+
+.resize {
+  resize: both;
 }
 
 .grid-cols-2 {
@@ -1911,6 +1919,10 @@ select {
 
 .text-right {
   text-align: right;
+}
+
+.align-middle {
+  vertical-align: middle;
 }
 
 .font-mono {
