@@ -18,6 +18,7 @@ pub fn use_group_user_cache(group_id: i32) -> RwSignal<HashMap<i32, UserProfile>
 
     // Fetch group members on mount
     create_effect(move |_| {
+        let user_cache_snapshot = user_cache.get(); // tracked here!
         let user_cache = user_cache.clone();
         let membership_service = membership_service.clone();
         let user_service = user_service.clone();
@@ -27,7 +28,7 @@ pub fn use_group_user_cache(group_id: i32) -> RwSignal<HashMap<i32, UserProfile>
                     for m in memberships {
                         let user_id = m.user_id;
                         // Avoid duplicates
-                        if !user_cache.get().contains_key(&user_id) {
+                        if !user_cache_snapshot.contains_key(&user_id) {
                             if let Ok(profile) = user_service.get_user_by_id(&user_id.to_string()).await {
                                 // Convert UserSearchResult -> UserProfile (partial, only basic fields)
                                 let user_profile = UserProfile {

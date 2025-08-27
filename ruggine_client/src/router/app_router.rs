@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_router::*;
-use crate::pages::{LandingPage, RegisterPage, HomePage};
+use crate::pages::{LandingPage, RegisterPage, HomePage, ProfilePage};
 use crate::components::AppLayout;
 use super::guards::AuthGuard;
 use super::login_guard::PublicGuard;
@@ -34,6 +34,15 @@ pub fn AppRouter() -> impl IntoView {
                         <AuthGuard>
                             <AppLayout>
                                 <HomePage />
+                            </AppLayout>
+                        </AuthGuard>
+                    }
+                } />
+                <Route path="/profile" view=|| {
+                    view! {
+                        <AuthGuard>
+                            <AppLayout>
+                                <ProfilePage />
                             </AppLayout>
                         </AuthGuard>
                     }

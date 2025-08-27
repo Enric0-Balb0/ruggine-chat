@@ -89,13 +89,14 @@ impl UserService {
 
 }
 
-/// User profile update request
+/// User profile update request (corrisponde a ProfileUpdateDto OpenAPI)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProfileUpdate {
-    pub username: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub address: Option<String>,
+    pub birthday: Option<String>,
+    pub gender: Option<String>,
 }
 
 impl Default for UserService {

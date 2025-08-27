@@ -1,4 +1,3 @@
-use crate::hooks::fetch_missing_users::fetch_missing_users;
 use leptos::*;
 use leptos::For;
 use leptos::html::Div;
@@ -13,6 +12,8 @@ use leptos_router::use_navigate;
 use crate::hooks::use_groups_context;
 use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
 use crate::hooks::use_group_socket_messages::use_group_socket_messages;
+use crate::hooks::use_group_initial_messages::use_group_initial_messages;
+use crate::hooks::fetch_missing_users::fetch_missing_users;
 use leptos::use_context;
 use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
 use crate::types::message::Message;
@@ -47,10 +48,8 @@ pub fn ChatView(
     use leptos::use_context;
     use crate::hooks::use_group_message_ws::UseGroupMessageWs;
     let ws_ctx = use_context::<Option<UseGroupMessageWs>>();
-
-    // Local signal for messages sent via REST (immediate)
+    // Signal per messaggi locali inviati via input
     let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
-    // Callback to add a local message
     let set_local_messages_rc = Rc::new(set_local_messages);
     let add_message: Rc<dyn Fn(Message)> = {
         let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
@@ -58,12 +57,36 @@ pub fn ChatView(
             set_local_messages_rc.update(|msgs| msgs.push(msg));
         })
     };
-    // Hook that returns all messages (socket + local), deduplicated and sorted
-    let messages = use_group_socket_messages(
+    let (initial_messages, initial_loading, initial_error) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
+    let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
+
+    let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
+    let set_local_messages_rc = Rc::new(set_local_messages);
+    let add_message: Rc<dyn Fn(Message)> = {
+        let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
+        Rc::new(move |msg: Message| {
+            set_local_messages_rc.update(|msgs| msgs.push(msg));
+        })
+    };
+    let ws_messages = use_group_socket_messages(
         group_data.membership.group_chat_id,
         ws_ctx.as_ref().and_then(|w| w.as_ref().cloned()),
         local_messages,
     );
+    let messages = create_memo(move |_| {
+        let mut all_msgs = Vec::new();
+        all_msgs.extend(initial_messages.get());
+        all_msgs.extend(ws_messages.get());
+        all_msgs.extend(local_messages.get());
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        for msg in all_msgs {
+            map.insert(msg.id, msg);
+        }
+        let mut deduped: Vec<_> = map.into_values().collect();
+        deduped.sort_by_key(|m| m.sent_at);
+        deduped
+    });
     let (dropdown_state, set_dropdown_state) = create_signal(DropdownState::Closed);
     let (invite_modal_open, set_invite_modal_open) = create_signal(false);
     let (group_details_modal_open, set_group_details_modal_open) = create_signal(false);
@@ -329,14 +352,15 @@ pub fn ChatView(
                 style=move || format!("{};padding-bottom:72px;", bg_url.get())
             >
                 {move || {
+                    let msgs = messages.get();
+                    let users = user_cache.get();
                     let storage_service = StorageService::new();
                     let user_profile = storage_service.get_user_profile();
-                    let msgs = messages.get();
-                    msgs.iter().enumerate().map(|(_idx, msg)| {
+                    msgs.iter().map(|msg| {
                         let (is_own, sender_username, sender_name, sender_surname) = if let Some(ref user) = user_profile {
                             if msg.sender_id == user.id {
                                 (true, user.username.clone(), user.first_name.clone(), user.last_name.clone())
-                            } else if let Some(sender) = user_cache.get().get(&msg.sender_id) {
+                            } else if let Some(sender) = users.get(&msg.sender_id) {
                                 (false, sender.username.clone(), sender.first_name.clone(), sender.last_name.clone())
                             } else {
                                 (false, "?".to_string(), "".to_string(), "".to_string())
