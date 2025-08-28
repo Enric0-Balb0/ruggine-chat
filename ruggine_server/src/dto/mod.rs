@@ -5,6 +5,7 @@ use crate::dto::group_chat_dto::{GroupChatReadDto, GroupChatCreateDto, GroupChat
 use crate::dto::invitation_dto::{InvitationReadDto, InvitationCreateDto, InvitationUpdateStatusDto, InvitationUpdateResponseDto};
 use crate::dto::group_membership_dto::{GroupMembershipReadDto, GroupMembershipCreateDto};
 use crate::dto::text_message_dto::{TextMessageReadDto, TextMessageCreateDto};
+use crate::dto::cpu_usage_log_dto::{CpuUsageLogReadDto, CpuUsageLogCreateDto};
 use crate::response::{PaginatedResponse};
 
 pub mod token_dto;
@@ -13,6 +14,8 @@ pub mod group_chat_dto;
 pub mod invitation_dto;
 pub mod group_membership_dto;
 pub mod text_message_dto;
+pub mod cpu_usage_log_dto;
+pub mod cpu_usage_log_pagination_dto;
 pub mod text_message_pagination_dto;
 
 api_success_response_alias!(ApiSuccessResponseUserReadDto, UserReadDto);
@@ -31,3 +34,4 @@ api_success_response_alias!(ApiSuccessResponseVecInvitationReadDto, Vec<Invitati
 api_success_response_alias!(ApiSuccessResponseTextMessageReadDto, TextMessageReadDto);
 pagination_metadata_alias!(PaginationMetadataDateTime, DateTime<Utc>);
 paginated_response_alias!(PaginatedTextMessageResponse, TextMessageReadDto, PaginationMetadataDateTime);
+paginated_response_alias!(PaginatedCpuUsageLogResponse, CpuUsageLogReadDto, PaginationMetadataDateTime);

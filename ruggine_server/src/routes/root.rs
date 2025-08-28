@@ -1,4 +1,4 @@
-use super::{auth_route, group_chat_route, group_membership_route, invitation_route, text_message_route, websocket};
+use super::{auth_route, cpu_usage_log_route, group_chat_route, group_membership_route, invitation_route, text_message_route, websocket};
 use crate::config::database::Database;
 use crate::docs::ApiDoc;
 use crate::routes::user_route;
@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::state::cpu_usage_log_state::CpuUsageLogState;
 
 pub fn routes(db_conn: Arc<Database>) -> Router {
     let auth_state = AuthState::new(&db_conn);
@@ -20,6 +21,7 @@ pub fn routes(db_conn: Arc<Database>) -> Router {
     let group_chat_state = GroupChatState::new(&db_conn);
     let invitation_state = InvitationState::new(&db_conn);
     let group_membership_state = GroupMembershipState::new(&db_conn);
+    let cpu_usage_log_state = CpuUsageLogState::new(&db_conn);
     
     // Crea lo stato per i WebSocket
     let websocket_state = WebSocketState::new(Arc::new(token_state.clone()), &db_conn);
@@ -39,6 +41,10 @@ pub fn routes(db_conn: Arc<Database>) -> Router {
         ))
         .nest("/group_membership", group_membership_route::routes(
             group_membership_state,
+            token_state.clone(),
+        ))
+        .nest("/cpu_usage_log", cpu_usage_log_route::routes(
+            cpu_usage_log_state,
             token_state.clone(),
         ))
         .nest("/ws", websocket::routes(websocket_state))

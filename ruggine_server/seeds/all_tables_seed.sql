@@ -1,4 +1,5 @@
 -- Drop della tabella se esiste già
+DROP TABLE IF EXISTS cpu_usage_log;
 DROP TABLE IF EXISTS "text_message_info";
 DROP TABLE IF EXISTS "text_message";
 DROP TABLE IF EXISTS "group_membership";
@@ -274,3 +275,17 @@ CREATE TRIGGER check_text_message_info
 BEFORE INSERT OR UPDATE ON text_message_info
 FOR EACH ROW
 EXECUTE FUNCTION validate_text_message_info();
+
+-- Creazione tabella CPU_USAGE_LOG
+CREATE TABLE cpu_usage_log (
+                               id SERIAL PRIMARY KEY,
+                               timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               cpu_usage_percent DECIMAL(5,2) NOT NULL
+);
+
+-- Inserimento di esempio
+INSERT INTO cpu_usage_log (cpu_usage_percent)
+VALUES
+    (12.50),
+    (37.89),
+    (85.20);

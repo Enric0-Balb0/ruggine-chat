@@ -77,7 +77,6 @@ erDiagram
         int id PK "SERIAL"
         timestamptz timestamp "NOT NULL, DEFAULT CURRENT_TIMESTAMP"
         decimal cpu_usage_percent "NOT NULL, DECIMAL(5,2)"
-        int monitored_by FK "NULLABLE"
     }
 
 

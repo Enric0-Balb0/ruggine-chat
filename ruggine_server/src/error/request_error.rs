@@ -2,27 +2,34 @@ use crate::response::api_response::ApiErrorResponse;
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::Request;
-use axum::extract::{rejection::JsonRejection, FromRequest};
+use axum::extract::{rejection::JsonRejection, FromRequest, FromRequestParts, Query};
+use axum::http::request::Parts;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::de::DeserializeOwned;
 use thiserror::Error;
 use tokio::sync::mpsc::UnboundedSender;
-use validator::Validate;
+use utoipa::IntoParams;
+use validator::{Validate, ValidationError, ValidationErrors};
+use crate::error::api_error::ApiError;
+use crate::error::db_error::DbError;
 use crate::websocket::message::{ControlMessage, WsError};
 use crate::websocket::WebSocketMessage;
 
 #[derive(Debug, Error)]
 pub enum RequestError {
     #[error(transparent)]
-    ValidationError(#[from] validator::ValidationErrors),
+    ValidationError(ValidationErrors),
     #[error(transparent)]
     JsonRejection(#[from] JsonRejection),
+    #[error(transparent)]
+    QueryValidationError(ValidationErrors),
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedRequest<T>(pub T);
 
+// per JSON body
 #[async_trait]
 impl<T, S> FromRequest<S, Body> for ValidatedRequest<T>
 where
@@ -33,15 +40,56 @@ where
 
     async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state).await?;
-        value.validate()?;
+        value.validate().map_err(RequestError::ValidationError)?;
         Ok(ValidatedRequest(value))
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ValidatedQuery<T>(pub T);
+
+#[async_trait::async_trait]
+impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
+where
+    T: DeserializeOwned + Validate,
+    S: Send + Sync,
+{
+    type Rejection = RequestError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Estrai la query dai parametri
+        let Query(query): Query<T> = Query::from_request_parts(parts, _state)
+            .await
+            .map_err(|err| {
+                // costruisci un ValidationErrors vuoto
+                let mut errors = ValidationErrors::new();
+
+                // crea un ValidationError con dentro il messaggio originale
+                let mut ve = ValidationError::new("query_deserialization");
+                ve.message = Some(err.to_string().into());
+
+                // aggiungilo come errore "globale", non legato a nessun campo
+                errors.add("", ve);
+
+                RequestError::QueryValidationError(errors)
+            })?;
+
+        // Applica la validazione validator
+        if let Err(errors) = query.validate() {
+            eprintln!("Validation errors: {:?}", errors);
+            return Err(RequestError::QueryValidationError(errors));
+        }
+
+        Ok(ValidatedQuery(query))
+    }
+}
 impl IntoResponse for RequestError {
     fn into_response(self) -> Response {
         match self {
             RequestError::ValidationError(_) => {
+                ApiErrorResponse::send(400, Some(self.to_string().replace('\n', ", ")))
+            }
+            RequestError::QueryValidationError(_) => {
                 ApiErrorResponse::send(400, Some(self.to_string().replace('\n', ", ")))
             }
             RequestError::JsonRejection(_) => ApiErrorResponse::send(400, Some(self.to_string())),

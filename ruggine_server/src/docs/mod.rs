@@ -28,16 +28,27 @@ use crate::{dto::{
             TextMessageReadDto,
             TextMessageInfoReadAtDtoUpdate,
         },
+        PaginatedCpuUsageLogResponse,
+        cpu_usage_log_dto::{
+            CpuUsageLogReadDto,
+        },
+        cpu_usage_log_pagination_dto::{
+            FindCpuUsageLogsByGroupQuery,
+            CpuUsageLogPaginationQuery,
+        },
     },
     entity::{user::{Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole, CurrentAction}},
 };
+
+
 use crate::handler::{
     auth_handler,
     user_handler,
     group_chat_handler,
     invitation_handler,
     group_membership_handler,
-    text_message_handler
+    text_message_handler,
+    cpu_usage_log_handler,
 };
 
 #[derive(OpenApi)]
@@ -64,6 +75,7 @@ use crate::handler::{
         text_message_handler::find_messages_not_sent_yet::find_messages_not_sent_yet,
         text_message_handler::find_messages_not_read_yet::find_messages_not_read_yet,
         text_message_handler::update_read_at::update_read_at,
+        cpu_usage_log_handler::find_paginated::find_paginated,
     ),
     components(
         schemas(
@@ -98,6 +110,10 @@ use crate::handler::{
             TextMessageReadDto,
             ApiSuccessResponseTextMessageReadDto,
             TextMessageInfoReadAtDtoUpdate,
+            PaginatedCpuUsageLogResponse,
+            FindCpuUsageLogsByGroupQuery,
+            CpuUsageLogPaginationQuery,
+            CpuUsageLogReadDto,
         )
     ),
     modifiers(&SecurityAddon),
@@ -108,6 +124,7 @@ use crate::handler::{
         (name = "Invitation", description = "Invitation management endpoints"),
         (name = "GroupMembership", description = "Group membership management endpoints"),
         (name = "TextMessage", description = "Text message management endpoints"),
+        (name = "CpuUsageLog", description = "Cpu usage log management endpoints"),
     ),
     info(
         title = "Ruggine Server API",

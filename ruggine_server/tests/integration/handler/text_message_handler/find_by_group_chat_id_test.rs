@@ -10,6 +10,7 @@ use crate::common::{
 #[cfg(test)]
 mod find_by_group_chat_id_handler_integration_tests {
     use ruggine_server::error::api_error::ApiError;
+    use ruggine_server::error::request_error::ValidatedQuery;
     use ruggine_server::error::text_message_error::TextMessageError;
     use crate::{cleanup_test_user_from_a_group_chat, create_test_group_chat_with_invitation_and_membership, test_user_leave_from_a_group};
     use super::*;
@@ -35,7 +36,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(unauthorized_user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -67,7 +68,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -111,7 +112,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -150,7 +151,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -189,7 +190,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -222,7 +223,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(non_existing_group_id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert - Should return error
@@ -251,7 +252,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -294,7 +295,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(creator_user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert
@@ -343,7 +344,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state.clone()),
             Path(group.id),
-            Query(first_page_query),
+            ValidatedQuery(first_page_query),
         ).await;
 
         assert!(first_result.is_ok(), "Handler should handle first page");
@@ -364,7 +365,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state.clone()),
             Path(group.id),
-            Query(second_page_query),
+            ValidatedQuery(second_page_query),
         ).await;
 
         // Act & Assert for second page
@@ -410,7 +411,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state.clone()),
             Path(group.id),
-            Query(exact_limit_query),
+            ValidatedQuery(exact_limit_query),
         ).await;
 
         assert!(exact_result.is_ok());
@@ -429,7 +430,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state.clone()),
             Path(group.id),
-            Query(large_limit_query),
+            ValidatedQuery(large_limit_query),
         ).await;
 
         assert!(large_result.is_ok());
@@ -447,7 +448,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(small_limit_query),
+            ValidatedQuery(small_limit_query),
         ).await;
 
         assert!(small_result.is_ok());
@@ -486,7 +487,7 @@ mod find_by_group_chat_id_handler_integration_tests {
             Extension(user.clone()),
             State(state),
             Path(group.id),
-            Query(pagination_query),
+            ValidatedQuery(pagination_query),
         ).await;
 
         // Assert

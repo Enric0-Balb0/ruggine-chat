@@ -5,15 +5,16 @@ use chrono::{DateTime, Utc};
 
 /// Pagination query specifically for text messages (uses DateTime cursor)
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Validate, IntoParams)]
+#[into_params(parameter_in = Query)] // <-- fondamentale con wrapper custom
 pub struct TextMessagePaginationQuery {
     /// Cursor for pagination (timestamp)
     #[schema(example = "2025-08-12T10:30:00Z")]
     pub cursor: Option<DateTime<Utc>>,
 
     /// Number of items to return (max 100)
-    #[serde(default = "default_limit")]
     #[validate(range(min = 1, max = 100))]
-    #[schema(example = 20, minimum = 1, maximum = 100)]
+    #[serde(default = "default_limit")]
+    #[schema(example = 20, minimum = 1, maximum = 100, default = 20)]
     pub limit: usize,
 }
 

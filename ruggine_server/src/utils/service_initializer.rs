@@ -2,12 +2,14 @@ use std::sync::Arc;
 use axum::extract::ws;
 
 use crate::config::database::Database;
+use crate::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
 use crate::service::group_chat_service::{GroupChatService, GroupChatServiceTrait};
 use crate::service::invitation_service::{InvitationService, InvitationServiceTrait};
 use crate::service::user_service::{UserService, UserServiceTrait};
 use crate::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
 use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
 use crate::repository::text_message_repository::TextMessageRepository;
+use crate::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
 use crate::service::websocket::{WebSocketGroupService, WebSocketGroupServiceTrait};
 
 /// ServiceInitializer manages the creation and initialization of all services
@@ -20,6 +22,7 @@ pub struct ServiceInitializer {
     group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
     text_message_service: Arc<dyn TextMessageServiceTrait>,
     websocket_group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    cpu_usage_log_service: Arc<dyn CpuUsageLogServiceTrait>,
 }
 
 impl ServiceInitializer {
@@ -47,6 +50,10 @@ impl ServiceInitializer {
         group_chat_service.set_invitation_service(invitation_service.clone());
         group_membership_service.set_invitation_service(invitation_service.clone());
 
+        let cpu_usage_log_service = Arc::new(CpuUsageLogService::new(
+            Arc::new(CpuUsageLogRepository::new(db_conn)),
+        ));
+
         // Create WebSocket group service
         let websocket_group_service = Arc::new(WebSocketGroupService::new(
             group_membership_service.clone(),
@@ -60,6 +67,7 @@ impl ServiceInitializer {
             group_membership_service,
             text_message_service,
             websocket_group_service,
+            cpu_usage_log_service,
         }
     }
 
@@ -91,5 +99,9 @@ impl ServiceInitializer {
     // Get the WebSocketGroupService instance
     pub fn websocket_group_service(&self) -> Arc<dyn WebSocketGroupServiceTrait> {
         Arc::clone(&self.websocket_group_service)
+    }
+
+    pub fn cpu_usage_log_service(&self) -> Arc<dyn CpuUsageLogServiceTrait> {
+        Arc::clone(&self.cpu_usage_log_service)
     }
 }

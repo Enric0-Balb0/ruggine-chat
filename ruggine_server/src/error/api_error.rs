@@ -1,6 +1,7 @@
 use crate::error::{db_error::DbError,token_error::TokenError, user_error::UserError };
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
+use crate::error::cpu_usage_log_error::CpuUsageLogError;
 use crate::error::group_chat_error::GroupChatError;
 use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::invitation_error::InvitationError;
@@ -22,6 +23,8 @@ pub enum ApiError {
     GroupMembershipError(#[from] GroupMembershipError),
     #[error(transparent)]
     TextMessageError(#[from] TextMessageError),
+    #[error(transparent)]
+    CpuUsageLogError(#[from] CpuUsageLogError),
 }
 
 impl IntoResponse for ApiError {
@@ -34,6 +37,7 @@ impl IntoResponse for ApiError {
             ApiError::InvitationError(error) => error.into_response(),
             ApiError::GroupMembershipError(error) => error.into_response(),
             ApiError::TextMessageError(error) => error.into_response(),
+            ApiError::CpuUsageLogError(error) => error.into_response(),
         }
     }
 }

@@ -1,15 +1,18 @@
 use axum::body::{to_bytes, Body};
 use axum::http::{Request, StatusCode};
 use axum::Router;
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
+use ruggine_server::config::database::DatabaseTrait;
 use ruggine_server::dto::group_chat_dto::GroupChatReadDto;
 use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
+use ruggine_server::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoReadAtDtoUpdate, TextMessageInfoSentAtDtoUpdate, TextMessageReadDto};
 use ruggine_server::entity::group_chat::GroupChat;
 use ruggine_server::entity::group_membership::{all_membership_statuses, MemberRole};
 use ruggine_server::entity::invitation::{Invitation, InvitationStatus, NewInvitation};
-use ruggine_server::entity::text_message::{NewTextMessage, TextMessage, TextMessageInfoUpdate};
+use ruggine_server::entity::text_message::{NewTextMessage, TextMessage};
 use ruggine_server::entity::user::User;
 use ruggine_server::factory::group_chat_factory::GroupChatFactory;
 use ruggine_server::factory::user_factory::UserFactory;
@@ -19,9 +22,10 @@ use ruggine_server::repository::group_membership_repository::{GroupMembershipRep
 use ruggine_server::repository::invitation_repository::{InvitationRepository, InvitationRepositoryTrait};
 use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
 use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
-use ruggine_server::routes::{auth_route, group_chat_route, group_membership_route, invitation_route, text_message_route, user_route};
+use ruggine_server::routes::{auth_route, cpu_usage_log_route, group_chat_route, group_membership_route, invitation_route, text_message_route, user_route};
 use ruggine_server::service::user_service::{UserService, UserServiceTrait};
 use ruggine_server::state::auth_state::AuthState;
+use ruggine_server::state::cpu_usage_log_state::CpuUsageLogState;
 use ruggine_server::state::group_chat_state::GroupChatState;
 use ruggine_server::state::group_membership_state::GroupMembershipState;
 use ruggine_server::state::invitation_state::InvitationState;
@@ -33,20 +37,18 @@ use ruggine_server::utils::service_initializer::ServiceInitializer;
 use ruggine_server::websocket::WebSocketMessage;
 use ruggine_server::{config::database::Database, entity::invitation::UpdateInvitationStatus};
 use serde_json::json;
+use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicU64;
-use std::sync::Once;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use sqlx::postgres::PgPoolOptions;
+use std::sync::Once;
+use bigdecimal::FromPrimitive;
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, OnceCell};
 use tokio_tungstenite::connect_async;
 use tower::ServiceExt;
 use tungstenite::Message;
-use ruggine_server::config::database::DatabaseTrait;
-use ruggine_server::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoReadAtDtoUpdate, TextMessageInfoSentAtDtoUpdate, TextMessageReadDto};
 
 static INIT_LOG: Once = Once::new();
 static DB_POOL: OnceCell<PgPool> = OnceCell::const_new();
@@ -152,6 +154,13 @@ pub async fn create_websocket_router() -> Router {
     ruggine_server::routes::websocket::routes(websocket_state)
 }
 
+pub async fn create_cpu_usage_log_router() -> Router {
+    let db = get_database().await;
+    let cpu_usage_log_state = CpuUsageLogState::new(&db);
+    let token_state = TokenState::new(&db);
+    cpu_usage_log_route::routes(cpu_usage_log_state, token_state)
+}
+
 /// Helper function to create the full application router for e2e tests
 pub async fn create_full_router() -> Router {
     let db = get_database().await;
@@ -181,6 +190,92 @@ pub async fn create_test_user(prefix: &str) -> (User, String) {
     let password = "testpassword123".to_string();
     let user = create_test_user_with_password(prefix, password.clone()).await;
     (user, password)
+}
+
+/// Helper function to create a test admin user with specific user type
+pub async fn create_test_admin_user(prefix: &str) -> (User, String) {
+    use ruggine_server::entity::user::UserType;
+    use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
+    
+    let db = get_database().await;
+    let user_service = UserService::new(&db);
+    let repository = UserRepository::new(&db);
+
+    let mut user_dto = UserFactory::unique_fake_user_register_dto(prefix);
+    let password = "testpassword123".to_string();
+    user_dto.password = password.clone();
+    
+    let create_result = user_service.create_user(user_dto.clone()).await;
+    assert!(create_result.is_ok(), "Failed to create user for admin test");
+
+    // Get the created user from database
+    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap();
+    
+    // Update user type to Admin using direct SQL since there's no update service method for user_type
+    let result = sqlx::query(
+        r#"UPDATE "user" SET user_type = 'admin' WHERE id = $1"#
+    )
+        .bind(user.id)
+        .execute(db.get_pool())
+        .await;
+    
+    assert!(result.is_ok(), "Failed to update user to admin type");
+    assert_eq!(result.unwrap().rows_affected(), 1, "User was not marked as admin unexpectedly");
+    
+    // Update the user object
+    user.user_type = UserType::Admin;
+    
+    (user, password)
+}
+
+/// Helper function to create a test developer user
+pub async fn create_test_developer_user(prefix: &str) -> (User, String) {
+    use ruggine_server::entity::user::UserType;
+    use ruggine_server::repository::user_repository::{UserRepository, UserRepositoryTrait};
+    
+    let db = get_database().await;
+    let user_service = UserService::new(&db);
+    let repository = UserRepository::new(&db);
+
+    let mut user_dto = UserFactory::unique_fake_user_register_dto(prefix);
+    let password = "testpassword123".to_string();
+    user_dto.password = password.clone();
+    
+    let create_result = user_service.create_user(user_dto.clone()).await;
+    assert!(create_result.is_ok(), "Failed to create user for developer test");
+
+    // Get the created user from database
+    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap();
+    
+    // Update user type to Developer using direct SQL
+    let result = sqlx::query(
+        r#"UPDATE "user" SET user_type = 'developer' WHERE id = $1"#
+    )
+        .bind(user.id)
+        .execute(db.get_pool())
+        .await;
+
+    assert!(result.is_ok(), "Failed to update user to developer type");
+    assert_eq!(result.unwrap().rows_affected(), 1, "User was not marked as developer unexpectedly");
+    
+    // Update the user object
+    user.user_type = UserType::Developer;
+    
+    (user, password)
+}
+
+/// Helper function to create admin login and get token
+pub async fn create_admin_login_and_get_token(prefix: String) -> (User, String, String) {
+    let (user, password) = create_test_admin_user(&prefix).await;
+    let token = login_and_get_token_for_user(&user, &password).await;
+    (user, password, token)
+}
+
+/// Helper function to create developer login and get token  
+pub async fn create_developer_login_and_get_token(prefix: String) -> (User, String, String) {
+    let (user, password) = create_test_developer_user(&prefix).await;
+    let token = login_and_get_token_for_user(&user, &password).await;
+    (user, password, token)
 }
 
 // Helper function to log in and get token
@@ -699,6 +794,32 @@ pub async fn mark_message_as_sent(auth_user_id: i32, text_message_id: i32, sent_
         Err(e) => panic!("Failed mark message as sent: {:?}", e),
     }
 }
+
+// Cleanup a cpu_usage_log_service by id
+pub async fn cleanup_cpu_usage_log(id: i32) {
+    let db = get_database().await;
+    let repository = ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository::new(&db);
+    let _ = repository.delete_by_id(id).await;
+}
+
+// Create a test CPU usage log entry
+pub async fn create_test_cpu_usage_log(cpu_percent: f32) -> ruggine_server::entity::cpu_usage_log::CpuUsageLog {
+    use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
+    use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository_trait::CpuUsageLogRepositoryTrait;
+    use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
+    use bigdecimal::BigDecimal;
+    
+    let db = get_database().await;
+    let repository = CpuUsageLogRepository::new(&db);
+    
+    let new_log = CpuUsageLogFactory::fake_new_cpu_usage_log_with_percent(BigDecimal::from_f32(cpu_percent).unwrap());
+    
+    match repository.insert(new_log).await {
+        Ok(log) => repository.find(log).await.unwrap(),
+        Err(e) => panic!("Failed to create test CPU usage log: {:?}", e),
+    }
+}
+
 fn init_test_logging() {
     INIT_LOG.call_once(|| {
         let _ = env_logger::builder().is_test(true).try_init();

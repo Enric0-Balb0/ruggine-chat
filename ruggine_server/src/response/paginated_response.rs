@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
+use crate::dto::cpu_usage_log_dto::CpuUsageLogReadDto;
 use crate::dto::text_message_dto::TextMessageReadDto;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
@@ -82,6 +82,7 @@ impl<T, C> PaginatedResponse<T, C> {
 
 pub type PaginationMetadataDateTime = PaginationMetadata<DateTime<Utc>>;
 pub type PaginatedTextMessageResponse = PaginatedResponse<TextMessageReadDto, DateTime<Utc>>;
+pub type PaginatedCpuUsageLogResponse = PaginatedResponse<CpuUsageLogReadDto, DateTime<Utc>>;
 
 #[cfg(test)]
 mod tests {

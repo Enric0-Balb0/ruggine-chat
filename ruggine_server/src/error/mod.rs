@@ -9,3 +9,4 @@ pub mod group_membership_error;
 pub mod text_message_error;
 pub mod web_socket_error;
 pub mod connection_error;
+pub mod cpu_usage_log_error;

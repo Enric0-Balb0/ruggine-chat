@@ -5,3 +5,4 @@ pub mod invitation;
 pub mod group_membership;
 pub mod text_message;
 pub mod websocket;
+pub mod cpu_usage_log;
