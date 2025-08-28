@@ -36,6 +36,7 @@ use crate::{dto::{
             FindCpuUsageLogsByGroupQuery,
             CpuUsageLogPaginationQuery,
         },
+        ApiSuccessResponseVecUserId,
     },
     entity::{user::{Gender, UserStatus, UserType}, invitation::{InvitationStatus}, group_membership::{MembershipStatus, MemberRole, CurrentAction}},
 };
@@ -70,6 +71,7 @@ use crate::handler::{
         group_membership_handler::find_by_user_id::find_by_user_id,
         group_membership_handler::find_active_by_id_and_user_id::find_active_by_id_and_user_id,
         group_membership_handler::leave_group::leave_group,
+        group_membership_handler::find_connected_users_and_online::find_connected_users_and_online,
         text_message_handler::find_by_group_chat_id::find_by_group_chat_id,
         text_message_handler::create::create,
         text_message_handler::find_messages_not_sent_yet::find_messages_not_sent_yet,
@@ -114,6 +116,7 @@ use crate::handler::{
             FindCpuUsageLogsByGroupQuery,
             CpuUsageLogPaginationQuery,
             CpuUsageLogReadDto,
+            ApiSuccessResponseVecUserId
         )
     ),
     modifiers(&SecurityAddon),

@@ -1,4 +1,4 @@
-use crate::dto::user_dto::{UserReadDto, UserRegisterDto, ProfileUpdateDto};
+use crate::dto::user_dto::{UserReadDto, UserRegisterDto, ProfileUpdateDto, UpdateOnlineDto};
 use crate::entity::user::{User, UpdateUser};
 use crate::error::api_error::ApiError;
 use async_trait::async_trait;
@@ -13,4 +13,5 @@ pub trait UserServiceTrait: Send + Sync {
     async fn update_user_profile(&self, user_id: i32, update_user: ProfileUpdateDto) -> Result<UserReadDto, ApiError>;
     async fn find_by_id(&self, id: i32) -> Result<UserReadDto, ApiError>;
     async fn find_by_username(&self, username: String) -> Result<Option<UserReadDto>, ApiError>;
+    async fn update_online(&self, user_id: i32, update_online: UpdateOnlineDto) -> Result<(), ApiError>;
 }

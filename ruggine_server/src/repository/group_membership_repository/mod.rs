@@ -8,6 +8,7 @@ mod find_by_user_id_and_group_id;
 mod find_by_group_chat_id;
 pub mod find_active_by_user_id_and_group_id;
 mod find_connected_users;
+mod find_connected_users_and_online;
 
 pub use group_membership_repository_trait::GroupMembershipRepositoryTrait;
 pub use group_membership_repository::GroupMembershipRepository;

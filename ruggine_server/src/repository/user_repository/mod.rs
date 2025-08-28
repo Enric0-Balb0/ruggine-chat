@@ -5,6 +5,7 @@ mod find;
 mod insert;
 mod update_profile;
 mod find_by_username;
+mod update_online;
 
 use async_trait::async_trait;
 use sqlx::Error;
@@ -32,5 +33,9 @@ impl UserRepositoryTrait for UserRepository {
 
     async fn find_by_username(&self, username: String) -> Result<Option<User>, Error> {
         self.find_by_username_inner(username).await
+    }
+
+    async fn update_online(&self, user_id: i32, is_online: bool) -> Result<(), Error> {
+        self.update_online_inner(user_id, is_online).await
     }
 }

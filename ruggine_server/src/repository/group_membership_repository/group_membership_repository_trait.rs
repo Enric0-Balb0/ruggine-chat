@@ -19,6 +19,10 @@ pub trait GroupMembershipRepositoryTrait: Send + Sync {
         &self,
         user_id: i32,
     ) -> Result<Vec<i32>, SqlxError>;
+    async fn find_connected_users_and_online(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<i32>, Error>;
 
     /* // user_id is passed because the user can see all other memberships in the group
     // only if he is a member of the group

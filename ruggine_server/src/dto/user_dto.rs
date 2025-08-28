@@ -115,6 +115,12 @@ pub struct ProfileUpdateDto {
     pub gender: Option<Gender>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq, ToSchema)]
+pub struct UpdateOnlineDto {
+    #[schema(example = "false")]
+    pub online: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
 #[schema(example = json!({
     "id": 1,

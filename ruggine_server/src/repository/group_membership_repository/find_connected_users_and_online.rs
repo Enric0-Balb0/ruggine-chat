@@ -3,7 +3,7 @@ use crate::config::database::DatabaseTrait;
 use crate::repository::group_membership_repository::GroupMembershipRepository;
 
 impl GroupMembershipRepository {
-    pub async fn find_connected_users_inner(
+    pub async fn find_connected_users_and_online_inner(
         &self,
         user_id: i32,
     ) -> Result<Vec<i32>, Error> {
@@ -19,6 +19,7 @@ impl GroupMembershipRepository {
           AND gm1.membership_status = 'active'
           AND gm2.membership_status = 'active'
           AND i2.to_user_id != $1
+          AND u.is_online = TRUE
           AND u.user_status = 'active'
         "#
         )

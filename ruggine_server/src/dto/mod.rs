@@ -32,6 +32,7 @@ api_success_response_alias!(ApiSuccessResponseVecGroupMembershipReadDto, Vec<Gro
 api_success_response_alias!(ApiSuccessResponseInvitationUpdateResponseDto, InvitationUpdateResponseDto);
 api_success_response_alias!(ApiSuccessResponseVecInvitationReadDto, Vec<InvitationReadDto>);
 api_success_response_alias!(ApiSuccessResponseTextMessageReadDto, TextMessageReadDto);
+api_success_response_alias!(ApiSuccessResponseVecUserId, Vec<i32>);
 pagination_metadata_alias!(PaginationMetadataDateTime, DateTime<Utc>);
 paginated_response_alias!(PaginatedTextMessageResponse, TextMessageReadDto, PaginationMetadataDateTime);
 paginated_response_alias!(PaginatedCpuUsageLogResponse, CpuUsageLogReadDto, PaginationMetadataDateTime);

@@ -80,6 +80,7 @@ async fn test_concurrent_insert_cpu_usage_log() {
 }
 
 #[tokio_shared_rt::test(shared)]
+#[serial]
 async fn test_insert_and_fetch_extreme_values() {
     cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;

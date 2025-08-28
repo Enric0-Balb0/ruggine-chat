@@ -77,4 +77,11 @@ impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
     ) -> Result<Vec<i32>, SqlxError> {
         self.find_connected_users_inner(user_id).await
     }
+
+    async fn find_connected_users_and_online(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<i32>, SqlxError> {
+        self.find_connected_users_and_online_inner(user_id).await
+    }
 }

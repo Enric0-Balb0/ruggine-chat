@@ -6,10 +6,10 @@ mod find_by_id;
 mod find_by_username;
 pub mod user_service;
 pub mod user_service_trait;
-
+mod update_online;
 
 use async_trait::async_trait;
-use crate::dto::user_dto::{ProfileUpdateDto, UserReadDto, UserRegisterDto};
+use crate::dto::user_dto::{ProfileUpdateDto, UpdateOnlineDto, UserReadDto, UserRegisterDto};
 use crate::entity::user::{User, UpdateUser};
 use crate::error::api_error::ApiError;
 pub use crate::service::user_service::user_service::UserService;
@@ -37,5 +37,9 @@ impl UserServiceTrait for UserService {
 
     async fn find_by_username(&self, username: String) -> Result<Option<UserReadDto>, ApiError> {
         self.find_by_username_internal(username).await
+    }
+
+    async fn update_online(&self, user_id: i32, update_online: UpdateOnlineDto) -> Result<(), ApiError> {
+        self.update_online_internal(user_id, update_online).await
     }
 }

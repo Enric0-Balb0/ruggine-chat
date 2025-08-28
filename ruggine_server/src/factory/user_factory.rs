@@ -208,4 +208,22 @@ impl UserFactory {
         }
     }
 
+    pub fn fake_update_online_dto_true() -> crate::dto::user_dto::UpdateOnlineDto {
+        crate::dto::user_dto::UpdateOnlineDto {
+            online: true,
+        }
+    }
+
+    pub fn fake_update_online_dto_false() -> crate::dto::user_dto::UpdateOnlineDto {
+        crate::dto::user_dto::UpdateOnlineDto {
+            online: false,
+        }
+    }
+
+    pub fn fake_update_online_dto(online: bool) -> crate::dto::user_dto::UpdateOnlineDto {
+        crate::dto::user_dto::UpdateOnlineDto {
+            online,
+        }
+    }
+
 }
