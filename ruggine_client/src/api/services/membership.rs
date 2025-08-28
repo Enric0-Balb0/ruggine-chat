@@ -6,7 +6,6 @@ use crate::types::membership::{
     ApiSuccessResponseVecGroupMembershipReadDto,
     ApiSuccessResponseGroupMembershipReadDto,
     GroupMembership,
-    GroupMembershipReadDto,
 };
 use serde::Serialize;
 

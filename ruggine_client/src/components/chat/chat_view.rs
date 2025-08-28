@@ -1,17 +1,12 @@
 use crate::context::unread_counts_context::use_unread_counts_context;
 use leptos::*;
-use leptos::For;
 use leptos::html::Div;
 // use wasm_bindgen::JsCast; // già importato sopra
 use web_sys::{Element, HtmlDivElement};
-use web_sys::js_sys;
 // use wasm_bindgen::JsCast; // già importato sopra
 // Importa il trait per get_bounding_client_rect
-use web_sys::Element as _;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsValue;
-use std::rc::Rc;
 use crate::hooks::GroupMembershipWithDetails;
 use crate::api::services::GroupMembershipService;
 use crate::components::use_toast;
@@ -20,16 +15,10 @@ use crate::hooks::use_groups_context;
 use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
 use crate::hooks::use_group_socket_messages::use_group_socket_messages;
 use crate::hooks::use_group_initial_messages::use_group_initial_messages;
-use crate::hooks::fetch_missing_users::fetch_missing_users;
-use leptos::use_context;
 use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
 use crate::types::message::Message;
 use crate::utils::storage::StorageService;
-use crate::api::client::ApiClient;
-use crate::types::user::UserProfile;
-use std::collections::HashMap;
 use crate::hooks::use_group_user_cache::use_group_user_cache;
-use chrono::{TimeZone, Utc, Datelike, NaiveDate};
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -74,7 +63,7 @@ pub fn ChatView(
                 use crate::config::constants::AppConstants;
                 use crate::utils::storage::StorageService;
                 use crate::api::client::ApiClient;
-                let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
                 let storage_service = StorageService::new();
                 if let Some(token) = storage_service.get_token() {
                     http_client.set_auth_token(Some(token.token));
@@ -249,16 +238,16 @@ pub fn ChatView(
         match action {
             ChatHeaderAction::InviteMembers => {
                 set_invite_modal_open.set(true);
-                logging::log!("Opening invite modal");
+                
             }
             ChatHeaderAction::GroupDetails => {
                 set_group_details_modal_open.set(true);
-                logging::log!("Opening group details modal");
+                
             }
             ChatHeaderAction::LeaveGroup => {
                 set_leave_modal_open.set(true);
                 set_leave_error.set(None);
-                logging::log!("Showing leave confirmation");
+                
             }
         }
     };
@@ -299,7 +288,7 @@ pub fn ChatView(
                         toast.success("Hai abbandonato il gruppo con successo!");
                         // Redirect to home
                         navigate("/", Default::default());
-                        leptos::logging::log!("Left group successfully");
+                        // left group
                     }
                     Err(e) => {
                         set_leave_loading.set(false);
@@ -335,7 +324,7 @@ pub fn ChatView(
 
     // Handle invite member
     let handle_invite_member = move |invite_request: InviteMemberRequest| {
-        logging::log!("Inviting user: {} with role: {:?}", invite_request.username, invite_request.role);
+        
     // TODO: Implement actual invitation logic
         set_invite_modal_open.set(false);
     };

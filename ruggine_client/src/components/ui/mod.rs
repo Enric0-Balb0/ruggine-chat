@@ -5,7 +5,6 @@ pub use icons::*;
 
 // Loaders
 pub mod loaders;
-pub use loaders::*;
 
 // Feedback
 pub mod feedback;

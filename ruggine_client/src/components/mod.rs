@@ -18,13 +18,11 @@ pub mod theme;
 // Re-exports for backward compatibility and ease of use
 pub use ui::{
     UserAvatar,
-    LucideIcon, IconSize,
-    CircleLoader, InlineSpinner, LoadingButton,
-    Toast, ToastMessage, ToastType, ToastProvider, ToastContainer, use_toast,
+    LucideIcon, IconSize, ToastProvider, use_toast,
 };
 
 pub use layout::{AppLayout, AppNavbar, Sidebar};
-pub use modals::{CreateGroupModal, InviteMemberModal, InviteMemberRequest, MemberRole, GroupDetailsModal, GroupMember};
-pub use chat::{ChatView, ChatHeaderAction, MessageInputArea};
+pub use modals::{CreateGroupModal, InviteMemberModal, InviteMemberRequest, GroupDetailsModal};
+pub use chat::{ChatView, MessageInputArea};
 pub use groups::{GroupItem, CreateGroupButton, ShowInvitesButton};
 pub use theme::{ThemeToggle, ThemeSlider};

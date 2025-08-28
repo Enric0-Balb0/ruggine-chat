@@ -3,11 +3,10 @@ use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::{
-	Invitation, InvitationCreateRequest, InvitationUpdateRequest, InvitationStatus,
-	ApiSuccessResponseInvitationReadDto, ApiSuccessResponseVecInvitationReadDto, InvitationReadDto, InvitationUpdateDto,
+	Invitation, InvitationCreateRequest, InvitationUpdateRequest,
+	ApiSuccessResponseInvitationReadDto, ApiSuccessResponseVecInvitationReadDto, InvitationUpdateDto,
 	ApiSuccessResponseInvitationUpdateDto,
 };
-use serde::{Deserialize, Serialize};
 
 /// Invitation management service
 #[derive(Clone)]

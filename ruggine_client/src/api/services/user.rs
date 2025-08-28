@@ -1,4 +1,3 @@
-use crate::types::user::ApiSuccessResponseUserOptionReadDto;
 use crate::api::client::ApiClient;
 use crate::utils::storage::StorageService;
 use crate::error::AuthError;

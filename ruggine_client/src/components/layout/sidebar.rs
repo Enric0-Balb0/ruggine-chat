@@ -41,10 +41,10 @@ pub fn Sidebar(
         if let Some(window) = web_sys::window() {
             if let Some(storage) = window.local_storage().ok().flatten() {
                 if let Ok(Some(_token)) = storage.get_item("ruggine_auth_token") {
-                    logging::log!("Token found, fetching groups...");
+                    
                     groups_hook.refresh_groups.dispatch(());
                 } else {
-                    logging::log!("No token found, skipping groups fetch");
+                    
                 }
             }
         }
@@ -56,7 +56,7 @@ pub fn Sidebar(
     
     let handle_group_click = move |group_id: i32| {
         set_active_group.set(Some(group_id));
-        logging::log!("Selected group: {}", group_id);
+        
     };
 
 
@@ -65,7 +65,7 @@ pub fn Sidebar(
     let (invites, set_invites) = create_signal(Vec::<Invitation>::new());
     let (is_loading_invites, set_is_loading_invites) = create_signal(false);
 
-    use std::rc::Rc;
+    
 
     let handle_create_click = move |_| {
         on_create_group_click.call(());
@@ -77,7 +77,7 @@ pub fn Sidebar(
         // Fetch inviti async
         spawn_local(async move {
             let storage_service = crate::utils::storage::StorageService::new();
-            let mut http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage_service.get_token() {
                 http_client.set_auth_token(Some(token_response.token));
             }

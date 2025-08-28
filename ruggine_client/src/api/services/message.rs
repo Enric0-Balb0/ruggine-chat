@@ -5,7 +5,6 @@ use crate::config::endpoints::ApiEndpoints;
 use crate::types::message::{
     TextMessageCreateRequest, TextMessageReadDto, PaginatedTextMessageResponse, Message, MessagePage
 };
-use serde_json::json;
 
 #[derive(Clone)]
 pub struct MessageService {

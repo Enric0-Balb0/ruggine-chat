@@ -15,7 +15,7 @@ pub fn use_group_initial_messages(group_chat_id: i32, limit: i32) -> (ReadSignal
     create_effect(move |_| {
         set_loading.set(true);
         set_error.set(None);
-        leptos::logging::log!("[DEBUG] use_group_initial_messages: fetching for group {} limit {}", group_chat_id, limit);
+    // debug: fetching initial messages for group
         spawn_local(async move {
             let storage_service = StorageService::new();
             let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
@@ -26,12 +26,12 @@ pub fn use_group_initial_messages(group_chat_id: i32, limit: i32) -> (ReadSignal
             match service.get_messages_by_group(group_chat_id, None, Some(limit)).await {
                 Ok(page) => {
                     let msgs = page.data.clone();
-                    leptos::logging::log!("[DEBUG] use_group_initial_messages: fetch ok, {} messaggi", msgs.len());
+                    // debug: fetch ok
                     set_messages.set(msgs);
                     set_loading.set(false);
                 }
                 Err(e) => {
-                    leptos::logging::log!("[DEBUG] use_group_initial_messages: fetch error: {}", e);
+                    // debug: fetch error: {e}
                     set_error.set(Some(format!("Errore: {}", e)));
                     set_loading.set(false);
                 }

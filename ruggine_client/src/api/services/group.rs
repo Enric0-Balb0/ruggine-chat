@@ -3,7 +3,6 @@ use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::group::{GroupChatCreateRequest, ApiSuccessResponseGroupChatReadDto, GroupChat};
-use crate::types::membership::{ApiSuccessResponseVecGroupMembershipReadDto, GroupMembership};
 use serde::{Deserialize, Serialize};
 
 /// Group chat management service

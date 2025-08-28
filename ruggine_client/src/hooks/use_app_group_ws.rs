@@ -11,11 +11,11 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
     // Log token presence and when a WS context is created
     create_effect(move |_| {
         match token.get() {
-            Some(t) => leptos::logging::log!("[WS-APP] token present (len={}), creating/using WS memo", t.len()),
-            None => leptos::logging::log!("[WS-APP] no token available - WS will not be created"),
+                Some(_t) => {},
+                None => {},
         }
         if let Some(ws_ctx) = ws.get() {
-            leptos::logging::log!("[WS-APP] use_group_message_ws created (status={:?})", ws_ctx.status.get());
+                
             // If already open, send join request
             if let WsStatus::Open = ws_ctx.status.get() {
                 ws_ctx.send_message.set(Some(WebSocketMessage::Request {
@@ -30,7 +30,7 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
     create_effect(move |_| {
         if let Some(ws_ctx) = ws.get() {
             let status = ws_ctx.status.get();
-            leptos::logging::log!("[WS-APP][STATUS] group WS status changed: {:?}", status);
+                
         }
     });
 
