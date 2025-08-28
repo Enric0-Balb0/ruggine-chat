@@ -4,6 +4,9 @@ use crate::config::endpoints::WebSocketEndpoints;
 use crate::config::constants::AppConstants;
 use crate::types::WebSocketMessage;
 use crate::types::message_ws::WsStatus;
+use crate::context::unread_counts_context::use_unread_counts_context;
+use crate::types::message_ws::{ServerEvent, GroupEvent};
+use crate::utils::storage::StorageService;
 
 #[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
@@ -20,13 +23,34 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     let (send_message, set_send_message) = create_signal(None::<WebSocketMessage>);
     let (disconnect, set_disconnect) = create_signal(false);
 
+    // Capture global unread_counts context here so we can update badges from the WS callback
+    let unread_counts = use_unread_counts_context();
+
     // Clone the signal to ensure it is shared between closures and the hook
     let set_messages_shared = set_messages.clone();
     let ws_service = std::rc::Rc::new(std::cell::RefCell::new(MessageWsService::new(status)));
-    ws_service.borrow_mut().set_on_message(move |msg: WebSocketMessage| {
-        set_messages_shared.update(|msgs| {
-            msgs.push(msg.clone());
-        });
+    ws_service.borrow_mut().set_on_message({
+        let ws_service = ws_service.clone();
+        move |msg: WebSocketMessage| {
+            // push incoming message into local messages buffer
+            set_messages_shared.update(|msgs| {
+                msgs.push(msg.clone());
+            });
+
+            // If this is a Group NewMessage event, increment the global unread_counts
+            if let WebSocketMessage::Event { event, .. } = &msg {
+                if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
+                    // avoid increment for messages sent by current user
+                    let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
+                    if Some(*sender_id) != current_user_id {
+                        let mut cloned = unread_counts.get().clone();
+                        let prev = cloned.get(group_id).cloned().unwrap_or(0);
+                        cloned.insert(*group_id, prev.saturating_add(1));
+                        unread_counts.set(cloned);
+                    }
+                }
+            }
+        }
     });
 
     // Manual connection on mount and cleanup

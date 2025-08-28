@@ -8,6 +8,7 @@ pub fn AppLayout(children: ChildrenFn) -> impl IntoView {
     let auth_ctx = use_auth_context();
     let token = auth_ctx.token.read_only();
     let ws_ctx = use_app_group_ws(token);
+    leptos::logging::log!("[APP-LAYOUT] Providing ws_ctx to context: present={}", ws_ctx.is_some());
     provide_context(ws_ctx);
 
     view! {

@@ -47,4 +47,28 @@ impl MessageService {
         let resp: PaginatedTextMessageResponse = self.http_client.get(&url).await.map_err(AuthError::from)?;
         Ok(MessagePage::from(resp))
     }
+    /// Recupera i messaggi non letti di un gruppo
+    pub async fn get_messages_not_read_yet(
+        &self,
+        group_chat_id: i32,
+    ) -> Result<MessagePage, AuthError> {
+        let url = ApiEndpoints::text_messages_not_read_yet(&group_chat_id.to_string());
+        let resp: PaginatedTextMessageResponse = self.http_client.get(&url).await.map_err(AuthError::from)?;
+        Ok(MessagePage::from(resp))
+    }
+
+    /// Aggiorna la lettura di un messaggio (update read_at)
+    pub async fn update_message_read_at(
+        &self,
+        text_message_id: i32,
+        read_at: String,
+    ) -> Result<(), AuthError> {
+        use crate::types::message::TextMessageInfoReadAtDtoUpdate;
+        let req = TextMessageInfoReadAtDtoUpdate { text_message_id, read_at };
+        // La risposta non viene usata, ma si può gestire se serve
+        let _resp: crate::types::message::ApiSuccessResponseUserReadDto =
+            self.http_client.patch(ApiEndpoints::TEXT_MESSAGE_UPDATE_READ_AT, &req).await.map_err(AuthError::from)?;
+
+        Ok(())
+    }
 }

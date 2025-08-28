@@ -1,6 +1,13 @@
+use crate::context::unread_counts_context::use_unread_counts_context;
 use leptos::*;
 use leptos::For;
 use leptos::html::Div;
+// use wasm_bindgen::JsCast; // già importato sopra
+use web_sys::{Element, HtmlDivElement};
+use web_sys::js_sys;
+// use wasm_bindgen::JsCast; // già importato sopra
+// Importa il trait per get_bounding_client_rect
+use web_sys::Element as _;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsValue;
@@ -51,28 +58,64 @@ pub fn ChatView(
     // Signal per messaggi locali inviati via input
     let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
     let set_local_messages_rc = Rc::new(set_local_messages);
+    let unread_counts = use_unread_counts_context();
+    let group_id_for_update = group_data.membership.group_chat_id;
     let add_message: Rc<dyn Fn(Message)> = {
         let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
+        let unread_counts = unread_counts.clone();
+        let group_id = group_id_for_update;
         Rc::new(move |msg: Message| {
-            set_local_messages_rc.update(|msgs| msgs.push(msg));
+            set_local_messages_rc.update(|msgs| msgs.push(msg.clone()));
+            // After sending, call update_message_read_at and decrement the counter using clone-set
+            let unread_counts = unread_counts.clone();
+            let msg_id = msg.id;
+            leptos::spawn_local(async move {
+                use crate::api::services::message::MessageService;
+                use crate::config::constants::AppConstants;
+                use crate::utils::storage::StorageService;
+                use crate::api::client::ApiClient;
+                let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                let storage_service = StorageService::new();
+                if let Some(token) = storage_service.get_token() {
+                    http_client.set_auth_token(Some(token.token));
+                }
+                let message_service = MessageService::new(http_client, storage_service);
+                let now = chrono::Utc::now().to_rfc3339();
+                if message_service.update_message_read_at(msg_id, now).await.is_ok() {
+                    // Use clone-modify-set to avoid in-place mutation of the RwSignal map
+                    let mut cloned = unread_counts.get().clone();
+                    let entry = cloned.entry(group_id).or_insert(0);
+                    if *entry > 0 {
+                        *entry -= 1;
+                    }
+                    unread_counts.set(cloned);
+                }
+            });
         })
     };
     let (initial_messages, initial_loading, initial_error) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
 
-    let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
-    let set_local_messages_rc = Rc::new(set_local_messages);
-    let add_message: Rc<dyn Fn(Message)> = {
-        let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
-        Rc::new(move |msg: Message| {
-            set_local_messages_rc.update(|msgs| msgs.push(msg));
-        })
-    };
+    // diagnostic block removed
+
     let ws_messages = use_group_socket_messages(
         group_data.membership.group_chat_id,
         ws_ctx.as_ref().and_then(|w| w.as_ref().cloned()),
         local_messages,
     );
+
+    // Use unread counts context for badge decrement
+    let unread_counts = use_unread_counts_context();
+
+    // Call this after a successful update_message_read_at for a message in this group
+    fn decrement_unread_for_group(unread_counts: &leptos::RwSignal<std::collections::HashMap<i32, u32>>, group_id: i32) {
+        unread_counts.update(|map| {
+            let entry = map.entry(group_id).or_insert(0);
+            if *entry > 0 {
+                *entry -= 1;
+            }
+        });
+    }
     let messages = create_memo(move |_| {
         let mut all_msgs = Vec::new();
         all_msgs.extend(initial_messages.get());
@@ -95,6 +138,71 @@ pub fn ChatView(
     let (leave_loading, set_leave_loading) = create_signal(false);
 
     let dropdown_ref = create_node_ref::<Div>();
+    let messages_container_ref = create_node_ref::<Div>();
+    // Funzione per verificare se un elemento è visibile nel container scrollabile
+    fn is_element_in_viewport(container: &HtmlDivElement, element: &Element) -> bool {
+    let container_rect = container.get_bounding_client_rect();
+    let elem_rect = element.get_bounding_client_rect();
+    elem_rect.top() < container_rect.bottom() && elem_rect.bottom() > container_rect.top()
+    }
+
+    // Effetto: aggiungi event listener su scroll per update read_at
+    // Effetto: scroll automatico all'ultimo messaggio dopo il caricamento
+    {
+        let messages = messages.clone();
+        let messages_container_ref = messages_container_ref.clone();
+        create_effect(move |_| {
+            let msgs = messages.get();
+            if msgs.is_empty() {
+                return;
+            }
+            // Prendi l'ultimo messaggio (il più recente)
+            let last_msg = msgs.last().unwrap();
+            if let Some(container) = messages_container_ref.get() {
+                let doc = web_sys::window().unwrap().document().unwrap();
+                if let Some(last_elem) = doc.get_element_by_id(&format!("msg-{}", last_msg.id)) {
+                    // Scrolla il container in modo che l'ultimo messaggio sia visibile
+                    let _ = last_elem.scroll_into_view_with_bool(true);
+                }
+            }
+        });
+    }
+    {
+        use crate::api::services::message::MessageService;
+        use crate::config::constants::AppConstants;
+        use crate::utils::storage::StorageService;
+        use crate::api::client::ApiClient;
+        let messages = messages.clone();
+        let messages_container_ref = messages_container_ref.clone();
+        create_effect(move |_| {
+            if let Some(container) = messages_container_ref.get() {
+                let container_clone = container.clone();
+                let messages = messages.clone();
+                let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+                    let doc = web_sys::window().unwrap().document().unwrap();
+                    let msg_ids: Vec<i32> = messages.get().iter().map(|m| m.id).collect();
+                    for msg_id in msg_ids {
+                        if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg_id)) {
+                            if is_element_in_viewport(&container_clone, &elem) {
+                                let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                                let storage_service = StorageService::new();
+                                if let Some(token) = storage_service.get_token() {
+                                    http_client.set_auth_token(Some(token.token));
+                                }
+                                let message_service = MessageService::new(http_client, storage_service);
+                                let now = chrono::Utc::now().to_rfc3339();
+                                leptos::spawn_local(async move {
+                                    let _ = message_service.update_message_read_at(msg_id, now).await;
+                                });
+                            }
+                        }
+                    }
+                }) as Box<dyn FnMut(_)>);
+                let _ = container.add_event_listener_with_callback("scroll", closure.as_ref().unchecked_ref());
+                closure.forget();
+            }
+        });
+    }
     
     // Effect to close the dropdown when clicking outside
     create_effect(move |_| {
@@ -349,7 +457,8 @@ pub fn ChatView(
             
             <div
                 class="messages-container custom-scrollbar flex-1 min-h-0 overflow-y-auto px-12 py-4 space-y-4"
-                style=move || format!("{};padding-bottom:72px;", bg_url.get())
+                node_ref=messages_container_ref
+                style=move || format!("{};padding-bottom:24px;", bg_url.get())
             >
                 {move || {
                     let msgs = messages.get();
@@ -369,14 +478,16 @@ pub fn ChatView(
                             (false, "?".to_string(), "".to_string(), "".to_string())
                         };
                         view! {
-                            <ChatMessage
-                                message=msg.clone()
-                                sender_username=sender_username
-                                sender_name=sender_name
-                                sender_surname=sender_surname
-                                status=MessageStatus::Delivered
-                                is_own=is_own
-                            />
+                            <div id={format!("msg-{}", msg.id)}>
+                                <ChatMessage
+                                    message=msg.clone()
+                                    sender_username=sender_username
+                                    sender_name=sender_name
+                                    sender_surname=sender_surname
+                                    status=MessageStatus::Delivered
+                                    is_own=is_own
+                                />
+                            </div>
                         }
                     }).collect_view()
                 }}

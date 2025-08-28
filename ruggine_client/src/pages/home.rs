@@ -3,6 +3,9 @@ use crate::components::{AppNavbar, Sidebar, CreateGroupModal, ChatView, use_toas
 use crate::types::group::GroupChatCreateRequest;
 use crate::api::facade::RuggineApiClient;
 use crate::hooks::{provide_groups_context, use_groups_list};
+use crate::context::unread_counts_context::use_unread_counts_context;
+use crate::api::services::message::MessageService;
+use std::collections::HashMap;
 
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -17,6 +20,34 @@ pub fn HomePage() -> impl IntoView {
     let groups_hook = groups_context.groups_hook.clone();
     let groups_list = use_groups_list(&groups_hook);
     let active_group_id = groups_hook.active_group_id;
+
+    // Use unread counts context
+    let unread_counts = use_unread_counts_context();
+
+    // On mount, fetch unread counts for all groups
+    let api_client = api_client_instance.clone();
+    create_effect(move |_| {
+        let groups = groups_list.get();
+        let unread_counts = unread_counts.clone();
+        let api_client = api_client.clone();
+        spawn_local(async move {
+            let mut map = HashMap::new();
+            let message_service = MessageService::new(api_client.http_client.clone(), api_client.storage_service.clone());
+            for group in &groups {
+                let group_id = group.membership.group_chat_id;
+                match message_service.get_messages_not_read_yet(group_id).await {
+                    Ok(page) => {
+                        let count = page.data.len() as u32;
+                        map.insert(group_id, count);
+                    },
+                    Err(_) => {
+                        map.insert(group_id, 0);
+                    }
+                }
+            }
+            unread_counts.set(map);
+        });
+    });
     
     // Get current user for personalized welcome message
     let current_user = api_client_instance.auth_service.get_current_user();
