@@ -1,3 +1,5 @@
+pub mod profile;
+pub use profile::ProfilePage;
 // Pages module - UI pages/views
 pub mod landing;
 pub mod register;

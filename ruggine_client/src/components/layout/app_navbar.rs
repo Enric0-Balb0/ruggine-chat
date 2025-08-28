@@ -77,11 +77,11 @@ pub fn AppNavbar() -> impl IntoView {
     };
 
     let handle_profile = {
-        let toast = toast.clone();
         let set_is_menu_open = set_is_menu_open;
+        let navigate = navigate.clone();
         Callback::new(move |_| {
             set_is_menu_open.set(false);
-            toast.info("Profilo utente - Funzionalità in sviluppo");
+            navigate("/profile", Default::default());
         })
     };
 

@@ -1,3 +1,15 @@
+use std::fmt;
+// Implementazione Display per Gender
+impl fmt::Display for Gender {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Gender::Male => "male",
+            Gender::Female => "female",
+            Gender::Other => "other",
+        };
+        write!(f, "{}", s)
+    }
+}
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 

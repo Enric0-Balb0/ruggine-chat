@@ -2,6 +2,7 @@
 pub struct ApiEndpoints;
 
 impl ApiEndpoints {
+
     // Authentication endpoints
     pub const AUTH_LOGIN: &'static str = "/auth/login";
     pub const AUTH_LOGOUT: &'static str = "/auth/logout";
@@ -71,7 +72,15 @@ impl ApiEndpoints {
     }
 
     pub fn text_messages_by_group(group_id: &str) -> String {
-        format!("/messages/group/{}", group_id)
+    format!("/text_message/group/{}/messages", group_id)
+    }
+
+    pub fn text_messages_not_read_yet(group_id: &str) -> String {
+    format!("/text_message/group/{}/messages/not-read-yet", group_id)
+    }
+
+    pub fn text_messages_not_sent_yet(group_id: &str) -> String {
+    format!("/text_message/group/{}/messages/not-sent-yet", group_id)
     }
 }
 
