@@ -8,7 +8,7 @@ pub mod membership;
 
 // Re-exports
 pub use auth::AuthService;
-pub use user::{UserService, UserSearchResult, UserProfileUpdate};
-pub use group::{GroupChatService, GroupUpdateRequest};
+pub use user::UserService;
+pub use group::GroupChatService;
 pub use membership::GroupMembershipService;
 pub use invitation::{InvitationService};

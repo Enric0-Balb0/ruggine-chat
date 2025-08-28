@@ -40,6 +40,7 @@ impl ApiEndpoints {
     
     // Message endpoints
     pub const TEXT_MESSAGE_CREATE: &'static str = "/text_message/create";
+    pub const TEXT_MESSAGE_UPDATE_READ_AT: &'static str = "/text_message/update_read_at";
     
     // Utility methods for dynamic endpoints
     pub fn group_by_id(group_id: &str) -> String {

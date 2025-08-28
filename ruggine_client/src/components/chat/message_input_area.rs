@@ -33,7 +33,7 @@ pub fn MessageInputArea(
             if !message.is_empty() {
                 let storage_service = StorageService::new();
                 let token = storage_service.get_token().map(|t| t.token);
-                let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
                 http_client.set_auth_token(token);
                 let message_service = MessageService::new(http_client, storage_service);
                 let req = TextMessageCreateRequest {

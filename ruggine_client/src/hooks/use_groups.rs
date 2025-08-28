@@ -56,7 +56,7 @@ pub fn use_groups() -> UseGroups {
     let group_service = group_service.clone();
     let membership_service = membership_service.clone();
         async move {
-            logging::log!("Fetching user groups...");
+            
             
             let memberships = match membership_service.get_user_groups().await {
                 Ok(memberships) => memberships,
@@ -68,7 +68,7 @@ pub fn use_groups() -> UseGroups {
                 }
             };
 
-            logging::log!("Successfully fetched {} group memberships", memberships.len());
+            
 
             let mut groups_with_details = Vec::new();
             for membership in memberships {
@@ -76,7 +76,7 @@ pub fn use_groups() -> UseGroups {
                 // Fetch group details
                 let mut group_details = match group_service.get_group_by_id(&group_id).await {
                     Ok(details) => {
-                        logging::log!("Fetched details for group {}", group_id);
+                        
                         Some(details)
                     },
                     Err(e) => {
@@ -103,7 +103,7 @@ pub fn use_groups() -> UseGroups {
                 });
             }
 
-            logging::log!("Successfully processed {} groups with details", groups_with_details.len());
+            
             set_groups.set(LoadingState::Success(groups_with_details.clone()));
             Ok(groups_with_details)
         }

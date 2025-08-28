@@ -169,7 +169,6 @@ pub fn ShowInvitesModal(
                         <div class="divide-y divide-border dark:divide-border-dark max-h-[340px] overflow-y-auto">
                             {move || {
                                 let list = invites.get();
-                                logging::log!("Invites list: {:?}", list);
                                 let on_accept_cb = on_accept.clone();
                                 let on_reject_cb = on_reject.clone();
                                 if list.is_empty() {

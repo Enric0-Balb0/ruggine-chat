@@ -3,12 +3,14 @@ use leptos::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use crate::hooks::GroupMembershipWithDetails;
+use crate::components::ui::UnreadBadge;
 
 #[component]
 pub fn GroupItem(
     #[prop(into)] group_data: GroupMembershipWithDetails,
     #[prop(into, default = false)] is_active: bool,
     #[prop(into, optional)] on_click: Option<Callback<i32>>,
+    #[prop(into, default = 0)] unread_count: i32,
 ) -> impl IntoView {
     let group_name = group_data.group_name();
     let membership = group_data.membership.clone();
@@ -52,22 +54,8 @@ pub fn GroupItem(
                 </span>
             </div>
             
-            // Role badge on the right
-            {if membership.is_admin() {
-                view! {
-                    <span class="ml-2 px-3 text-xs bg-brand-primary-light text-white  py-1 rounded-md">
-                        "Admin"
-                    </span>
-                }.into_view()
-            } else if membership.is_member() {
-                view! {
-                    <span class="ml-2 px-3 text-xs bg-brand-secondary-light text-white  py-1 rounded-md">
-                        "Member"
-                    </span>
-                }.into_view()
-            } else {
-                view! {}.into_view()
-            }}
+            // Unread badge (solo se > 0)
+            <UnreadBadge count=unread_count />
         </div>
     }
 }

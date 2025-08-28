@@ -4,7 +4,7 @@ use crate::types::user::{UserProfile, UserStatus, UserType, Gender};
 use crate::api::services::UserService;
 use crate::components::{ UserAvatar, LucideIcon};
 use crate::types::invitation::MemberRole;
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupMember {

@@ -4,28 +4,47 @@ use crate::components::modals::ShowInvitesModal;
 use crate::api::services::invitation::InvitationService;
 use crate::types::Invitation;
 use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
+use crate::context::unread_counts_context::use_unread_counts_context;
+
+use crate::hooks::use_global_group_unread_ws;
 
 /// Sidebar component for the main app layout
 #[component]
 pub fn Sidebar(
     #[prop(into)] on_create_group_click: Callback<()>,
 ) -> impl IntoView {
-    // Use groups context from provider
     let groups_context = use_groups_context();
     let groups_hook = groups_context.groups_hook;
     let groups_list = use_groups_list(&groups_hook);
     let is_loading = use_groups_loading(&groups_hook);
     let error = use_groups_error(&groups_hook);
 
+    // Use unread counts context
+    let unread_counts = use_unread_counts_context();
+
+    // Lightweight memo for possible future debug; not rendered by default.
+    let _debug_unread = create_memo(move |_| unread_counts.get().clone());
+
+    // Hook globale per badge: aggiorna i badge in tempo reale anche fuori dalla chat
+    // Passa sempre la lista aggiornata di group_id
+    let group_ids = create_memo(move |_| {
+        groups_list.get().iter().map(|g| g.membership.group_chat_id).collect::<Vec<_>>()
+    });
+    // Initialize global badge hook with current group ids (no-op if not implemented)
+    create_effect(move |_| {
+        let ids = group_ids.get();
+        use_global_group_unread_ws(ids);
+    });
+
     // Load groups on mount
     create_effect(move |_| {
         if let Some(window) = web_sys::window() {
             if let Some(storage) = window.local_storage().ok().flatten() {
                 if let Ok(Some(_token)) = storage.get_item("ruggine_auth_token") {
-                    logging::log!("Token found, fetching groups...");
+                    
                     groups_hook.refresh_groups.dispatch(());
                 } else {
-                    logging::log!("No token found, skipping groups fetch");
+                    
                 }
             }
         }
@@ -37,7 +56,7 @@ pub fn Sidebar(
     
     let handle_group_click = move |group_id: i32| {
         set_active_group.set(Some(group_id));
-        logging::log!("Selected group: {}", group_id);
+        
     };
 
 
@@ -45,6 +64,8 @@ pub fn Sidebar(
     let (show_invites_modal, set_show_invites_modal) = create_signal(false);
     let (invites, set_invites) = create_signal(Vec::<Invitation>::new());
     let (is_loading_invites, set_is_loading_invites) = create_signal(false);
+
+    
 
     let handle_create_click = move |_| {
         on_create_group_click.call(());
@@ -56,7 +77,7 @@ pub fn Sidebar(
         // Fetch inviti async
         spawn_local(async move {
             let storage_service = crate::utils::storage::StorageService::new();
-            let mut http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage_service.get_token() {
                 http_client.set_auth_token(Some(token_response.token));
             }
@@ -84,6 +105,7 @@ pub fn Sidebar(
                     "Team e Gruppi"
                 </div>
                 <div class="flex-1 overflow-y-auto max-h-[340px] pr-1">
+                    
                     {move || {
                         if let Some(_error_msg) = error.get() {
                             view! {
@@ -113,7 +135,13 @@ pub fn Sidebar(
                                 view! {
                                     <div class="space-y-1">
                                         {groups.into_iter().enumerate().map(|(index, group_data)| {
-                                            let is_active = active_group_id.get() == Some(group_data.membership.group_chat_id);
+                                            let group_id = group_data.membership.group_chat_id;
+                                            let is_active = active_group_id.get() == Some(group_id);
+                                            // Create a per-group memo so the badge depends only on this group's unread count
+                                            let unread_memo = create_memo(move |_| {
+                                                unread_counts.get().get(&group_id).cloned().unwrap_or(0)
+                                            });
+                                            let unread_for_group = unread_memo.get();
                                             view! {
                                                 <div 
                                                     class="animate-fade-in-up"
@@ -123,6 +151,7 @@ pub fn Sidebar(
                                                         group_data=group_data
                                                         is_active=is_active 
                                                         on_click=handle_group_click
+                                                        unread_count={unread_for_group as i32}
                                                     />
                                                 </div>
                                             }

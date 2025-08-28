@@ -14,6 +14,36 @@ pub struct TextMessageCreateRequest {
     pub group_chat_id: i32,
 }
 
+/// DTO per update read_at (TextMessageInfoReadAtDtoUpdate)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextMessageInfoReadAtDtoUpdate {
+    pub text_message_id: i32,
+    pub read_at: String, // date-time
+}
+
+/// DTO risposta update lettura (ApiSuccessResponseUserReadDto, solo se serve lato client)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponseUserReadDto {
+    pub data: UserReadDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserReadDto {
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+    pub email: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub user_status: String,
+    pub user_type: String,
+    pub birthday: String,
+    pub is_online: bool,
+    pub address: String,
+    pub gender: String,
+}
+
 /// Text message read DTO from server (TextMessageReadDto)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMessageReadDto {

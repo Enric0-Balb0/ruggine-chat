@@ -7,7 +7,7 @@ pub mod error_messages;
 
 // Re-exports for services
 pub use storage::StorageService;
-pub use theme::{ThemeService, Theme, ThemeContext, ThemeProvider, use_theme};
+pub use theme::{Theme, ThemeProvider, use_theme};
 pub use error_messages::{auth_error_to_login_message, auth_error_to_register_message};
 
 /// Common validation utilities

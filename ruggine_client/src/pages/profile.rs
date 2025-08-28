@@ -6,7 +6,7 @@ use crate::api::services::AuthService;
 use crate::utils::StorageService;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
-use crate::components::{ThemeToggle, use_toast};
+use crate::components::ThemeToggle;
 
 #[component]
 pub fn ProfilePage() -> impl IntoView {
@@ -63,7 +63,7 @@ pub fn ProfilePage() -> impl IntoView {
         set_error_profile.set(None);
         set_success_profile.set(None);
         let storage_service = StorageService::new();
-        let mut http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+        let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
         if let Some(token_response) = storage_service.get_token() {
             http_client.set_auth_token(Some(token_response.token));
         }

@@ -1171,6 +1171,10 @@ select {
   min-width: 12rem;
 }
 
+.min-w-\[1\.5em\] {
+  min-width: 1.5em;
+}
+
 .max-w-\[75\%\] {
   max-width: 75%;
 }
@@ -1529,6 +1533,11 @@ select {
 .border-white {
   --tw-border-opacity: 1;
   border-color: rgb(255 255 255 / var(--tw-border-opacity, 1));
+}
+
+.border-gray-900 {
+  --tw-border-opacity: 1;
+  border-color: rgb(17 24 39 / var(--tw-border-opacity, 1));
 }
 
 .border-t-current {
@@ -2776,6 +2785,11 @@ textarea::placeholder {
 .dark\:border-indigo-700:is(.dark *) {
   --tw-border-opacity: 1;
   border-color: rgb(67 56 202 / var(--tw-border-opacity, 1));
+}
+
+.dark\:border-white:is(.dark *) {
+  --tw-border-opacity: 1;
+  border-color: rgb(255 255 255 / var(--tw-border-opacity, 1));
 }
 
 .dark\:bg-accent-dark:is(.dark *) {

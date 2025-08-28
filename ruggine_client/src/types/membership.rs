@@ -3,6 +3,18 @@ use chrono::{DateTime, Utc};
 use super::invitation::{MemberRole, MembershipStatus};
 
 // =============================================================================
+// ADDITIONAL ENUMS (from OpenAPI)
+// =============================================================================
+
+/// Current action for membership as defined in OpenAPI ("waiting" | "writing")
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CurrentAction {
+    Waiting,
+    Writing,
+}
+
+// =============================================================================
 // DTOs - Server synchronized
 // =============================================================================
 
@@ -29,6 +41,7 @@ pub struct GroupMembershipReadDto {
     pub left_at: Option<String>, // date-time format, nullable
     pub membership_status: MembershipStatus,
     pub invitation_id: i32,
+    pub current_action: CurrentAction,
 }
 
 // =============================================================================
@@ -46,6 +59,7 @@ pub struct GroupMembership {
     pub left_at: Option<DateTime<Utc>>,
     pub membership_status: MembershipStatus,
     pub invitation_id: i32,
+    pub current_action: CurrentAction,
     
     // Denormalized data for UI
     pub group_name: Option<String>,
@@ -71,6 +85,7 @@ impl From<ApiSuccessResponseGroupMembershipReadDto> for GroupMembership {
                 .and_then(|s| s.parse().ok()),
             membership_status: membership_data.membership_status,
             invitation_id: membership_data.invitation_id,
+            current_action: membership_data.current_action,
             
             // Denormalized data for UI - not provided by server
             group_name: None,
@@ -93,6 +108,7 @@ impl From<ApiSuccessResponseVecGroupMembershipReadDto> for Vec<GroupMembership> 
                     .and_then(|s| s.parse().ok()),
                 membership_status: membership_data.membership_status,
                 invitation_id: membership_data.invitation_id,
+                current_action: membership_data.current_action,
                 
                 // Denormalized data for UI - not provided by server
                 group_name: None,
@@ -148,6 +164,7 @@ mod tests {
             left_at: None,
             membership_status: MembershipStatus::Active,
             invitation_id: 1,
+            current_action: CurrentAction::Waiting,
             group_name: None,
             user_name: None,
         };
