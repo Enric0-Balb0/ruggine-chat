@@ -1,9 +1,3 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use chrono::Utc;
-use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
-use async_trait::async_trait;
 use crate::dto::group_membership_dto::GroupMembershipReadDto;
 use crate::dto::text_message_dto::{TextMessageInfoSentAtDtoUpdate, TextMessageReadDto};
 use crate::entity::group_membership::GroupMembership;
@@ -13,7 +7,13 @@ use crate::service::group_membership_service::GroupMembershipServiceTrait;
 use crate::service::text_message_service::TextMessageServiceTrait;
 use crate::service::websocket::websocket_group_service_trait::WebSocketGroupServiceTrait;
 use crate::websocket::core::manager::WebSocketManager;
-use crate::websocket::message::{WebSocketMessage, ServerEvent, WsError};
+use crate::websocket::message::{ServerEvent, WebSocketMessage, WsError};
+use async_trait::async_trait;
+use chrono::Utc;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tracing::{debug, error, info, warn};
 
 /// Servizio per gestire le sottoscrizioni WebSocket ai gruppi
 #[derive(Clone)]
@@ -49,9 +49,18 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     }
 
     /// Rimuove la sottoscrizione di un utente
-    async fn unsubscribe(&self, user_id: i32) -> Result<(), WebSocketError> {
-        self.group_subscriptions.write().await.remove(&user_id);
-        info!("User {} unsubscribed from group service", user_id);
+    async fn unsubscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError> {
+        let mut subscriptions = self.group_subscriptions.write().await;
+
+        if let Some(connections) = subscriptions.get_mut(&user_id) {
+            connections.remove(connection_id); // rimuove solo la connessione specifica
+
+            if connections.is_empty() {
+                subscriptions.remove(&user_id);
+            }
+        }
+
+        info!("User {} unsubscribed connection {}", user_id, connection_id);
         Ok(())
     }
 
@@ -90,6 +99,39 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
         Ok(connection_ids)
     }
 
+    async fn get_connections_number_for_user_id(&self, user_id: i32) -> i32 {
+        match self.group_subscriptions.read().await.get(&user_id) {
+            Some(connections) => connections.len() as i32,
+            None => 0,
+        }
+    }
+
+    async fn connections_to_broadcast_new_user_joined(
+        &self,
+        connected_user_id: i32,
+    ) -> Result<Vec<(i32, String)>, WebSocketError> {
+
+        let response = self.group_membership_service.find_connected_users(connected_user_id).await;
+        match response {
+            Ok(user_ids) => {
+                let mut connection_ids = Vec::new();
+                for user_id in user_ids {
+                    // Se l’utente ha una sottoscrizione WebSocket attiva → recupero connection_id
+                    if let Some(connnections) = self.group_subscriptions.read().await.get(&user_id).cloned() {
+                        for conn_id in connnections {
+                            connection_ids.push((user_id, conn_id));
+                        }
+                    }
+                }
+                Ok(connection_ids)
+            }
+            Err(error) => {
+                error!("Something went wrong getting the connected users to user_id {}: {:?}", connected_user_id, error);
+                Err(WebSocketError::GroupChatError(GroupChatError::SomethingWentWrong(error.to_string())))
+            }
+        }
+    }
+
     /// Statistiche sulle sottoscrizioni
     async fn get_stats(&self) -> usize {
         self.group_subscriptions.read().await.len()
@@ -110,14 +152,11 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
-    use crate::service::websocket::websocket_group_service_trait::MockWebSocketGroupServiceTrait;
-    use mockall::predicate::*;
-    use crate::error::api_error::ApiError;
-    use crate::factory::user_factory::UserFactory;
-    use crate::factory::group_chat_factory::GroupChatFactory;
     use crate::entity::group_membership::{CurrentAction, MembershipStatus};
+    use crate::error::api_error::ApiError;
+    use crate::service::group_membership_service::group_membership_service_trait::MockGroupMembershipServiceTrait;
     use crate::service::text_message_service::text_message_service_trait::MockTextMessageServiceTrait;
+    use mockall::predicate::*;
 
     fn create_mock_group_membership_service() -> (MockGroupMembershipServiceTrait, MockTextMessageServiceTrait) {
         (MockGroupMembershipServiceTrait::new(), MockTextMessageServiceTrait::new())
@@ -211,7 +250,7 @@ mod tests {
         assert_eq!(service.get_stats().await, 1);
 
         // Act
-        let result = service.unsubscribe(user_id).await;
+        let result = service.unsubscribe(user_id, connection_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -224,9 +263,10 @@ mod tests {
         let mock_service = create_mock_group_membership_service();
         let service = create_test_service_with_mock(mock_service.0, mock_service.1);
         let user_id = 999;
+        let connection_id = "not-existing";
 
         // Act
-        let result = service.unsubscribe(user_id).await;
+        let result = service.unsubscribe(user_id, connection_id).await;
 
         // Assert
         assert!(result.is_ok()); // Should not fail even if user doesn't exist
@@ -523,5 +563,217 @@ mod tests {
 
         // Assert
         assert_eq!(stats, 3);
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_success() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 100;
+        let connected_user1_id = 10;
+        let connected_user2_id = 20;
+        let connected_user3_id = 30;
+
+        // Setup mock to return connected users
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(move |_| {
+                let connected_users = vec![10, 20, 30];
+                Box::pin(async move { Ok(connected_users) })
+            });
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Subscribe some connected users (not all have active connections)
+        let _ = service.subscribe(connected_user1_id, "conn_1").await;
+        let _ = service.subscribe(connected_user3_id, "conn_3").await;
+        // connected_user2 is not subscribed
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 2);
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1_id && conn_id == "conn_1"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user3_id && conn_id == "conn_3"));
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_multiple_connections_per_user() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 100;
+        let connected_user1_id = 10;
+        let connected_user2_id = 20;
+
+        // Setup mock to return connected users
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(move |_| {
+                let connected_users = vec![10, 20];
+                Box::pin(async move { Ok(connected_users) })
+            });
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Subscribe users with multiple connections each
+        let _ = service.subscribe(connected_user1_id, "conn_1a").await;
+        let _ = service.subscribe(connected_user1_id, "conn_1b").await;
+        let _ = service.subscribe(connected_user2_id, "conn_2a").await;
+        let _ = service.subscribe(connected_user2_id, "conn_2b").await;
+        let _ = service.subscribe(connected_user2_id, "conn_2c").await;
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 5); // 2 connections for user1 + 3 for user2
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_1a"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_1b"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2a"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2b"));
+        assert!(connection_ids.iter().any(|(_, s)| s == "conn_2c"));
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_no_active_connections() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 100;
+        let connected_user1_id = 10;
+        let connected_user2_id = 20;
+
+        // Setup mock to return connected users
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(move |_| {
+                let connected_users = vec![10, 20];
+                Box::pin(async move { Ok(connected_users) })
+            });
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Don't subscribe any users - no active connections
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_service_error() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 999;
+
+        // Setup mock to return error
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(|_| {
+                Box::pin(async move {
+                    Err(ApiError::GroupChatError(GroupChatError::GroupChatNotFound))
+                })
+            });
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            WebSocketError::GroupChatError(GroupChatError::SomethingWentWrong(_)) => {
+                // Expected error - service error gets wrapped as SomethingWentWrong
+            }
+            _ => panic!("Expected SomethingWentWrong error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_no_connected_users() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 100;
+
+        // Setup mock to return empty list of connected users
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(|_| Box::pin(async move { Ok(vec![]) }));
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_connections_to_broadcast_new_user_joined_mixed_connections() {
+        // Arrange
+        let mut mock_service = create_mock_group_membership_service();
+        let connected_user_id = 100;
+        let connected_user1_id = 10;
+        let connected_user2_id = 20;
+        let connected_user3_id = 30;
+
+        // Setup mock to return connected users
+        mock_service
+            .0
+            .expect_find_connected_users()
+            .with(eq(connected_user_id))
+            .times(1)
+            .returning(move |_| {
+                let connected_users = vec![10, 20, 30];
+                Box::pin(async move { Ok(connected_users) })
+            });
+
+        let service = create_test_service_with_mock(mock_service.0, mock_service.1);
+
+        // Subscribe users with different connection patterns
+        let _ = service.subscribe(connected_user1_id, "conn_1").await; // Single connection
+        let _ = service.subscribe(connected_user2_id, "conn_2a").await; // Multiple connections
+        let _ = service.subscribe(connected_user2_id, "conn_2b").await;
+        // connected_user3 is not subscribed - no connection
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(connected_user_id).await;
+
+        // Assert
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 3); // 1 + 2 + 0 connections
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1_id && conn_id == "conn_1"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2_id && conn_id == "conn_2a"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2_id && conn_id == "conn_2b"));
+        // Should not include connected_user3 since they're not subscribed
+        assert!(!connection_ids.iter().any(|(user_id, _)| *user_id == connected_user3_id));
     }
 }

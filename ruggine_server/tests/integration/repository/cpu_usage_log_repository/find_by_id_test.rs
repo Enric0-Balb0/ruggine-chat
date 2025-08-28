@@ -2,7 +2,7 @@
 // This test follows the style of text_message_repository/find_by_id_test.rs
 
 use serial_test::serial;
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::{CpuUsageLogRepository, CpuUsageLogRepositoryTrait};
 use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
 
@@ -10,6 +10,7 @@ use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
 #[serial]
 async fn test_find_cpu_usage_log_by_id() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 
@@ -35,6 +36,7 @@ async fn test_find_cpu_usage_log_by_id() {
 #[serial]
 async fn test_find_cpu_usage_log_by_id_not_found() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 

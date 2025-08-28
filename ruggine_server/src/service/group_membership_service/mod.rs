@@ -8,6 +8,7 @@ mod find_by_user_id_and_group_id;
 mod find_by_group_chat_id_checked;
 mod find_by_group_chat_id;
 pub mod find_active_by_user_id_and_group_id;
+mod find_connected_users;
 
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -54,5 +55,9 @@ impl GroupMembershipServiceTrait for GroupMembershipService {
 
     async fn find_by_group_chat_id(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError> {
         self.find_by_group_chat_id_internal(group_id).await
+    }
+
+    async fn find_connected_users(&self, auth_user_id: i32) -> Result<Vec<i32>, ApiError> {
+        self.find_connected_users_internal(auth_user_id).await
     }
 }

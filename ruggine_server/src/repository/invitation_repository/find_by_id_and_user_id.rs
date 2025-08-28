@@ -5,12 +5,16 @@ use crate::repository::invitation_repository::InvitationRepository;
 
 impl InvitationRepository {
     pub async fn find_by_id_and_user_id_inner(&self, id: i32, user_id: i32) -> Result<Invitation, Error> {
-        let invitation = sqlx::query_as::<_, Invitation>("SELECT * FROM \"invitation\" WHERE id = $1 AND (from_user_id = $2 OR to_user_id = $2)")
+        let query = sqlx::query_as::<_, Invitation>("SELECT * FROM \"invitation\" WHERE id = $1 AND (from_user_id = $2 OR to_user_id = $2)")
             .bind(id)
-            .bind(user_id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
-        invitation
+            .bind(user_id);
+
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
     }
 }
 

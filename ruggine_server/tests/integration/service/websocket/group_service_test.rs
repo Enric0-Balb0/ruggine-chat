@@ -1,13 +1,8 @@
-use std::sync::Arc;
-use ruggine_server::service::websocket::group_service::WebSocketGroupService;
-use ruggine_server::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
-use ruggine_server::websocket::core::manager::WebSocketManager;
-use ruggine_server::error::web_socket_error::WebSocketError;
 use ruggine_server::error::group_chat_error::GroupChatError;
-use ruggine_server::repository::group_membership_repository::{GroupMembershipRepository, GroupMembershipRepositoryTrait};
-use ruggine_server::factory::user_factory::UserFactory;
-use ruggine_server::factory::group_chat_factory::GroupChatFactory;
-use ruggine_server::entity::group_membership::MemberRole;
+use ruggine_server::error::web_socket_error::WebSocketError;
+use ruggine_server::repository::group_membership_repository::GroupMembershipRepositoryTrait;
+use ruggine_server::service::group_membership_service::GroupMembershipServiceTrait;
+use std::sync::Arc;
 
 #[cfg(test)]
 mod websocket_group_service_integration_tests {
@@ -36,7 +31,7 @@ mod websocket_group_service_integration_tests {
         assert_eq!(service.get_stats().await, 1);
 
         // Act & Assert - Unsubscribe
-        let unsubscribe_result = service.unsubscribe(user_id).await;
+        let unsubscribe_result = service.unsubscribe(user_id, connection_id).await;
         assert!(unsubscribe_result.is_ok());
         assert_eq!(service.get_stats().await, 0);
     }
@@ -197,8 +192,8 @@ mod websocket_group_service_integration_tests {
         assert_eq!(connection_ids.len(), 2); // Only member2 now and admin
 
         // Test unsubscribe all
-        let _ = service.unsubscribe(admin_user.id).await;
-        let _ = service.unsubscribe(member2.id).await;
+        let _ = service.unsubscribe(admin_user.id, "multi_admin_conn").await;
+        let _ = service.unsubscribe(member2.id, "multi_member2_conn").await;
         assert_eq!(service.get_stats().await, 0);
 
         // Test broadcast to group with no active connections
@@ -327,5 +322,247 @@ mod websocket_group_service_integration_tests {
 
         // Should have 5 subscriptions left
         assert_eq!(service.get_stats().await, 5);
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_integration() {
+        // Arrange: Create test scenario with users connected through groups
+        let service = create_test_service().await;
+        
+        // Create users: target user will join a group, connected users are already in groups with target
+        let (owner_user, _) = create_test_user("ws_new_user_owner").await;
+        let (target_user, _) = create_test_user("ws_new_user_target").await;
+        let (connected_user1, _) = create_test_user("ws_new_user_connected1").await;
+        let (connected_user2, _) = create_test_user("ws_new_user_connected2").await;
+        let (connected_user3, _) = create_test_user("ws_new_user_connected3").await;
+        let (unrelated_user, _) = create_test_user("ws_new_user_unrelated").await;
+
+        // Create group chats
+        let group_chat1 = create_test_group_chat_with_invitation_and_membership("ws_new_user_group1", owner_user.id).await;
+        let group_chat2 = create_test_group_chat_with_invitation_and_membership("ws_new_user_group2", owner_user.id).await;
+        let group_chat3 = create_test_group_chat_with_invitation_and_membership("ws_new_user_group3", owner_user.id).await;
+
+        // Add users to groups to create connections:
+        // - target_user will be in group1 and group2
+        // - connected_user1 will be in group1 (connected to target through group1)
+        // - connected_user2 will be in both group1 and group2 (connected to target through both)
+        // - connected_user3 will be in group2 (connected to target through group2)
+        // - unrelated_user will be only in group3 (not connected to target)
+        
+        let _membership_target_1 = add_test_user_to_a_group(target_user.id, &group_chat1).await;
+        let _membership_target_2 = add_test_user_to_a_group(target_user.id, &group_chat2).await;
+        let _membership_connected1_1 = add_test_user_to_a_group(connected_user1.id, &group_chat1).await;
+        let _membership_connected2_1 = add_test_user_to_a_group(connected_user2.id, &group_chat1).await;
+        let _membership_connected2_2 = add_test_user_to_a_group(connected_user2.id, &group_chat2).await;
+        let _membership_connected3_2 = add_test_user_to_a_group(connected_user3.id, &group_chat2).await;
+        let _membership_unrelated_3 = add_test_user_to_a_group(unrelated_user.id, &group_chat3).await;
+
+        // Subscribe some connected users to WebSocket (simulate active connections)
+        let _ = service.subscribe(connected_user1.id, "connected1_conn").await;
+        let _ = service.subscribe(connected_user2.id, "connected2_conn_a").await;
+        let _ = service.subscribe(connected_user2.id, "connected2_conn_b").await; // Multiple connections
+        let _ = service.subscribe(connected_user3.id, "connected3_conn").await;
+        // unrelated_user is subscribed but shouldn't be in results
+        let _ = service.subscribe(unrelated_user.id, "unrelated_conn").await;
+
+        // Act: Get connections to broadcast when target_user joins
+        let result = service.connections_to_broadcast_new_user_joined(target_user.id).await;
+
+        // Assert: Should return connections for users connected to target_user through groups
+        assert!(result.is_ok(), "Failed to get connections for new user joined: {:?}", result);
+        let connection_ids = result.unwrap();
+        
+        // Should return 4 connections: 1 for connected_user1, 2 for connected_user2, 1 for connected_user3
+        // Note: connected_user2 appears only once per connection they have, even though they share 2 groups with target
+        assert_eq!(connection_ids.len(), 4);
+        
+        // Verify specific connections are included
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1.id && conn_id == "connected1_conn"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2.id && conn_id == "connected2_conn_a"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2.id && conn_id == "connected2_conn_b"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user3.id && conn_id == "connected3_conn"));
+        
+        // Verify unrelated_user is not included (no shared groups)
+        assert!(!connection_ids.iter().any(|(user_id, _)| *user_id == unrelated_user.id));
+        
+        // Verify target_user is not included (should not broadcast to self)
+        assert!(!connection_ids.iter().any(|(user_id, _)| *user_id == target_user.id));
+
+        // Cleanup: Clean up all users from their respective groups
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat1.id).await;
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat2.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user1.id, group_chat1.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user2.id, group_chat1.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user2.id, group_chat2.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user3.id, group_chat2.id).await;
+        cleanup_test_user_from_a_group_chat(unrelated_user.id, group_chat3.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat1.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat2.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat3.id).await;
+        cleanup_group_chat(group_chat1.id).await;
+        cleanup_group_chat(group_chat2.id).await;
+        cleanup_group_chat(group_chat3.id).await;
+        cleanup_test_users(vec![owner_user.id, target_user.id, connected_user1.id, connected_user2.id, connected_user3.id, unrelated_user.id]).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_no_connections() {
+        // Arrange: User with connected users but no active WebSocket connections
+        let service = create_test_service().await;
+        
+        let (owner_user, _) = create_test_user("ws_new_user_no_conn_owner").await;
+        let (target_user, _) = create_test_user("ws_new_user_no_conn_target").await;
+        let (connected_user1, _) = create_test_user("ws_new_user_no_conn_connected1").await;
+        let (connected_user2, _) = create_test_user("ws_new_user_no_conn_connected2").await;
+
+        // Create group and add users
+        let group_chat = create_test_group_chat_with_invitation_and_membership("ws_new_user_no_conn_group", owner_user.id).await;
+        let _membership_target = add_test_user_to_a_group(target_user.id, &group_chat).await;
+        let _membership_connected1 = add_test_user_to_a_group(connected_user1.id, &group_chat).await;
+        let _membership_connected2 = add_test_user_to_a_group(connected_user2.id, &group_chat).await;
+
+        // Don't subscribe any users - no active WebSocket connections
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(target_user.id).await;
+
+        // Assert: Should return empty list since no users have active connections
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 0);
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user1.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user2.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_test_users(vec![owner_user.id, target_user.id, connected_user1.id, connected_user2.id]).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_isolated_user() {
+        // Arrange: User with no group memberships (isolated user)
+        let service = create_test_service().await;
+        
+        let (isolated_user, _) = create_test_user("ws_new_user_isolated").await;
+
+        // Act: Try to get connections for user with no group connections
+        let result = service.connections_to_broadcast_new_user_joined(isolated_user.id).await;
+
+        // Assert: Should return empty list since user has no connections
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 0);
+
+        // Cleanup
+        cleanup_test_users(vec![isolated_user.id]).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_nonexistent_user() {
+        // Arrange
+        let service = create_test_service().await;
+        let nonexistent_user_id = 999999;
+
+        // Act: Try to get connections for nonexistent user
+        let result = service.connections_to_broadcast_new_user_joined(nonexistent_user_id).await;
+
+        // Assert: Should handle gracefully and return empty list
+        assert!(result.is_ok(), "Should handle nonexistent user gracefully");
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 0);
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_partial_subscriptions() {
+        // Arrange: Some connected users have subscriptions, others don't
+        let service = create_test_service().await;
+        
+        let (owner_user, _) = create_test_user("ws_new_user_partial_owner").await;
+        let (target_user, _) = create_test_user("ws_new_user_partial_target").await;
+        let (connected_user1, _) = create_test_user("ws_new_user_partial_connected1").await;
+        let (connected_user2, _) = create_test_user("ws_new_user_partial_connected2").await;
+        let (connected_user3, _) = create_test_user("ws_new_user_partial_connected3").await;
+
+        // Create group and add users
+        let group_chat = create_test_group_chat_with_invitation_and_membership("ws_new_user_partial_group", owner_user.id).await;
+        let _membership_target = add_test_user_to_a_group(target_user.id, &group_chat).await;
+        let _membership_connected1 = add_test_user_to_a_group(connected_user1.id, &group_chat).await;
+        let _membership_connected2 = add_test_user_to_a_group(connected_user2.id, &group_chat).await;
+        let _membership_connected3 = add_test_user_to_a_group(connected_user3.id, &group_chat).await;
+
+        // Subscribe only some users
+        let _ = service.subscribe(connected_user1.id, "connected1_conn").await;
+        // connected_user2 is not subscribed
+        let _ = service.subscribe(connected_user3.id, "connected3_conn").await;
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(target_user.id).await;
+
+        // Assert: Should return only connections for subscribed users
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 2);
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1.id && conn_id == "connected1_conn"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user3.id && conn_id == "connected3_conn"));
+        // Should not include connected_user2 since they're not subscribed
+        assert!(!connection_ids.iter().any(|(user_id, _)| *user_id == connected_user2.id));
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user1.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user2.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user3.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_test_users(vec![owner_user.id, target_user.id, connected_user1.id, connected_user2.id, connected_user3.id]).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_connections_to_broadcast_new_user_joined_multiple_connections_per_user() {
+        // Arrange: Test with users having multiple WebSocket connections
+        let service = create_test_service().await;
+        
+        let (owner_user, _) = create_test_user("ws_new_user_multi_conn_owner").await;
+        let (target_user, _) = create_test_user("ws_new_user_multi_conn_target").await;
+        let (connected_user1, _) = create_test_user("ws_new_user_multi_conn_connected1").await;
+        let (connected_user2, _) = create_test_user("ws_new_user_multi_conn_connected2").await;
+
+        // Create group and add users
+        let group_chat = create_test_group_chat_with_invitation_and_membership("ws_new_user_multi_conn_group", owner_user.id).await;
+        let _membership_target = add_test_user_to_a_group(target_user.id, &group_chat).await;
+        let _membership_connected1 = add_test_user_to_a_group(connected_user1.id, &group_chat).await;
+        let _membership_connected2 = add_test_user_to_a_group(connected_user2.id, &group_chat).await;
+
+        // Subscribe users with multiple connections
+        let _ = service.subscribe(connected_user1.id, "connected1_conn_a").await;
+        let _ = service.subscribe(connected_user1.id, "connected1_conn_b").await;
+        let _ = service.subscribe(connected_user1.id, "connected1_conn_c").await;
+        let _ = service.subscribe(connected_user2.id, "connected2_conn_a").await;
+        let _ = service.subscribe(connected_user2.id, "connected2_conn_b").await;
+
+        // Act
+        let result = service.connections_to_broadcast_new_user_joined(target_user.id).await;
+
+        // Assert: Should return all connections for all connected users
+        assert!(result.is_ok());
+        let connection_ids = result.unwrap();
+        assert_eq!(connection_ids.len(), 5); // 3 for connected_user1 + 2 for connected_user2
+        
+        // Verify all connections are included
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1.id && conn_id == "connected1_conn_a"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1.id && conn_id == "connected1_conn_b"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user1.id && conn_id == "connected1_conn_c"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2.id && conn_id == "connected2_conn_a"));
+        assert!(connection_ids.iter().any(|(user_id, conn_id)| *user_id == connected_user2.id && conn_id == "connected2_conn_b"));
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user1.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user2.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(owner_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_test_users(vec![owner_user.id, target_user.id, connected_user1.id, connected_user2.id]).await;
     }
 }

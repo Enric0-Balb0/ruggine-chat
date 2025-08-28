@@ -1,16 +1,16 @@
 // Integration test for CpuUsageLogRepository::insert_inner
 // This test follows the style of text_message_repository/insert_test.rs
 
-use crate::common;
-use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::{CpuUsageLogRepository, CpuUsageLogRepositoryTrait};
+use crate::{cleanup_all_cpu_usage_log, common};
 use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
-use chrono::Utc;
+use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
 use serial_test::serial;
 
 #[tokio_shared_rt::test(shared)]
 #[serial]
 async fn test_insert_cpu_usage_log_success() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 
@@ -42,6 +42,7 @@ async fn test_insert_cpu_usage_log_success() {
 #[serial]
 async fn test_insert_cpu_usage_log_invalid() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 
@@ -57,7 +58,8 @@ async fn test_insert_cpu_usage_log_invalid() {
 #[serial]
 async fn test_concurrent_insert_cpu_usage_log() {
     use futures::future::join_all;
-    let db = crate::common::get_database().await;
+    cleanup_all_cpu_usage_log().await;
+    let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
     let mut handles = vec![];
     for _ in 0..10 {
@@ -74,12 +76,13 @@ async fn test_concurrent_insert_cpu_usage_log() {
         ids.push(id);
     }
     // Cleanup
-    for id in ids { crate::common::cleanup_cpu_usage_log(id).await; }
+    for id in ids { common::cleanup_cpu_usage_log(id).await; }
 }
 
 #[tokio_shared_rt::test(shared)]
 async fn test_insert_and_fetch_extreme_values() {
-    let db = crate::common::get_database().await;
+    cleanup_all_cpu_usage_log().await;
+    let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
     // Insert 0%
     let mut log0 = CpuUsageLogFactory::unique_fake_new_cpu_usage_log();
@@ -94,6 +97,6 @@ async fn test_insert_and_fetch_extreme_values() {
     let found100 = repository.find_inner(id100).await.expect("Find 100% failed");
     assert_eq!(found100.cpu_usage_percent, 100.into());
     // Cleanup
-    crate::common::cleanup_cpu_usage_log(id0).await;
-    crate::common::cleanup_cpu_usage_log(id100).await;
+    common::cleanup_cpu_usage_log(id0).await;
+    common::cleanup_cpu_usage_log(id100).await;
 }

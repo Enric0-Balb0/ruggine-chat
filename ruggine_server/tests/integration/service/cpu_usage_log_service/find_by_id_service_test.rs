@@ -4,7 +4,7 @@ use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsag
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::cpu_usage_log_error::CpuUsageLogError;
 use bigdecimal::{BigDecimal, FromPrimitive};
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 use std::sync::Arc;
 use serial_test::serial;
 
@@ -12,6 +12,7 @@ use serial_test::serial;
 #[serial]
 async fn test_find_by_id_success() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -39,6 +40,7 @@ async fn test_find_by_id_success() {
 #[serial]
 async fn test_find_by_id_not_found() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -58,6 +60,7 @@ async fn test_find_by_id_not_found() {
 #[serial]
 async fn test_find_by_id_multiple_logs() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -105,6 +108,7 @@ async fn test_find_by_id_multiple_logs() {
 #[serial]
 async fn test_find_by_id_with_zero_percent() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -131,6 +135,7 @@ async fn test_find_by_id_with_zero_percent() {
 #[serial]
 async fn test_find_by_id_with_decimal_percent() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -158,6 +163,7 @@ async fn test_find_by_id_with_decimal_percent() {
 #[serial]
 async fn test_find_by_id_after_create_and_find_consistency() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);

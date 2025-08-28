@@ -4,7 +4,7 @@ use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_reposito
 use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
 use bigdecimal::BigDecimal;
 use chrono::{Duration, Utc};
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 use std::sync::Arc;
 use serial_test::serial;
 
@@ -12,6 +12,7 @@ use serial_test::serial;
 #[serial]
 async fn test_find_paginated_success_without_cursor() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -54,6 +55,7 @@ async fn test_find_paginated_success_without_cursor() {
 #[serial]
 async fn test_find_paginated_with_cursor() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -109,6 +111,7 @@ async fn test_find_paginated_with_cursor() {
 #[serial]
 async fn test_find_paginated_empty_result() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -134,6 +137,7 @@ async fn test_find_paginated_empty_result() {
 #[serial]
 async fn test_find_paginated_limit_boundary() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -171,6 +175,7 @@ async fn test_find_paginated_limit_boundary() {
 #[serial]
 async fn test_find_paginated_large_limit() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -209,6 +214,7 @@ async fn test_find_paginated_large_limit() {
 #[serial]
 async fn test_find_paginated_chronological_order() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);

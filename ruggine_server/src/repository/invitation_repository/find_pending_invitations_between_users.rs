@@ -10,7 +10,7 @@ impl InvitationRepository {
         to_user_id: i32,
         group_chat_id: i32,
     ) -> Result<Option<Invitation>, Error> {
-        let invitation = sqlx::query_as::<_, Invitation>(
+        let query = sqlx::query_as::<_, Invitation>(
             r#"
         SELECT * FROM "invitation"
         WHERE from_user_id = $1 AND to_user_id = $2 AND group_chat_id = $3 AND status = $4
@@ -19,11 +19,14 @@ impl InvitationRepository {
             .bind(from_user_id)
             .bind(to_user_id)
             .bind(group_chat_id)
-            .bind(InvitationStatus::Pending)
-            .fetch_optional(self.db_conn.get_pool())
-            .await;
+            .bind(InvitationStatus::Pending);
 
-        invitation
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_optional(&mut *tx_ref).await
+        } else {
+            query.fetch_optional(self.db_conn.get_pool()).await
+        }
     }
 }
 

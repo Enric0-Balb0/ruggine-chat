@@ -802,6 +802,12 @@ pub async fn cleanup_cpu_usage_log(id: i32) {
     let _ = repository.delete_by_id(id).await;
 }
 
+pub async fn cleanup_all_cpu_usage_log() {
+    let db = get_database().await;
+    let repository = ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository::new(&db);
+    let _ = repository.delete_all().await;
+}
+
 // Create a test CPU usage log entry
 pub async fn create_test_cpu_usage_log(cpu_percent: f32) -> ruggine_server::entity::cpu_usage_log::CpuUsageLog {
     use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;

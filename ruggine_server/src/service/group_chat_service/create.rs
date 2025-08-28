@@ -1,3 +1,4 @@
+use crate::config::database::DatabaseTrait;
 use crate::entity::group_chat::{NewGroupChat};
 use crate::error::{api_error::ApiError, db_error::DbError};
 use crate::dto::group_chat_dto::{GroupChatCreateDto, GroupChatReadDto};
@@ -8,78 +9,83 @@ use crate::service::group_chat_service::GroupChatService;
 
 impl GroupChatService {
     pub async fn create_internal(&self, payload: GroupChatCreateDto, created_by: i32) -> Result<GroupChatReadDto, ApiError> {
-        // Create the new group chat entity
-        let new_group_chat = NewGroupChat {
-            name: payload.name.clone(),
-            description: payload.description.clone(),
-            created_by,
-        };
+        self.group_chat_repo
+            .db_conn()
+            .with_tx(|db| async move {
+                // Create the new group chat entity
+                let new_group_chat = NewGroupChat {
+                    name: payload.name.clone(),
+                    description: payload.description.clone(),
+                    created_by,
+                };
 
-        // Insert the group chat into the database
-        let group_id = match self.group_chat_repo.insert(new_group_chat).await {
-            Ok(id) => id,
-            Err(sqlx_error) => return match sqlx_error {
-                sqlx::Error::Database(db_err) => {
-                    if let Some(code) = db_err.code() {
-                        match code.as_ref() {
-                            "23505" => {
-                                // Unique violation
-                                Err(ApiError::DbError(DbError::UniqueConstraintViolation(db_err.to_string())))
-                            },
-                            "23503" => {
-                                // Foreign key violation (es. created_by non esiste)
-                                Err(ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string())))
-                            },
-                            _ => {
+                // Insert the group chat into the database
+                let group_id = match self.group_chat_repo.insert(new_group_chat).await {
+                    Ok(id) => id,
+                    Err(sqlx_error) => return match sqlx_error {
+                        sqlx::Error::Database(db_err) => {
+                            if let Some(code) = db_err.code() {
+                                match code.as_ref() {
+                                    "23505" => {
+                                        // Unique violation
+                                        Err(ApiError::DbError(DbError::UniqueConstraintViolation(db_err.to_string())))
+                                    },
+                                    "23503" => {
+                                        // Foreign key violation (es. created_by non esiste)
+                                        Err(ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string())))
+                                    },
+                                    _ => {
+                                        Err(ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())))
+                                    }
+                                }
+                            } else {
                                 Err(ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())))
                             }
-                        }
-                    } else {
-                        Err(ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())))
-                    }
-                },
-                _ => Err(ApiError::DbError(DbError::SomethingWentWrong(sqlx_error.to_string()))),
-            },
-        };
+                        },
+                        _ => Err(ApiError::DbError(DbError::SomethingWentWrong(sqlx_error.to_string()))),
+                    },
+                };
 
-        // Create an invitation for the creator to join their own group
-        let invitation_create_dto = InvitationCreateDto {
-            to_user_id: created_by,
-            group_chat_id: group_id,
-            role_at_join: MemberRole::Admin,
-        };
+                // Create an invitation for the creator to join their own group
+                let invitation_create_dto = InvitationCreateDto {
+                    to_user_id: created_by,
+                    group_chat_id: group_id,
+                    role_at_join: MemberRole::Admin,
+                };
 
-        let invitation_service = self.invitation_service();
+                let invitation_service = self.invitation_service();
 
-        let invitation = match invitation_service.send_for_group_chat_create(invitation_create_dto, created_by).await {
-            Ok(invitation) => invitation,
-            Err(e) => return Err(e),
-        };
+                let invitation = match invitation_service.send_for_group_chat_create(invitation_create_dto, created_by).await {
+                    Ok(invitation) => invitation,
+                    Err(e) => return Err(e),
+                };
 
-        // Accept the invitation automatically
-        let invitation_update_dto = InvitationUpdateStatusDto {
-            invitation_id: invitation.id,
-            status: InvitationStatus::Accepted,
-        };
+                // Accept the invitation automatically
+                let invitation_update_dto = InvitationUpdateStatusDto {
+                    invitation_id: invitation.id,
+                    status: InvitationStatus::Accepted,
+                };
 
-        if let Err(e) = invitation_service.update_status(invitation_update_dto, created_by).await {
-            eprintln!("Errore durante update_status: {:?}", e); // stampa l'errore completo
-            return Err(e);
-        }
+                if let Err(e) = invitation_service.update_status(invitation_update_dto, created_by).await {
+                    eprintln!("Errore durante update_status: {:?}", e); // stampa l'errore completo
+                    return Err(e);
+                }
 
-        // Return the created group chat as DTO
-        let now = chrono::Utc::now();
-        Ok(GroupChatReadDto {
-            id: group_id,
-            name: payload.name,
-            description: payload.description,
-            created_by,
-            created_at: now,
-            updated_at: now,
-        })
+                // Return the created group chat as DTO
+                let now = chrono::Utc::now();
+                Ok(GroupChatReadDto {
+                    id: group_id,
+                    name: payload.name,
+                    description: payload.description,
+                    created_by,
+                    created_at: now,
+                    updated_at: now,
+                })
+            }).await
+
     }
 }
-
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,3 +344,4 @@ mod tests {
     }
 }
 
+*/

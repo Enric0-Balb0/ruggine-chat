@@ -5,11 +5,15 @@ use crate::repository::group_chat_repository::GroupChatRepository;
 
 impl GroupChatRepository {
     pub async fn find_by_id_inner(&self, id: i32) -> Result<GroupChat, Error> {
-        let group_chat = sqlx::query_as::<_, GroupChat>("SELECT * FROM \"group_chat\" WHERE id = $1")
-            .bind(id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
-        group_chat
+        let query = sqlx::query_as::<_, GroupChat>("SELECT * FROM \"group_chat\" WHERE id = $1")
+            .bind(id);
+
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
     }
 }
 

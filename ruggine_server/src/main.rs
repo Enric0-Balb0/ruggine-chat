@@ -57,7 +57,7 @@ async fn main() {
         );
 
     let mut cpu_usage_log_service = CpuUsageLogService::new(Arc::new(CpuUsageLogRepository::new(&connection_arc)));
-    cpu_usage_log_service.set_monitoring_interval_ms(5000);
+    cpu_usage_log_service.set_monitoring_interval_ms(120000);
     match cpu_usage_log_service.start_monitoring().await {
         Ok(_) => {
             axum::serve(listener, app)

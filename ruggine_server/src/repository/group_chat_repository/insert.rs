@@ -6,7 +6,7 @@ use crate::repository::group_chat_repository::GroupChatRepository;
 impl GroupChatRepository {
     pub async fn insert_inner(&self, new_group_chat: NewGroupChat) -> Result<i32, Error> {
         let now = chrono::Utc::now();
-        let rec = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             INSERT INTO "group_chat" (name, description, created_by, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5)
@@ -17,11 +17,26 @@ impl GroupChatRepository {
             .bind(new_group_chat.description)
             .bind(new_group_chat.created_by)
             .bind(now)
-            .bind(now)
-            .fetch_one(self.db_conn.get_pool())
-            .await?;
+            .bind(now);
 
-        Ok(rec)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        let response;
+
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            response = query.fetch_one(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            response = query.fetch_one(self.db_conn.get_pool()).await
+        }
+
+        match response {
+            Ok(id) => Ok(id),
+            Err(err) => {
+                eprintln!("Failed to insert group chat repository: {:?}", err);
+                Err(err)
+            }
+        }
     }
 }
 

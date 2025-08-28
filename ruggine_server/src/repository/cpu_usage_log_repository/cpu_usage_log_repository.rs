@@ -31,6 +31,19 @@ impl CpuUsageLogRepository {
 
         Ok(rec)
     }
+
+    pub async fn delete_all(&self) -> Result<Vec<i32>, Error> {
+        let rec = sqlx::query_scalar(
+            r#"
+        DELETE FROM cpu_usage_log
+        RETURNING id
+        "#
+        )
+            .fetch_all(self.db_conn.get_pool())
+            .await?;
+
+        Ok(rec)
+    }
 }
 
 #[async_trait]

@@ -70,4 +70,11 @@ impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
     async fn find_by_group_chat_id(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
         self.find_by_group_chat_id_inner(group_id).await
     }
+
+    async fn find_connected_users(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<i32>, SqlxError> {
+        self.find_connected_users_inner(user_id).await
+    }
 }

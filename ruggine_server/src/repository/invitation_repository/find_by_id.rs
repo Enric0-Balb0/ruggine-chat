@@ -5,11 +5,14 @@ use crate::repository::invitation_repository::InvitationRepository;
 
 impl InvitationRepository {
     pub async fn find_by_id_inner(&self, id: i32) -> Result<Invitation, Error> {
-        let invitation = sqlx::query_as::<_, Invitation>("SELECT * FROM \"invitation\" WHERE id = $1")
-            .bind(id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
-        invitation
+        let query = sqlx::query_as::<_, Invitation>("SELECT * FROM \"invitation\" WHERE id = $1")
+            .bind(id);
+
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
     }
 }
 

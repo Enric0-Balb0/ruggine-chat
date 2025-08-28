@@ -6,7 +6,7 @@ use crate::repository::invitation_repository::InvitationRepository;
 impl InvitationRepository {
     pub async fn insert_inner(&self, new_invitation: NewInvitation) -> Result<i32, Error> {
         let now = chrono::Utc::now();
-        let rec = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             INSERT INTO "invitation" (from_user_id, to_user_id, group_chat_id, status, sent_at, role_at_join)
             VALUES ($1, $2, $3, 'pending', $4, $5)
@@ -17,11 +17,26 @@ impl InvitationRepository {
             .bind(new_invitation.to_user_id)
             .bind(new_invitation.group_chat_id)
             .bind(now)
-            .bind(new_invitation.role_at_join)
-            .fetch_one(self.db_conn.get_pool())
-            .await?;
+            .bind(new_invitation.role_at_join);
 
-        Ok(rec)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        let response;
+
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            response = query.fetch_one(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            response = query.fetch_one(self.db_conn.get_pool()).await
+        }
+
+        match response {
+            Ok(id) => Ok(id),
+            Err(err) => {
+                eprintln!("Failed to insert invitation repository: {:?}", err);
+                Err(err)
+            }
+        }
     }
 }
 

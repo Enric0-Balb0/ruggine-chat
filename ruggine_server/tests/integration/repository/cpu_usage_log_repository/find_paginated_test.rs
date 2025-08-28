@@ -1,7 +1,7 @@
 // Integration test for CpuUsageLogRepository::find_paginated_inner
 // This test follows the style of text_message_repository/find_by_group_chat_id_paginated_service_test.rs
 
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::{CpuUsageLogRepository, CpuUsageLogRepositoryTrait};
 use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
 use chrono::{Utc, Duration};
@@ -11,6 +11,7 @@ use serial_test::serial;
 #[serial]
 async fn test_find_cpu_usage_log_paginated() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 
@@ -43,6 +44,7 @@ async fn test_find_cpu_usage_log_paginated() {
 #[serial]
 async fn test_find_cpu_usage_log_paginated_empty() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
 
@@ -56,6 +58,7 @@ async fn test_find_cpu_usage_log_paginated_empty() {
 #[tokio_shared_rt::test(shared)]
 #[serial]
 async fn test_find_cpu_usage_log_paginated_limit_zero() {
+    cleanup_all_cpu_usage_log().await;
     let db = crate::common::get_database().await;
     let repository = CpuUsageLogRepository::new(&db);
     let logs = repository.find_paginated_inner(None, 0).await.expect("Should not fail");

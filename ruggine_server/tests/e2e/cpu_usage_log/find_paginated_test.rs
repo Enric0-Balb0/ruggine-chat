@@ -12,7 +12,8 @@ use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
 use crate::common::{
     cleanup_user_by_email, create_full_router,
     create_admin_login_and_get_token, create_developer_login_and_get_token,
-    create_login_and_get_token, cleanup_cpu_usage_log, create_test_cpu_usage_log
+    create_login_and_get_token, cleanup_cpu_usage_log, create_test_cpu_usage_log,
+    cleanup_all_cpu_usage_log,
 };
 
 #[cfg(test)]
@@ -23,6 +24,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_success_as_admin() {
         // Arrange: Create router, admin user and CPU usage logs
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_admin".to_string()).await;
         
@@ -92,6 +94,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_success_as_developer() {
         // Arrange: Create router, developer user and CPU usage logs
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_developer_login_and_get_token("e2e_cpu_dev".to_string()).await;
         
@@ -131,6 +134,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_unauthorized_regular_user() {
         // Arrange: Create router and regular user (not admin/developer)
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_login_and_get_token("e2e_cpu_regular".to_string()).await;
 
@@ -159,6 +163,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_unauthorized_no_token() {
         // Arrange: Create router only
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
 
         // Act: Send GET request without auth token
@@ -184,6 +189,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_with_pagination_params() {
         // Arrange: Create router, admin user and multiple CPU usage logs
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_paginate".to_string()).await;
         
@@ -241,6 +247,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_with_cursor() {
         // Arrange: Create router, admin user and CPU usage logs
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_cursor".to_string()).await;
         
@@ -303,6 +310,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_invalid_limit_too_high() {
         // Arrange: Create router and admin user
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_limit_high".to_string()).await;
 
@@ -333,6 +341,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_invalid_limit_too_low() {
         // Arrange: Create router and admin user
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_limit_low".to_string()).await;
 
@@ -363,6 +372,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_invalid_cursor_format() {
         // Arrange: Create router and admin user
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_cursor_invalid".to_string()).await;
 
@@ -390,6 +400,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_without_limit() {
         // Arrange: Create router and admin user
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_default".to_string()).await;
 
@@ -432,6 +443,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_no_logs() {
         // Arrange: Create router and admin user
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
         let (user, _password, token) = create_admin_login_and_get_token("e2e_cpu_default".to_string()).await;
 
@@ -467,6 +479,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_invalid_token() {
         // Arrange: Create router only
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
 
         // Act: Send GET request with invalid token format
@@ -487,6 +500,7 @@ mod find_paginated_cpu_usage_log_e2e_tests {
     #[serial]
     async fn test_find_paginated_malformed_auth_header() {
         // Arrange: Create router only
+        cleanup_all_cpu_usage_log().await;
         let app = create_full_router().await;
 
         // Act: Send GET request with malformed authorization header

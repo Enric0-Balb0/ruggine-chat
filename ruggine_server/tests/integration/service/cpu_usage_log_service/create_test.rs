@@ -5,7 +5,7 @@ use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsag
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::db_error::DbError;
 use bigdecimal::{BigDecimal, FromPrimitive};
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 use std::sync::Arc;
 use serial_test::serial;
 
@@ -13,6 +13,7 @@ use serial_test::serial;
 #[serial]
 async fn test_create_cpu_usage_log_success() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -38,6 +39,7 @@ async fn test_create_cpu_usage_log_success() {
 #[serial]
 async fn test_create_cpu_usage_log_with_zero_percent() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -62,6 +64,7 @@ async fn test_create_cpu_usage_log_with_zero_percent() {
 #[serial]
 async fn test_create_cpu_usage_log_with_high_percent() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -86,6 +89,7 @@ async fn test_create_cpu_usage_log_with_high_percent() {
 #[serial]
 async fn test_create_cpu_usage_log_with_decimal_percent() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -111,6 +115,7 @@ async fn test_create_cpu_usage_log_with_decimal_percent() {
 #[serial]
 async fn test_create_multiple_cpu_usage_logs() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);

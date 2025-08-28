@@ -16,7 +16,7 @@ use crate::common::{
 #[cfg(test)]
 mod group_websocket_e2e_tests {
     use crate::{cleanup_text_message, connect_chat_websocket_with_auth, send_websocket_message_and_get_response, start_test_server};
-    use ruggine_server::websocket::GroupEvent::NewMessage;
+    use ruggine_server::websocket::GroupEvent::{Joined, NewMessage};
     use std::time::Duration;
     use tower::ServiceExt;
 
@@ -540,7 +540,12 @@ mod group_websocket_e2e_tests {
                                         }) => {
                                             assert_eq!(content, "Test message from e2e test");
                                             break; // Exit after receiving the expected message
-                                        }
+                                        },
+                                        ruggine_server::websocket::ServerEvent::Groups(Joined {
+                                            user_id
+                                        }) => {
+                                            // Ignore
+                                        },
                                         _ => {
                                             panic!("Unexpected event type");
                                         }

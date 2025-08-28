@@ -5,11 +5,15 @@ use crate::repository::user_repository::UserRepository;
 
 impl UserRepository {
     pub async fn find_inner(&self, id: i32) -> Result<User, Error> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE id = $1")
-            .bind(id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
-        user
+        let query = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE id = $1")
+            .bind(id);
+
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_one(&mut *tx_ref).await
+        } else {
+            query.fetch_one(self.db_conn.get_pool()).await
+        }
     }
 }
 

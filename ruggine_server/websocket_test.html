@@ -260,6 +260,7 @@
         let currentGroupId = null;
         let autoScroll = true;
         let userId = null;
+        let isJoinedToGroups = false;
 
         function addMessage(message, type = 'info') {
             const messagesDiv = document.getElementById('messages');
@@ -324,26 +325,41 @@
             const indicator = document.getElementById('statusIndicator');
             const connectBtn = document.getElementById('connectBtn');
             const disconnectBtn = document.getElementById('disconnectBtn');
-            const wsButtons = ['joinGroupBtn', 'leaveGroupBtn', 'pingBtn', 'sendTestBtn'];
             
             if (connected) {
                 status.textContent = 'Connesso a tutti i gruppi';
                 indicator.className = 'status-indicator status-connected';
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
-                wsButtons.forEach(btnId => {
-                    const btn = document.getElementById(btnId);
-                    if (btn) btn.disabled = false;
-                });
             } else {
                 status.textContent = 'Disconnesso';
                 indicator.className = 'status-indicator status-disconnected';
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
-                wsButtons.forEach(btnId => {
-                    const btn = document.getElementById(btnId);
-                    if (btn) btn.disabled = true;
-                });
+                isJoinedToGroups = false; // Reset join status quando si disconnette
+            }
+            
+            updateButtonStates(connected);
+        }
+
+        function updateButtonStates(connected) {
+            const joinGroupBtn = document.getElementById('joinGroupBtn');
+            const leaveGroupBtn = document.getElementById('leaveGroupBtn');
+            const pingBtn = document.getElementById('pingBtn');
+            const sendTestBtn = document.getElementById('sendTestBtn');
+            
+            if (connected) {
+                // WebSocket connesso
+                if (joinGroupBtn) joinGroupBtn.disabled = isJoinedToGroups;
+                if (leaveGroupBtn) leaveGroupBtn.disabled = !isJoinedToGroups;
+                if (pingBtn) pingBtn.disabled = false;
+                if (sendTestBtn) sendTestBtn.disabled = false;
+            } else {
+                // WebSocket disconnesso - disabilita tutti
+                if (joinGroupBtn) joinGroupBtn.disabled = true;
+                if (leaveGroupBtn) leaveGroupBtn.disabled = true;
+                if (pingBtn) pingBtn.disabled = true;
+                if (sendTestBtn) sendTestBtn.disabled = true;
             }
         }
 
@@ -405,8 +421,57 @@
                 case 'response':
                     if (data.ok) {
                         addMessage(`✅ Risposta positiva (ID: ${data.request_id}): ${JSON.stringify(data.data || {})}`, 'websocket-msg');
+                        
+                        // Gestisce risposte specifiche per join/leave
+                        if (data.request_id && data.request_id.includes('join_req_')) {
+                            isJoinedToGroups = true;
+                            addMessage(`✅ Ti sei unito ai gruppi con successo!`, 'success');
+                            
+                            // Ripristina il testo e stato del bottone join
+                            const joinBtn = document.getElementById('joinGroupBtn');
+                            if (joinBtn) {
+                                joinBtn.textContent = '➕ Unisciti ai Gruppi';
+                            }
+                            
+                            // Ripristina il testo del bottone leave
+                            const leaveBtn = document.getElementById('leaveGroupBtn');
+                            if (leaveBtn) {
+                                leaveBtn.textContent = '➖ Lascia i Gruppi';
+                            }
+                            
+                            updateButtonStates(true);
+                        } else if (data.request_id && data.request_id.includes('leave_req_')) {
+                            isJoinedToGroups = false;
+                            addMessage(`👋 Hai lasciato i gruppi con successo!`, 'success');
+                            
+                            // Ripristina il testo del bottone leave
+                            const leaveBtn = document.getElementById('leaveGroupBtn');
+                            if (leaveBtn) {
+                                leaveBtn.textContent = '➖ Lascia i Gruppi';
+                            }
+                            
+                            // Ripristina il testo del bottone join
+                            const joinBtn = document.getElementById('joinGroupBtn');
+                            if (joinBtn) {
+                                joinBtn.textContent = '➕ Unisciti ai Gruppi';
+                            }
+                            
+                            updateButtonStates(true);
+                        }
                     } else {
                         addMessage(`❌ Risposta errore (ID: ${data.request_id}): ${data.error?.message || 'Errore sconosciuto'}`, 'error');
+                        
+                        // Ripristina i bottoni in caso di errore
+                        const joinBtn = document.getElementById('joinGroupBtn');
+                        const leaveBtn = document.getElementById('leaveGroupBtn');
+                        
+                        if (data.request_id && data.request_id.includes('join_req_') && joinBtn) {
+                            joinBtn.textContent = '➕ Unisciti ai Gruppi';
+                            joinBtn.disabled = false;
+                        } else if (data.request_id && data.request_id.includes('leave_req_') && leaveBtn) {
+                            leaveBtn.textContent = '➖ Lascia i Gruppi';
+                            leaveBtn.disabled = false;
+                        }
                     }
                     break;
                 case 'event':
@@ -418,9 +483,13 @@
                 // Manteniamo la compatibilità con i vecchi formati
                 case 'group_joined':
                     addMessage(`✅ Ti sei unito ai gruppi con successo!`, 'websocket-msg');
+                    isJoinedToGroups = true;
+                    updateButtonStates(ws && ws.readyState === WebSocket.OPEN);
                     break;
                 case 'group_left':
                     addMessage(`👋 Hai lasciato i gruppi con successo!`, 'websocket-msg');
+                    isJoinedToGroups = false;
+                    updateButtonStates(ws && ws.readyState === WebSocket.OPEN);
                     break;
                 case 'new_message':
                     addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${data.group_id}:<br>
@@ -449,6 +518,33 @@
         function handleServerEvent(data) {
             const timestamp = new Date(data.timestamp).toLocaleString();
             
+            // Gestisce gli eventi nested di tipo Groups
+            if (data.event && data.event.Groups) {
+                const groupEvent = data.event.Groups;
+                
+                if (groupEvent.Joined) {
+                    const joinedUserId = groupEvent.Joined.user_id;
+                    addMessage(`👤 Utente ${joinedUserId} si è connesso ai gruppi (${timestamp})`, 'websocket-msg');
+                    return;
+                }
+                
+                if (groupEvent.Left) {
+                    const leftUserId = groupEvent.Left.user_id;
+                    addMessage(`👋 Utente ${leftUserId} ha lasciato i gruppi (${timestamp})`, 'websocket-msg');
+                    return;
+                }
+                
+                if (groupEvent.NewMessage) {
+                    const event = groupEvent.NewMessage;
+                    addMessage(`🆕 NUOVO MESSAGGIO nel gruppo ${event.group_id} da ${event.sender_username}:<br>
+                              💬 "${event.content}"<br>
+                              🕒 <span class="timestamp">${new Date(event.sent_at).toLocaleString()}</span>`, 'new-message');
+                    playNotificationSound();
+                    return;
+                }
+            }
+            
+            // Compatibilità con formati legacy
             switch(data.event?.type || data.event) {
                 case 'group_joined':
                     addMessage(`✅ Ti sei unito ai gruppi con successo! (${timestamp})`, 'websocket-msg');
@@ -500,9 +596,15 @@
                 return;
             }
 
+            if (isJoinedToGroups) {
+                addMessage('⚠️ Sei già unito ai gruppi!', 'info');
+                return;
+            }
+
+            const requestId = `join_req_${Date.now()}`;
             const message = { 
                 type: "request",
-                request_id: `req_${Date.now()}`,
+                request_id: requestId,
                 "action": {
                     "groups": {
                         "join": {}
@@ -511,6 +613,21 @@
             };
             ws.send(JSON.stringify(message));
             addMessage(`📤 Richiesta di unirsi ai gruppi: ${JSON.stringify(message)}`, 'sent');
+            
+            // Disabilita temporaneamente il bottone durante la richiesta
+            const joinBtn = document.getElementById('joinGroupBtn');
+            if (joinBtn) {
+                joinBtn.disabled = true;
+                joinBtn.textContent = '⏳ Connessione...';
+            }
+            
+            // Ripristina il bottone dopo 3 secondi in caso di mancata risposta
+            setTimeout(() => {
+                if (!isJoinedToGroups && joinBtn) {
+                    joinBtn.disabled = false;
+                    joinBtn.textContent = '➕ Unisciti ai Gruppi';
+                }
+            }, 3000);
         }
 
         function leaveGroup() {
@@ -519,9 +636,15 @@
                 return;
             }
 
+            if (!isJoinedToGroups) {
+                addMessage('⚠️ Non sei ancora unito ai gruppi!', 'info');
+                return;
+            }
+
+            const requestId = `leave_req_${Date.now()}`;
             const message = { 
                 type: "request",
-                request_id: `req_${Date.now()}`,
+                request_id: requestId,
                 "action": {
                     "groups": {
                         "leave": {}
@@ -530,6 +653,21 @@
             };
             ws.send(JSON.stringify(message));
             addMessage(`📤 Richiesta di lasciare i gruppi: ${JSON.stringify(message)}`, 'sent');
+            
+            // Disabilita temporaneamente il bottone durante la richiesta
+            const leaveBtn = document.getElementById('leaveGroupBtn');
+            if (leaveBtn) {
+                leaveBtn.disabled = true;
+                leaveBtn.textContent = '⏳ Disconnessione...';
+            }
+            
+            // Ripristina il bottone dopo 3 secondi in caso di mancata risposta
+            setTimeout(() => {
+                if (isJoinedToGroups && leaveBtn) {
+                    leaveBtn.disabled = false;
+                    leaveBtn.textContent = '➖ Lascia i Gruppi';
+                }
+            }, 3000);
         }
 
         function sendPing() {
@@ -747,6 +885,7 @@
             addMessage('📝 3. Usa "Unisciti ai Gruppi" per ricevere notifiche', 'info');
             addMessage('📝 4. Crea messaggi e osserva le notifiche in tempo reale!', 'info');
             addMessage('💡 Formato messaggi: Request/Response/Event/Control', 'info');
+            addMessage('👥 Quando un utente si connette, vedrai una notifica di "connessione"', 'info');
             
             // Test periodico della connessione WebSocket
             setInterval(() => {
@@ -776,8 +915,16 @@
                 addMessage(`🔍 WebSocket State: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`, 'info');
                 addMessage(`🔍 Current Group: ${currentGroupId || 'None'}`, 'info');
                 addMessage(`🔍 User ID: ${userId || 'Unknown'}`, 'info');
+                addMessage(`🔍 Joined to Groups: ${isJoinedToGroups ? 'YES' : 'NO'}`, 'info');
+                
+                // Stato dei bottoni
+                const joinBtn = document.getElementById('joinGroupBtn');
+                const leaveBtn = document.getElementById('leaveGroupBtn');
+                addMessage(`🔍 Join Button: ${joinBtn ? (joinBtn.disabled ? 'DISABLED' : 'ENABLED') : 'NOT_FOUND'}`, 'info');
+                addMessage(`🔍 Leave Button: ${leaveBtn ? (leaveBtn.disabled ? 'DISABLED' : 'ENABLED') : 'NOT_FOUND'}`, 'info');
             } else {
                 addMessage(`🔍 WebSocket: Not initialized`, 'info');
+                addMessage(`🔍 Joined to Groups: ${isJoinedToGroups ? 'YES' : 'NO'}`, 'info');
             }
         }
     </script>

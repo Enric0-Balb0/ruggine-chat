@@ -11,12 +11,13 @@ use ruggine_server::factory::cpu_usage_log_factory::CpuUsageLogFactory;
 use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
 use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository_trait::CpuUsageLogRepositoryTrait;
 use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
-use crate::common;
+use crate::{cleanup_all_cpu_usage_log, common};
 
 #[tokio_shared_rt::test(shared)]
 #[serial]
 async fn test_start_monitoring_success() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let mut service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -53,6 +54,7 @@ async fn test_start_monitoring_success() {
 #[serial]
 async fn test_start_monitoring_without_interval_fails() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -82,6 +84,7 @@ async fn test_start_monitoring_without_interval_fails() {
 #[serial]
 async fn test_start_monitoring_twice_fails() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let mut service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -115,6 +118,7 @@ async fn test_start_monitoring_twice_fails() {
 #[serial]
 async fn test_stop_monitoring_when_not_running_fails() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let mut service = CpuUsageLogService::new(cpu_usage_log_repo);
@@ -142,6 +146,7 @@ async fn test_stop_monitoring_when_not_running_fails() {
 #[serial]
 async fn test_monitoring_state_consistency() {
     // Arrange
+    cleanup_all_cpu_usage_log().await;
     let db = common::get_database().await;
     let cpu_usage_log_repo = Arc::new(CpuUsageLogRepository::new(&db));
     let mut service = CpuUsageLogService::new(cpu_usage_log_repo);

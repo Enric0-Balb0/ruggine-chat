@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::Error as SqlxError;
+use sqlx::{Error as SqlxError, Error};
 use mockall::automock;
 
 use crate::entity::group_membership::{MembershipStatus, NewGroupMembership, UpdateGroupMembership};
@@ -15,6 +15,11 @@ pub trait GroupMembershipRepositoryTrait: Send + Sync {
     async fn find_active_by_user_id_and_group_id(&self, user_id: i32, group_id: i32) -> Result<GroupMembershipWithInvitationRow, SqlxError>;
     async fn find_by_user_id_and_group_id(&self, user_id: i32, group_id: i32, membership_statuses: Vec<MembershipStatus>) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError>;
     async fn find_by_group_chat_id(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError>;
+    async fn find_connected_users(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<i32>, SqlxError>;
+
     /* // user_id is passed because the user can see all other memberships in the group
     // only if he is a member of the group
     async fn find_by_group_chat_id(&self, group_chat_id: i32, user_id: i32) -> Result<Vec<GroupMembership>, SqlxError>; */
