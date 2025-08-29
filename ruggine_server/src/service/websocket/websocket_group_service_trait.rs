@@ -6,10 +6,10 @@ use mockall::automock;
 #[automock]
 pub trait WebSocketGroupServiceTrait: Send + Sync {
     /// Sottoscrive un utente al servizio WebSocket dei gruppi
-    async fn subscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError>;
+    async fn subscribe(&self, user_id: i32, connection_id: &str);
     
     /// Rimuove la sottoscrizione di un utente
-    async fn unsubscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError>;
+    async fn unsubscribe(&self, user_id: i32, connection_id: &str);
     
     /// Pulisce tutte le sottoscrizioni relative a una connessione chiusa
     async fn cleanup_connection(&self, connection_id: &str);

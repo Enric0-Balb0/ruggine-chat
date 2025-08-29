@@ -20,6 +20,7 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 use crate::dto::text_message_dto::TextMessageReadDto;
+use crate::dto::user_dto::UpdateOnlineDto;
 use crate::entity::user::User;
 
 pub async fn chat_websocket_handler(
@@ -34,12 +35,13 @@ pub async fn chat_websocket_handler(
         user_id
     );
 
+    let arc_state = Arc::new(state);
+
     Ok(ws.on_upgrade(move |socket| {
         handle_chat_websocket_upgrade(
             socket,
             user_id,
-            state.manager.clone(),
-            state.group_service.clone(),
+            Arc::clone(&arc_state),
         )
     }))
 }
@@ -47,22 +49,20 @@ pub async fn chat_websocket_handler(
 async fn handle_chat_websocket_upgrade(
     socket: WebSocket,
     user_id: i32,
-    manager: Arc<dyn WebSocketManagerTrait>,
-    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    state: Arc<WebSocketState>,
 ) {
     info!(
         "WebSocket group connection established for user {}",
         user_id
     );
-    handle_chat_websocket_connection(socket, user_id, manager, group_service).await;
+    handle_chat_websocket_connection(socket, user_id, state).await;
     info!("WebSocket group connection closed for user {}", user_id);
 }
 
 pub async fn handle_chat_websocket_connection(
     socket: WebSocket,
     user_id: i32,
-    manager: Arc<dyn WebSocketManagerTrait>,
-    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    arc_state: Arc<WebSocketState>,
 ) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<WebSocketMessage>();
@@ -85,13 +85,12 @@ pub async fn handle_chat_websocket_connection(
     });
 
     // Registrazione della connessione PRIMA di spawnare il task di ricezione
-    let connection = manager.register_connection(user_id, tx.clone()).await;
+    let connection = arc_state.manager.register_connection(user_id, tx.clone()).await;
     let connection_id = connection.connection_id.clone();
 
     // Task per ricevere messaggi
     let receive_task = {
-        let manager = manager.clone();
-        let group_service = group_service.clone();
+        let arc_state = Arc::clone(&arc_state);
         let user_id = user_id;
         let tx = tx.clone();
         let connection_id = connection_id.clone();
@@ -109,8 +108,7 @@ pub async fn handle_chat_websocket_connection(
                         user_id,
                         &connection_id,
                         validated.0,
-                        &manager,
-                        &group_service,
+                        Arc::clone(&arc_state),
                     )
                     .await
                     {
@@ -126,13 +124,13 @@ pub async fn handle_chat_websocket_connection(
 
     WebSocketConnection::await_connection_tasks(send_task, connection, receive_task).await;
 
-    match signal_user_left(user_id, &manager, &group_service).await {
+    match mark_user_offline_and_signal_user_left(user_id, &arc_state).await {
         Ok(_) => {},
         Err(e) => error!("Something went wrong signaling users of {} left: {:?}", user_id, e),
     }
 
     // Cleanup
-    group_service.cleanup_connection(&connection_id).await;
+    arc_state.group_service.unsubscribe(user_id, &connection_id).await;
     info!("Cleaned up group WebSocket connection for user {}", user_id);
 }
 
@@ -140,8 +138,7 @@ pub async fn handle_chat_client_message(
     user_id: i32,
     connection_id: &str,
     message: WebSocketMessage,
-    manager: &Arc<dyn WebSocketManagerTrait>,
-    group_service: &Arc<dyn WebSocketGroupServiceTrait>,
+    arc_state: Arc<WebSocketState>,
 ) -> Result<(), WsError> {
     match message {
         WebSocketMessage::Request { request_id, action } => match action {
@@ -151,42 +148,57 @@ pub async fn handle_chat_client_message(
                         "User {} requesting to join group via connection {}",
                         user_id, connection_id
                     );
-                    group_service
+                    arc_state
+                        .group_service
                         .subscribe(user_id, connection_id)
-                        .await
-                        .map_err(|e| <WebSocketError as Into<WsError>>::into(e))?;
+                        .await;
+
+                    mark_user_online_and_signal_user_joined(user_id, &arc_state).await?;
+
                     let message = WebSocketMessage::Response {
                         request_id,
                         ok: true,
                         data: None,
                         error: None,
                     };
-                    manager
+
+                    arc_state
+                        .manager
                         .send_to_connection(connection_id, message)
                         .await
                         .map_err(|e| <ConnectionError as Into<WsError>>::into(e))?;
 
-                    signal_user_joined(user_id, manager, group_service).await?;
+                    info!(
+                        "User {} successfully joined group via connection {}",
+                        user_id, connection_id
+                    );
                 }
                 Leave {} => {
                     info!(
                         "User {} requesting to leave group via connection {}",
                         user_id, connection_id
                     );
-                    group_service
+                    arc_state
+                        .group_service
                         .unsubscribe(user_id, connection_id)
-                        .await
-                        .map_err(|e| <WebSocketError as Into<WsError>>::into(e))?;
+                        .await;
+
                     let message = WebSocketMessage::Response {
                         request_id,
                         ok: true,
                         data: None,
                         error: None,
                     };
-                    manager
+                    arc_state
+                        .manager
                         .send_to_connection(connection_id, message)
                         .await
                         .map_err(|e| <ConnectionError as Into<WsError>>::into(e))?;
+
+                    info!(
+                        "User {} successfully left group via connection {}",
+                        user_id, connection_id
+                    );
                     
                     return Err(WsError {
                         code: 0,
@@ -200,7 +212,8 @@ pub async fn handle_chat_client_message(
             ControlMessage::Ping => {
                 debug!("Ping received from user {}", user_id);
                 let message = WebSocketMessage::Control(ControlMessage::Pong);
-                manager
+                arc_state
+                    .manager
                     .send_to_connection(connection_id, message)
                     .await
                     .map_err(|e| <ConnectionError as Into<WsError>>::into(e))?;
@@ -218,14 +231,30 @@ pub async fn handle_chat_client_message(
     Ok(())
 }
 
-async fn signal_user_joined(user_id: i32, manager: &Arc<dyn WebSocketManagerTrait>, group_service: &Arc<dyn WebSocketGroupServiceTrait>) -> Result<(), WsError> {
+async fn mark_user_online_and_signal_user_joined(user_id: i32, state: &Arc<WebSocketState>) -> Result<(), WsError> {
     // Don't signal if user have more than 1 connection
-    if group_service.get_connections_number_for_user_id(user_id).await > 1 {
+    if state.group_service.get_connections_number_for_user_id(user_id).await > 1 {
         return Ok(());
     }
 
+    // Mark user online
+    match state
+        .user_service
+        .update_online(user_id, UpdateOnlineDto {online: true})
+        .await {
+        Ok(_) => (),
+        Err(e) => {
+            error!("Failed to mark user {} online: {:?}", user_id ,e);
+            return Err(WsError {
+                code: 0,
+                message: format!("Failed to mark user {} online ", user_id),
+            });
+        },
+    }
+
     // Now signal all users connected to user_id that he is online
-    let connection_ids = group_service
+    let connection_ids = state
+        .group_service
         .connections_to_broadcast_new_user_joined(user_id)
         .await
         .map_err(|e| <WebSocketError as Into<WsError>>::into(e))?;
@@ -238,7 +267,7 @@ async fn signal_user_joined(user_id: i32, manager: &Arc<dyn WebSocketManagerTrai
     };
 
     for conn_id in connection_ids {
-        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
+        if let Err(e) = state.manager.send_to_connection(&conn_id.1, notification.clone()).await {
             warn!("Failed to send joined message to connection {}: {}", conn_id.1, e);
             continue;
         }
@@ -246,14 +275,30 @@ async fn signal_user_joined(user_id: i32, manager: &Arc<dyn WebSocketManagerTrai
     Ok(())
 }
 
-async fn signal_user_left(user_id: i32, manager: &Arc<dyn WebSocketManagerTrait>, group_service: &Arc<dyn WebSocketGroupServiceTrait>) -> Result<(), WsError> {
+async fn mark_user_offline_and_signal_user_left(user_id: i32, state: &Arc<WebSocketState>) -> Result<(), WsError> {
     // Don't signal if user still have some connections
-    if group_service.get_connections_number_for_user_id(user_id).await > 0 {
+    if state.group_service.get_connections_number_for_user_id(user_id).await > 0 {
         return Ok(());
     }
 
+    // Mark user offline
+    match state
+        .user_service
+        .update_online(user_id, UpdateOnlineDto {online: false})
+        .await {
+        Ok(_) => (),
+        Err(e) => {
+            error!("Failed to mark user {} offline: {:?}", user_id, e);
+            return Err(WsError {
+                code: 0,
+                message: format!("Failed to mark user {} offline", user_id),
+            });
+        },
+    }
+
     // Now signal all users connected to user_id that he is offline
-    let connection_ids = group_service
+    let connection_ids = state
+        .group_service
         .connections_to_broadcast_new_user_joined(user_id)
         .await
         .map_err(|e| <WebSocketError as Into<WsError>>::into(e))?;
@@ -266,7 +311,7 @@ async fn signal_user_left(user_id: i32, manager: &Arc<dyn WebSocketManagerTrait>
     };
 
     for conn_id in connection_ids {
-        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
+        if let Err(e) = state.manager.send_to_connection(&conn_id.1, notification.clone()).await {
             warn!("Failed to send left message to connection {}: {}", conn_id.1, e);
             continue;
         }

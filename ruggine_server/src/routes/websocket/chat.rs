@@ -5,8 +5,7 @@ use axum::{
 };
 
 use crate::{
-    handler::websocket::chat_handler::chat_websocket_handler
-    ,
+    handler::websocket::chat_handler::chat_websocket_handler,
     state::websocket::WebSocketState,
 };
 

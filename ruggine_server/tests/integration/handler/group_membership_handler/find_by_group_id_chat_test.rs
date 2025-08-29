@@ -133,7 +133,7 @@ mod find_by_group_chat_id_handler_integration_tests {
     }
 
     
-    #[tokio::test]
+    #[tokio_shared_rt::test(shared)]
     async fn test_find_by_id_group_not_active_membership() {
         // Arrange
         let (admin_user, _) = create_test_user("find_by_group_chat_id_admin").await;

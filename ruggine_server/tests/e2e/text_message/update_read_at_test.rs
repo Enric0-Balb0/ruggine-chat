@@ -9,7 +9,7 @@ use ruggine_server::dto::text_message_dto::{TextMessageInfoReadAtDtoUpdate, Text
 use crate::common::*;
 use crate::start_test_server;
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_success() {
     // Start server
     let (addr, shutdown) = start_test_server().await;
@@ -59,7 +59,7 @@ async fn test_update_read_at_success() {
 
 // More tests to be added for not found, unauthorized, already set, etc.
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_message_not_found() {
     let (addr, shutdown) = start_test_server().await;
     let (user, pw) = create_test_user("e2e_update_read_at_not_found").await;
@@ -75,7 +75,7 @@ async fn test_update_read_at_message_not_found() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_unauthorized_user() {
     let (addr, shutdown) = start_test_server().await;
     let (sender, sender_pw) = create_test_user("e2e_update_read_at_sender_unauth").await;
@@ -107,7 +107,7 @@ async fn test_update_read_at_unauthorized_user() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_already_set() {
     let (addr, shutdown) = start_test_server().await;
     let (recipient, recipient_pw) = create_test_user("e2e_update_read_at_already_set").await;
@@ -145,7 +145,7 @@ async fn test_update_read_at_already_set() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_preserves_sent_at() {
     let (addr, shutdown) = start_test_server().await;
     let (recipient, recipient_pw) = create_test_user("e2e_update_read_at_preserve").await;
@@ -178,7 +178,7 @@ async fn test_update_read_at_preserves_sent_at() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_multiple_users_same_message() {
     let (addr, shutdown) = start_test_server().await;
     let (sender, sender_pw) = create_test_user("e2e_update_read_at_multi_sender").await;
@@ -221,7 +221,7 @@ async fn test_update_read_at_multiple_users_same_message() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_cannot_set_before_sent_at() {
     let (addr, shutdown) = start_test_server().await;
     let (recipient, recipient_pw) = create_test_user("e2e_update_read_at_before_sent").await;
@@ -252,7 +252,7 @@ async fn test_update_read_at_cannot_set_before_sent_at() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_must_be_greater_or_equal_to_sent_at() {
     let (addr, shutdown) = start_test_server().await;
     let (recipient, recipient_pw) = create_test_user("e2e_update_read_at_gte_sent").await;
@@ -283,7 +283,7 @@ async fn test_update_read_at_must_be_greater_or_equal_to_sent_at() {
     shutdown.send(()).unwrap();
 }
 
-#[tokio::test]
+#[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_must_be_less_or_equal_to_now() {
     let (addr, shutdown) = start_test_server().await;
     let (recipient, recipient_pw) = create_test_user("e2e_update_read_at_lte_now").await;

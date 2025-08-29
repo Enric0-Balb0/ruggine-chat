@@ -5,12 +5,13 @@ use crate::service::group_membership_service::{GroupMembershipService, GroupMemb
 use crate::websocket::WebSocketManager;
 use std::sync::Arc;
 use crate::utils::service_initializer::ServiceInitializer;
+use crate::websocket::core::manager_trait::WebSocketManagerTrait;
 
 #[derive(Clone)]
 pub struct TextMessageState {
     pub text_message_service: Arc<dyn TextMessageServiceTrait>,
     pub websocket_group_service: Option<Arc<dyn WebSocketGroupServiceTrait>>,
-    pub ws_manager: Option<Arc<WebSocketManager>>,
+    pub ws_manager: Option<Arc<dyn WebSocketManagerTrait>>,
 }
 
 impl TextMessageState {
@@ -25,7 +26,7 @@ impl TextMessageState {
         }
     }
 
-    pub fn with_websocket_service(mut self, ws_manager: Arc<WebSocketManager>, websocket_group_service: Arc<dyn WebSocketGroupServiceTrait>) -> Self {
+    pub fn with_websocket_service(mut self, ws_manager: Arc<dyn WebSocketManagerTrait>, websocket_group_service: Arc<dyn WebSocketGroupServiceTrait>) -> Self {
         self.websocket_group_service = Some(websocket_group_service);
         self.ws_manager = Some(ws_manager);
         self

@@ -39,17 +39,16 @@ impl WebSocketGroupService {
 #[async_trait]
 impl WebSocketGroupServiceTrait for WebSocketGroupService {
     /// Sottoscrive un utente al servizio WebSocket dei gruppi
-    async fn subscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError> {
+    async fn subscribe(&self, user_id: i32, connection_id: &str){
         self.group_subscriptions.write().await
             .entry(user_id)
             .or_insert_with(HashSet::new)
             .insert(connection_id.to_string());
         info!("User {} subscribed via connection {}", user_id, connection_id);
-        Ok(())
     }
 
     /// Rimuove la sottoscrizione di un utente
-    async fn unsubscribe(&self, user_id: i32, connection_id: &str) -> Result<(), WebSocketError> {
+    async fn unsubscribe(&self, user_id: i32, connection_id: &str) {
         let mut subscriptions = self.group_subscriptions.write().await;
 
         if let Some(connections) = subscriptions.get_mut(&user_id) {
@@ -61,7 +60,6 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
         }
 
         info!("User {} unsubscribed connection {}", user_id, connection_id);
-        Ok(())
     }
 
     /// Pulisce tutte le sottoscrizioni relative a una connessione chiusa
@@ -197,7 +195,6 @@ mod tests {
         let result = service.subscribe(user_id, connection_id).await;
 
         // Assert
-        assert!(result.is_ok());
         assert_eq!(service.get_stats().await, 1);
     }
 
@@ -253,7 +250,6 @@ mod tests {
         let result = service.unsubscribe(user_id, connection_id).await;
 
         // Assert
-        assert!(result.is_ok());
         assert_eq!(service.get_stats().await, 0);
     }
 
@@ -269,7 +265,6 @@ mod tests {
         let result = service.unsubscribe(user_id, connection_id).await;
 
         // Assert
-        assert!(result.is_ok()); // Should not fail even if user doesn't exist
         assert_eq!(service.get_stats().await, 0);
     }
 

@@ -117,7 +117,7 @@ pub struct ProfileUpdateDto {
 
 #[derive(Clone, Serialize, Deserialize, Validate, PartialEq, Eq, ToSchema)]
 pub struct UpdateOnlineDto {
-    #[schema(example = "false")]
+    #[schema(example = false)]
     pub online: bool,
 }
 

@@ -110,6 +110,35 @@ mod group_websocket_join_leave_notification_e2e_tests {
             _ => panic!("Expected Event message, got: {:?}", notification),
         }
 
+        // Assert both users are online
+        let client = reqwest::Client::new();
+
+        let mut response = client.get(format!("http://{}/api/user/profile", addr))
+            .bearer_auth(&token1)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut response_json: serde_json::Value = response.json().await.unwrap();
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        let mut data = &response_json["data"];
+        assert_eq!(data.get("id").unwrap(), user1.id);
+        assert_eq!(data.get("is_online").unwrap(), true);
+
+        response = client.get(format!("http://{}/api/user/profile", addr))
+            .bearer_auth(&token2)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        response_json = response.json().await.unwrap();
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        data = &response_json["data"];
+        assert_eq!(data.get("id").unwrap(), user2.id);
+        assert_eq!(data.get("is_online").unwrap(), true);
+
         // Cleanup
         cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await;
         cleanup_group_chat(group.id).await;
@@ -160,6 +189,22 @@ mod group_websocket_join_leave_notification_e2e_tests {
             .await
             .expect("User2 failed to join group");
 
+        // Assert user2 online
+        let client = reqwest::Client::new();
+
+        let mut response = client.get(format!("http://{}/api/user/profile", addr))
+            .bearer_auth(&token2)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut response_json: serde_json::Value = response.json().await.unwrap();
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        let mut data = &response_json["data"];
+        assert_eq!(data.get("id").unwrap(), user2.id);
+        assert_eq!(data.get("is_online").unwrap(), true);
+
         // Clear any pending join notifications
         let _ = receive_websocket_message_with_timeout(&mut ws1, Duration::from_millis(500)).await;
 
@@ -197,6 +242,22 @@ mod group_websocket_join_leave_notification_e2e_tests {
             },
             _ => panic!("Expected Event message, got: {:?}", notification),
         }
+
+        // Assert user2 offline
+        let client = reqwest::Client::new();
+
+        response = client.get(format!("http://{}/api/user/profile", addr))
+            .bearer_auth(&token2)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        response_json = response.json().await.unwrap();
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        data = &response_json["data"];
+        assert_eq!(data.get("id").unwrap(), user2.id);
+        assert_eq!(data.get("is_online").unwrap(), false);
 
         // Cleanup
         cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await; // user2 already left
@@ -390,6 +451,22 @@ mod group_websocket_join_leave_notification_e2e_tests {
             .expect("Should not error");
 
         assert!(no_notification.is_none(), "Should not receive notification when user already has active connections");
+
+        // Assert user2 is still online
+        let client = reqwest::Client::new();
+
+        let mut response = client.get(format!("http://{}/api/user/profile", addr))
+            .bearer_auth(&token2)
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut response_json: serde_json::Value = response.json().await.unwrap();
+        assert!(response_json.get("data").is_some(), "Response should contain data field");
+        let mut data = &response_json["data"];
+        assert_eq!(data.get("id").unwrap(), user2.id);
+        assert_eq!(data.get("is_online").unwrap(), true, "User2 still have one open connection and it should be online");
 
         // Cleanup
         cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await;
