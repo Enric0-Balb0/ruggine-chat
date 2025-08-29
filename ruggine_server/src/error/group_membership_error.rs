@@ -19,6 +19,8 @@ pub enum GroupMembershipError {
     UserAlreadyInGroup,
     #[error("User already left the group")]
     UserAlreadyLeftGroup,
+    #[error("CannotAccessIfUserIsNotOnline")]
+    CannotAccessIfUserIsNotOnline,
 }
 
 impl IntoResponse for GroupMembershipError {
@@ -30,6 +32,7 @@ impl IntoResponse for GroupMembershipError {
             GroupMembershipError::GroupNotFound => StatusCode::NOT_FOUND,
             GroupMembershipError::UserAlreadyInGroup => StatusCode::CONFLICT,
             GroupMembershipError::UserAlreadyLeftGroup => StatusCode::CONFLICT,
+            GroupMembershipError::CannotAccessIfUserIsNotOnline => StatusCode::FORBIDDEN,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

@@ -7,3 +7,4 @@ pub mod find_by_group_chat_id_test;
 pub mod find_connected_users_test;
 pub mod find_connected_users_and_online_test;
 pub mod update_test;
+pub mod promote_admin_if_none_test;

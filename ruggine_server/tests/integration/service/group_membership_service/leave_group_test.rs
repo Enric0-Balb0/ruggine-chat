@@ -203,4 +203,277 @@ mod group_membership_service_leave_group_integration_tests {
         cleanup_group_chat(group_chat.id).await;
         cleanup_user_by_email(admin_user.email).await;
     }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_leave_group_admin_promotes_member_to_admin() {
+        // Arrange: Create a group with admin and member, admin leaves, member should be promoted
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        
+        let (admin_user, _) = create_test_user("leave_promote_admin").await;
+        let (member_user, _) = create_test_user("leave_promote_member").await;
+        
+        // Create group with admin
+        let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_promote_group", admin_user.id).await;
+        
+        // Add member user to the group
+        let invitation = create_test_invitation(admin_user.id, member_user.id, group_chat.id).await;
+        let member_membership = create_test_group_membership(invitation.id, member_user.id).await;
+        
+        // Get admin membership
+        let admin_membership = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+
+        let leave_dto = LeaveGroupMembershipDto {
+            id: admin_membership.id,
+        };
+
+        // Act: Admin leaves the group
+        let result = group_membership_service.leave_group(leave_dto, admin_user.id).await;
+
+        // Assert: Admin should successfully leave
+        assert!(result.is_ok(), "Admin should be able to leave: {:?}", result);
+        
+        // Verify admin left
+        let left_membership = result.unwrap();
+        assert_eq!(left_membership.membership_status, MembershipStatus::Left);
+        
+        // Verify member was promoted to admin
+        let updated_member = group_membership_service.find_by_id_and_user_id(member_membership.id, member_user.id).await.unwrap();
+        assert_eq!(updated_member.role, ruggine_server::entity::group_membership::MemberRole::Admin, "Member should be promoted to admin");
+        assert_eq!(updated_member.membership_status, MembershipStatus::Active);
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_membership(member_membership.id).await;
+        cleanup_invitation(invitation.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_leave_group_admin_promotes_first_available_member() {
+        // Arrange: Create a group with admin and multiple members, admin leaves, first member should be promoted
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        
+        let (admin_user, _) = create_test_user("leave_promote_multi_admin").await;
+        let (member1_user, _) = create_test_user("leave_promote_multi_member1").await;
+        let (member2_user, _) = create_test_user("leave_promote_multi_member2").await;
+        let (member3_user, _) = create_test_user("leave_promote_multi_member3").await;
+        
+        // Create group with admin
+        let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_promote_multi_group", admin_user.id).await;
+        
+        // Add multiple members to the group
+        let invitation1 = create_test_invitation(admin_user.id, member1_user.id, group_chat.id).await;
+        let invitation2 = create_test_invitation(admin_user.id, member2_user.id, group_chat.id).await;
+        let invitation3 = create_test_invitation(admin_user.id, member3_user.id, group_chat.id).await;
+        
+        let member1_membership = create_test_group_membership(invitation1.id, member1_user.id).await;
+        let member2_membership = create_test_group_membership(invitation2.id, member2_user.id).await;
+        let member3_membership = create_test_group_membership(invitation3.id, member3_user.id).await;
+        
+        // Get admin membership
+        let admin_membership = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+
+        let leave_dto = LeaveGroupMembershipDto {
+            id: admin_membership.id,
+        };
+
+        // Act: Admin leaves the group
+        let result = group_membership_service.leave_group(leave_dto, admin_user.id).await;
+
+        // Assert: Admin should successfully leave
+        assert!(result.is_ok(), "Admin should be able to leave: {:?}", result);
+        
+        // Verify admin left
+        let left_membership = result.unwrap();
+        assert_eq!(left_membership.membership_status, MembershipStatus::Left);
+        
+        // Verify exactly one member was promoted to admin
+        let member1 = group_membership_service.find_by_id_and_user_id(member1_membership.id, member1_user.id).await.unwrap();
+        let member2 = group_membership_service.find_by_id_and_user_id(member2_membership.id, member2_user.id).await.unwrap();
+        let member3 = group_membership_service.find_by_id_and_user_id(member3_membership.id, member3_user.id).await.unwrap();
+        
+        let admin_count = [&member1, &member2, &member3]
+            .iter()
+            .filter(|m| m.role == ruggine_server::entity::group_membership::MemberRole::Admin)
+            .count();
+        
+        assert_eq!(admin_count, 1, "Exactly one member should be promoted to admin");
+        
+        let member_count = [&member1, &member2, &member3]
+            .iter()
+            .filter(|m| m.role == ruggine_server::entity::group_membership::MemberRole::Member)
+            .count();
+        
+        assert_eq!(member_count, 2, "Two members should remain as regular members");
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_membership(member1_membership.id).await;
+        cleanup_group_membership(member2_membership.id).await;
+        cleanup_group_membership(member3_membership.id).await;
+        cleanup_invitation(invitation1.id).await;
+        cleanup_invitation(invitation2.id).await;
+        cleanup_invitation(invitation3.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member1_user.email).await;
+        cleanup_user_by_email(member2_user.email).await;
+        cleanup_user_by_email(member3_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_leave_group_member_leaves_no_promotion_needed() {
+        // Arrange: Create a group with admin and member, member leaves, no promotion should occur
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        
+        let (admin_user, _) = create_test_user("leave_no_promote_admin").await;
+        let (member_user, _) = create_test_user("leave_no_promote_member").await;
+        
+        // Create group with admin
+        let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_no_promote_group", admin_user.id).await;
+        
+        // Add member user to the group
+        let invitation = create_test_invitation(admin_user.id, member_user.id, group_chat.id).await;
+        let member_membership = create_test_group_membership(invitation.id, member_user.id).await;
+        
+        // Get admin membership before member leaves
+        let admin_membership_before = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+
+        let leave_dto = LeaveGroupMembershipDto {
+            id: member_membership.id,
+        };
+
+        // Act: Member leaves the group
+        let result = group_membership_service.leave_group(leave_dto, member_user.id).await;
+
+        // Assert: Member should successfully leave
+        assert!(result.is_ok(), "Member should be able to leave: {:?}", result);
+        
+        // Verify member left
+        let left_membership = result.unwrap();
+        assert_eq!(left_membership.membership_status, MembershipStatus::Left);
+        assert_eq!(left_membership.user_id, member_user.id);
+        
+        // Verify admin remains admin (no change)
+        let admin_membership_after = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+        assert_eq!(admin_membership_after.role, ruggine_server::entity::group_membership::MemberRole::Admin);
+        assert_eq!(admin_membership_after.id, admin_membership_before.id);
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_membership(member_membership.id).await;
+        cleanup_invitation(invitation.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_leave_group_admin_leaves_no_members_left() {
+        // Arrange: Create a group with only admin, admin leaves, no promotion should occur
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        
+        let (admin_user, _) = create_test_user("leave_no_members_admin").await;
+        
+        // Create group with only admin
+        let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_no_members_group", admin_user.id).await;
+        
+        // Get admin membership
+        let admin_membership = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+
+        let leave_dto = LeaveGroupMembershipDto {
+            id: admin_membership.id,
+        };
+
+        // Act: Admin leaves the group (only member)
+        let result = group_membership_service.leave_group(leave_dto, admin_user.id).await;
+
+        // Assert: Admin should successfully leave even though no one is left
+        assert!(result.is_ok(), "Admin should be able to leave even with no other members: {:?}", result);
+        
+        // Verify admin left
+        let left_membership = result.unwrap();
+        assert_eq!(left_membership.membership_status, MembershipStatus::Left);
+        assert_eq!(left_membership.user_id, admin_user.id);
+        
+        // Verify no active members remain in the group
+        let remaining_members = group_membership_service.find_by_group_chat_id(group_chat.id).await.unwrap();
+        let active_members: Vec<_> = remaining_members
+            .iter()
+            .filter(|m| m.membership_status == MembershipStatus::Active)
+            .collect();
+        
+        assert_eq!(active_members.len(), 0, "No active members should remain in the group");
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_leave_group_admin_leaves_only_left_members_remain() {
+        // Arrange: Create a group with admin and member who already left, admin leaves, no promotion should occur
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        
+        let (admin_user, _) = create_test_user("leave_only_left_admin").await;
+        let (member_user, _) = create_test_user("leave_only_left_member").await;
+        
+        // Create group with admin
+        let group_chat = crate::common::create_test_group_chat_with_invitation_and_membership("leave_only_left_group", admin_user.id).await;
+        
+        // Add member user to the group and make them leave first
+        let invitation = create_test_invitation(admin_user.id, member_user.id, group_chat.id).await;
+        let member_membership = create_test_group_membership(invitation.id, member_user.id).await;
+        
+        // Member leaves first
+        let member_leave_dto = LeaveGroupMembershipDto {
+            id: member_membership.id,
+        };
+        let member_leave_result = group_membership_service.leave_group(member_leave_dto, member_user.id).await;
+        assert!(member_leave_result.is_ok(), "Member should be able to leave first");
+        
+        // Get admin membership
+        let admin_membership = group_membership_service.find_active_by_user_id_and_group_id(admin_user.id, group_chat.id).await.unwrap();
+
+        let admin_leave_dto = LeaveGroupMembershipDto {
+            id: admin_membership.id,
+        };
+
+        // Act: Admin leaves the group (only active member, other member already left)
+        let result = group_membership_service.leave_group(admin_leave_dto, admin_user.id).await;
+
+        // Assert: Admin should successfully leave
+        assert!(result.is_ok(), "Admin should be able to leave: {:?}", result);
+        
+        // Verify admin left
+        let left_membership = result.unwrap();
+        assert_eq!(left_membership.membership_status, MembershipStatus::Left);
+        assert_eq!(left_membership.user_id, admin_user.id);
+        
+        // Verify no active members remain, but left member is still Left (not promoted)
+        let all_members = group_membership_service.find_by_group_chat_id(group_chat.id).await.unwrap();
+        
+        assert_eq!(all_members.len(), 0, "No active members should remain");
+        
+        // Verify the previously left member was not promoted
+        let final_member_state = group_membership_service.find_by_id_and_user_id(member_membership.id, member_user.id).await.unwrap();
+        assert_eq!(final_member_state.role, ruggine_server::entity::group_membership::MemberRole::Member, "Previously left member should remain a member (not promoted)");
+        assert_eq!(final_member_state.membership_status, MembershipStatus::Left);
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_membership(member_membership.id).await;
+        cleanup_invitation(invitation.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(admin_user.email).await;
+        cleanup_user_by_email(member_user.email).await;
+    }
 }

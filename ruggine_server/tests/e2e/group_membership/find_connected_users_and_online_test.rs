@@ -23,6 +23,7 @@ use axum::body::to_bytes;
 
 #[cfg(test)]
 mod find_connected_users_and_online_e2e_tests {
+    use ruggine_server::dto::user_dto::UpdateOnlineDto;
     use ruggine_server::utils::service_initializer::ServiceInitializer;
     use crate::{cleanup_test_user_from_a_group_chat, create_full_router, get_database};
     use super::*;
@@ -92,6 +93,7 @@ mod find_connected_users_and_online_e2e_tests {
         let update_online_dto_true = UserFactory::fake_update_online_dto_true();
         let update_offline_dto_false = UserFactory::fake_update_online_dto_false();
 
+        user_service.update_online(target_user.id, update_online_dto_true.clone()).await.unwrap();
         user_service.update_online(online_user1.id, update_online_dto_true.clone()).await.unwrap();
         user_service.update_online(online_user2.id, update_online_dto_true).await.unwrap();
         user_service.update_online(offline_user.id, update_offline_dto_false).await.unwrap();
@@ -172,7 +174,8 @@ mod find_connected_users_and_online_e2e_tests {
 
         // Set other_user to online
         let update_online_dto = UserFactory::fake_update_online_dto_true();
-        user_service.update_online(other_user.id, update_online_dto).await.unwrap();
+        user_service.update_online(other_user.id, update_online_dto.clone()).await.unwrap();
+        user_service.update_online(target_user.id, update_online_dto).await.unwrap();
 
         // Login target user to get token
         let app = create_full_router().await;
@@ -433,6 +436,7 @@ mod find_connected_users_and_online_e2e_tests {
         let target_dto = UserFactory::unique_fake_user_register_dto("find_connected_all_offline_target");
         let target_password = target_dto.password.clone();
         let target_user = user_service.create_user(target_dto.clone()).await.unwrap();
+        user_service.update_online(target_user.id, UserFactory::fake_update_online_dto_true()).await.unwrap();
 
         // Create connected user who will be offline
         let connected_dto = UserFactory::unique_fake_user_register_dto("find_connected_all_offline_connected");
@@ -494,6 +498,191 @@ mod find_connected_users_and_online_e2e_tests {
 
         let connected_user_ids = json["data"].as_array().unwrap();
         assert_eq!(connected_user_ids.len(), 0, "Should have no online connected users");
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user(admin_user.id).await;
+        cleanup_user(target_user.id).await;
+        cleanup_user(connected_user.id).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_connected_users_and_online_e2e_fails_when_requesting_user_offline() {
+        // Arrange: Create a scenario where the requesting user is offline
+        let db = get_database().await;
+        let service_init = ServiceInitializer::new(&db);
+        let user_service = service_init.user_service();
+        let group_chat_service = service_init.group_chat_service();
+        let invitation_service = service_init.invitation_service();
+
+        // Create admin user
+        let admin_dto = UserFactory::unique_fake_user_register_dto("offline_req_admin");
+        let admin_user = user_service.create_user(admin_dto.clone()).await.unwrap();
+
+        // Create target user (who will make the API call and will be offline)
+        let target_dto = UserFactory::unique_fake_user_register_dto("offline_req_target");
+        let target_password = target_dto.password.clone();
+        let target_user = user_service.create_user(target_dto.clone()).await.unwrap();
+
+        // Create connected user (online)
+        let connected_dto = UserFactory::unique_fake_user_register_dto("offline_req_connected");
+        let connected_user = user_service.create_user(connected_dto.clone()).await.unwrap();
+
+        // Create group chat
+        let group_chat_dto = GroupChatFactory::unique_fake_group_chat_create_dto("offline_req_group");
+        let group_chat = group_chat_service.create(group_chat_dto, admin_user.id).await.unwrap();
+
+        // Create invitations and memberships for both users
+        for user_id in [target_user.id, connected_user.id] {
+            let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(user_id, group_chat.id);
+            let invitation = invitation_service.send(invitation_dto, admin_user.id).await.unwrap();
+            
+            let update_dto = ruggine_server::dto::invitation_dto::InvitationUpdateStatusDto {
+                invitation_id: invitation.id,
+                status: InvitationStatus::Accepted,
+            };
+            let _ = invitation_service.update_status(update_dto, user_id).await.unwrap();
+        }
+
+        // Set connected user online and target user offline
+        let update_online_dto = UserFactory::fake_update_online_dto_true();
+        let update_offline_dto = UserFactory::fake_update_online_dto_false();
+        
+        user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
+        user_service.update_online(target_user.id, update_offline_dto).await.unwrap();
+
+        // Login target user to get token (login should work even if user is offline)
+        let app = create_full_router().await;
+        let login_payload = json!({
+            "email": target_dto.email,
+            "password": target_password
+        });
+
+        let login_request = Request::builder()
+            .method("POST")
+            .uri("/api/auth/login")
+            .header("content-type", "application/json")
+            .body(Body::from(login_payload.to_string()))
+            .unwrap();
+
+        let login_response = app.clone().oneshot(login_request).await.unwrap();
+        assert_eq!(login_response.status(), StatusCode::OK);
+
+        let login_body = to_bytes(login_response.into_body(), usize::MAX).await.unwrap();
+        let login_json: serde_json::Value = serde_json::from_slice(&login_body).unwrap();
+        let token = login_json["data"]["token"].as_str().unwrap();
+
+        // Act: Try to find connected users while offline
+        let request = Request::builder()
+            .method("GET")
+            .uri("/api/group_membership/connected_users_online")
+            .header("authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        // Assert: Should return 400 Bad Request with CannotAccessIfUserIsNotOnline error
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        // Cleanup
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user(admin_user.id).await;
+        cleanup_user(target_user.id).await;
+        cleanup_user(connected_user.id).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_connected_users_and_online_e2e_success_when_requesting_user_online() {
+        // Arrange: Create a scenario where the requesting user is online
+        let db = get_database().await;
+        let service_init = ServiceInitializer::new(&db);
+        let user_service = service_init.user_service();
+        let group_chat_service = service_init.group_chat_service();
+        let invitation_service = service_init.invitation_service();
+
+        // Create admin user
+        let admin_dto = UserFactory::unique_fake_user_register_dto("online_req_admin");
+        let admin_user = user_service.create_user(admin_dto.clone()).await.unwrap();
+
+        // Create target user (who will make the API call and will be online)
+        let target_dto = UserFactory::unique_fake_user_register_dto("online_req_target");
+        let target_password = target_dto.password.clone();
+        let target_user = user_service.create_user(target_dto.clone()).await.unwrap();
+
+        // Create connected user (also online)
+        let connected_dto = UserFactory::unique_fake_user_register_dto("online_req_connected");
+        let connected_user = user_service.create_user(connected_dto.clone()).await.unwrap();
+
+        // Create group chat
+        let group_chat_dto = GroupChatFactory::unique_fake_group_chat_create_dto("online_req_group");
+        let group_chat = group_chat_service.create(group_chat_dto, admin_user.id).await.unwrap();
+
+        // Create invitations and memberships for both users
+        for user_id in [target_user.id, connected_user.id] {
+            let invitation_dto = InvitationFactory::fake_invitation_create_dto_with_ids(user_id, group_chat.id);
+            let invitation = invitation_service.send(invitation_dto, admin_user.id).await.unwrap();
+            
+            let update_dto = ruggine_server::dto::invitation_dto::InvitationUpdateStatusDto {
+                invitation_id: invitation.id,
+                status: InvitationStatus::Accepted,
+            };
+            let _ = invitation_service.update_status(update_dto, user_id).await.unwrap();
+        }
+
+        // Set both users online
+        let update_online_dto = UserFactory::fake_update_online_dto_true();
+        user_service.update_online(target_user.id, update_online_dto.clone()).await.unwrap();
+        user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
+
+        // Login target user to get token
+        let app = create_full_router().await;
+        let login_payload = json!({
+            "email": target_dto.email,
+            "password": target_password
+        });
+
+        let login_request = Request::builder()
+            .method("POST")
+            .uri("/api/auth/login")
+            .header("content-type", "application/json")
+            .body(Body::from(login_payload.to_string()))
+            .unwrap();
+
+        let login_response = app.clone().oneshot(login_request).await.unwrap();
+        assert_eq!(login_response.status(), StatusCode::OK);
+
+        let login_body = to_bytes(login_response.into_body(), usize::MAX).await.unwrap();
+        let login_json: serde_json::Value = serde_json::from_slice(&login_body).unwrap();
+        let token = login_json["data"]["token"].as_str().unwrap();
+
+        // Act: Find connected users while both are online
+        let request = Request::builder()
+            .method("GET")
+            .uri("/api/group_membership/connected_users_online")
+            .header("authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        // Assert: Should return 200 with the connected user
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        let connected_user_ids = json["data"].as_array().unwrap();
+        assert_eq!(connected_user_ids.len(), 1, "Should find one connected online user");
+        
+        let found_user_id = connected_user_ids[0].as_i64().unwrap() as i32;
+        assert_eq!(found_user_id, connected_user.id, "Should find the correct connected user");
 
         // Cleanup
         cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;

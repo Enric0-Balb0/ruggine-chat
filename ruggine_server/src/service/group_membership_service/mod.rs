@@ -10,6 +10,7 @@ mod find_by_group_chat_id;
 pub mod find_active_by_user_id_and_group_id;
 mod find_connected_users;
 mod find_connected_users_and_online;
+mod promote_admin_if_none;
 
 use std::sync::Arc;
 use async_trait::async_trait;
@@ -64,5 +65,9 @@ impl GroupMembershipServiceTrait for GroupMembershipService {
 
     async fn find_connected_users_and_online(&self, auth_user_id: i32) -> Result<Vec<i32>, ApiError> {
         self.find_connected_users_and_online_internal(auth_user_id).await
+    }
+
+    async fn promote_admin_if_none(&self, group_chat_id: i32) -> Result<Option<GroupMembershipReadDto>, ApiError> {
+        self.promote_admin_if_none_internal(group_chat_id).await
     }
 }

@@ -20,4 +20,5 @@ pub trait GroupMembershipServiceTrait: Send + Sync {
     async fn find_by_group_chat_id(&self, group_id: i32) -> Result<Vec<GroupMembershipReadDto>, ApiError>;
     async fn find_connected_users(&self, auth_user_id: i32) -> Result<Vec<i32>, ApiError>;
     async fn find_connected_users_and_online(&self, auth_user_id: i32) -> Result<Vec<i32>, ApiError>;
+    async fn promote_admin_if_none(&self, group_chat_id: i32) -> Result<Option<GroupMembershipReadDto>, ApiError>;
 }

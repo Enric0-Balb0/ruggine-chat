@@ -7,3 +7,4 @@ mod find_active_by_user_id_and_group_id_test;
 mod find_by_group_chat_id_test;
 mod find_connected_users_test;
 mod find_connected_users_and_online_test;
+mod promote_admin_if_none_test;

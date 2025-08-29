@@ -1,10 +1,10 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
 use crate::entity::group_membership::{MembershipStatus, NewGroupMembership, UpdateGroupMembership};
-use async_trait::async_trait;
-use std::sync::Arc;
-use sqlx::Error as SqlxError;
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
+use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
+use async_trait::async_trait;
+use sqlx::Error as SqlxError;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct GroupMembershipRepository {
@@ -83,5 +83,13 @@ impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
         user_id: i32,
     ) -> Result<Vec<i32>, SqlxError> {
         self.find_connected_users_and_online_inner(user_id).await
+    }
+
+    async fn promote_admin_if_none(&self, group_chat_id: i32) -> Result<Option<GroupMembershipWithInvitationRow>, SqlxError> {
+        self.promote_admin_if_none_inner(group_chat_id).await
+    }
+
+    fn db_conn(&self) -> Arc<Database> {
+        self.db_conn.clone()
     }
 }

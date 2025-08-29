@@ -7,6 +7,7 @@ use crate::common::{
 
 #[cfg(test)]
 mod group_membership_find_connected_users_and_online_integration_tests {
+    use ruggine_server::dto::user_dto::UpdateOnlineDto;
     use super::*;
 
     #[tokio_shared_rt::test(shared)]
@@ -35,6 +36,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
 
         // Act: Find connected users that are online for target_user
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Should find connected_user since they share the same group and connected_user is online
@@ -80,6 +82,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(connected_user.id, update_offline_dto).await.unwrap();
 
         // Act: Find connected users that are online for target_user
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Should find no users since connected_user is offline
@@ -140,6 +143,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(offline_user.id, update_offline_dto).await.unwrap();
 
         // Act: Find connected users that are online for target_user
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Should find only the two online users
@@ -196,6 +200,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(other_user.id, update_online_dto).await.unwrap();
 
         // Act: Find connected users that are online for target_user
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Should find no users since they don't share any groups
@@ -225,10 +230,8 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         // Act: Try to find connected users for non-existent user
         let result = group_membership_service.find_connected_users_and_online(nonexistent_user_id).await;
 
-        // Assert: Should return empty result for non-existent user
-        assert!(result.is_ok(), "Should handle non-existent user gracefully");
-        let connected_user_ids = result.unwrap();
-        assert_eq!(connected_user_ids.len(), 0, "Should return empty result for non-existent user");
+        // Assert
+        assert!(result.is_err());
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -263,6 +266,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
 
         // Act: Find connected users that are online for target_user
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Should find connected_user only once despite sharing multiple groups (DISTINCT clause)
@@ -307,7 +311,8 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         // Test 1: User starts offline
         let update_offline_dto = ruggine_server::factory::user_factory::UserFactory::fake_update_online_dto_false();
         user_service.update_online(connected_user.id, update_offline_dto).await.unwrap();
-        
+
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result_offline = group_membership_service.find_connected_users_and_online(target_user.id).await.unwrap();
         assert_eq!(result_offline.len(), 0, "Should find no users when connected user is offline");
 
@@ -360,6 +365,7 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
 
         // Act: Test normal functionality first
+        group_membership_service.user_service().update_online(target_user.id, UpdateOnlineDto{online:true}).await.unwrap();
         let result = group_membership_service.find_connected_users_and_online(target_user.id).await;
 
         // Assert: Service should work correctly and return ApiError on failures (not sqlx::Error)
@@ -367,6 +373,104 @@ mod group_membership_find_connected_users_and_online_integration_tests {
         let connected_user_ids = result.unwrap();
         assert_eq!(connected_user_ids.len(), 1);
         assert!(connected_user_ids.contains(&connected_user.id));
+
+        // Cleanup: Use the specific cleanup method for users in groups
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(target_user.email.clone()).await;
+        cleanup_user_by_email(connected_user.email.clone()).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_connected_users_and_online_fails_when_requesting_user_offline() {
+        // Arrange: Create user who is offline trying to access connected users
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        let user_service = UserService::new(&db);
+        
+        let (owner_user, _) = create_test_user("find_connected_offline_requester_owner").await;
+        let (target_user, _) = create_test_user("find_connected_offline_requester_target").await;
+        let (connected_user, _) = create_test_user("find_connected_offline_requester_connected").await;
+        
+        let group_chat = create_test_group_chat("find_connected_offline_requester", owner_user.id).await;
+        
+        // Create invitations for both users to the same group
+        let invitation_target = create_test_invitation(owner_user.id, target_user.id, group_chat.id).await;
+        let invitation_connected = create_test_invitation(owner_user.id, connected_user.id, group_chat.id).await;
+        
+        // Create active memberships for both users
+        let _membership_target = create_test_group_membership(invitation_target.id, target_user.id).await;
+        let _membership_connected = create_test_group_membership(invitation_connected.id, connected_user.id).await;
+
+        // Set connected_user to online
+        let update_online_dto = ruggine_server::factory::user_factory::UserFactory::fake_update_online_dto_true();
+        user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
+
+        // Set target_user (requesting user) to offline
+        let update_offline_dto = ruggine_server::factory::user_factory::UserFactory::fake_update_online_dto_false();
+        user_service.update_online(target_user.id, update_offline_dto).await.unwrap();
+
+        // Act: Try to find connected users when the requesting user is offline
+        let result = group_membership_service.find_connected_users_and_online_internal(target_user.id).await;
+
+        // Assert: Should fail with CannotAccessIfUserIsNotOnline error
+        assert!(result.is_err(), "Should fail when requesting user is offline");
+        match result.unwrap_err() {
+            ruggine_server::error::api_error::ApiError::GroupMembershipError(
+                ruggine_server::error::group_membership_error::GroupMembershipError::CannotAccessIfUserIsNotOnline
+            ) => {
+                // Expected error
+            }
+            e => panic!("Expected CannotAccessIfUserIsNotOnline error, got: {:?}", e),
+        }
+
+        // Cleanup: Use the specific cleanup method for users in groups
+        cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(connected_user.id, group_chat.id).await;
+        cleanup_group_chat(group_chat.id).await;
+        cleanup_user_by_email(owner_user.email.clone()).await;
+        cleanup_user_by_email(target_user.email.clone()).await;
+        cleanup_user_by_email(connected_user.email.clone()).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_find_connected_users_and_online_success_when_requesting_user_online() {
+        // Arrange: Create user who is online accessing connected users
+        let db = get_database().await;
+        let group_membership_service = GroupMembershipService::new(&db);
+        let user_service = UserService::new(&db);
+        
+        let (owner_user, _) = create_test_user("find_connected_online_requester_owner").await;
+        let (target_user, _) = create_test_user("find_connected_online_requester_target").await;
+        let (connected_user, _) = create_test_user("find_connected_online_requester_connected").await;
+        
+        let group_chat = create_test_group_chat("find_connected_online_requester", owner_user.id).await;
+        
+        // Create invitations for both users to the same group
+        let invitation_target = create_test_invitation(owner_user.id, target_user.id, group_chat.id).await;
+        let invitation_connected = create_test_invitation(owner_user.id, connected_user.id, group_chat.id).await;
+        
+        // Create active memberships for both users
+        let _membership_target = create_test_group_membership(invitation_target.id, target_user.id).await;
+        let _membership_connected = create_test_group_membership(invitation_connected.id, connected_user.id).await;
+
+        // Set both users to online
+        let update_online_dto = ruggine_server::factory::user_factory::UserFactory::fake_update_online_dto_true();
+        user_service.update_online(target_user.id, update_online_dto.clone()).await.unwrap();
+        user_service.update_online(connected_user.id, update_online_dto).await.unwrap();
+
+        // Act: Find connected users when the requesting user is online
+        let result = group_membership_service.find_connected_users_and_online_internal(target_user.id).await;
+
+        // Assert: Should succeed and find the connected online user
+        assert!(result.is_ok(), "Should succeed when requesting user is online: {:?}", result);
+        let connected_user_ids = result.unwrap();
+        
+        assert_eq!(connected_user_ids.len(), 1);
+        assert!(connected_user_ids.contains(&connected_user.id));
+        assert!(!connected_user_ids.contains(&target_user.id)); // Should not include self
 
         // Cleanup: Use the specific cleanup method for users in groups
         cleanup_test_user_from_a_group_chat(target_user.id, group_chat.id).await;

@@ -66,9 +66,31 @@ impl GroupMembershipRepository {
             query = query.bind(current_cation)
         }
 
-        match query.execute(self.db_conn.get_pool()).await {
+        /* match query.execute(self.db_conn.get_pool()).await {
             Ok(result) => {
                 if result.rows_affected() == 0 {
+                    Err(Error::RowNotFound)
+                } else {
+                    Ok(())
+                }
+            }
+            Err(err) => {
+                eprintln!("Failed to update group membership: {:?}", err);
+                Err(err)
+            }
+        } */
+
+        let result = if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            println!("Using transaction");
+            query.execute(&mut *tx_ref).await
+        } else {
+            println!("Using pool");
+            query.execute(self.db_conn.get_pool()).await
+        };
+
+        match result {
+            Ok(done) => {
+                if done.rows_affected() == 0 {
                     Err(Error::RowNotFound)
                 } else {
                     Ok(())

@@ -1,75 +1,94 @@
+use tracing::info;
+use crate::config::database::DatabaseTrait;
 use crate::dto::group_membership_dto::{GroupMembershipReadDto, LeaveGroupMembershipDto};
 use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
 use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::db_error::DbError;
-use crate::service::group_membership_service::GroupMembershipService;
+use crate::service::group_membership_service::{GroupMembershipService, GroupMembershipServiceTrait};
 
 impl GroupMembershipService {
     pub async fn leave_group_internal(&self, payload: LeaveGroupMembershipDto, auth_user_id: i32) -> Result<GroupMembershipReadDto, ApiError> {
-        // First verify the membership exists and belongs to the authenticated user
-        let membership = match self
-            .group_membership_repo
-            .find_by_id_and_user_id(payload.id, auth_user_id)
-            .await
-        {
-            Ok(membership) => membership,
-            Err(sqlx::Error::RowNotFound) => {
-                return Err(ApiError::GroupMembershipError(
-                    GroupMembershipError::GroupMembershipNotFound,
-                ))
-            }
-            Err(e) => {
-                return Err(ApiError::DbError(DbError::SomethingWentWrong(e.to_string())))
-            }
-        };
-
-        // Check if the user has already left the group
-        if membership.membership_status == MembershipStatus::Left {
-            return Err(ApiError::GroupMembershipError(
-                GroupMembershipError::UserAlreadyLeftGroup,
-            ));
-        }
-
-        // Convert the DTO to an update entity
-        let update_membership = payload.to_update_group_membership();
-
-        // Update the membership to set left status
-        match self.group_membership_repo.update(update_membership).await {
-            Ok(()) => {
-                // Retrieve the updated membership to return it
-                match self
+        self.group_membership_repo
+            .db_conn()
+            .with_tx(|db| async move {
+                // First verify the membership exists and belongs to the authenticated user
+                let membership = match self
                     .group_membership_repo
                     .find_by_id_and_user_id(payload.id, auth_user_id)
                     .await
                 {
-                    Ok(updated_membership) => Ok(GroupMembershipReadDto::from(updated_membership)),
-                    Err(e) => Err(ApiError::DbError(DbError::SomethingWentWrong(
-                        format!("Failed to retrieve updated membership: {}", e)
-                    ))),
+                    Ok(membership) => membership,
+                    Err(sqlx::Error::RowNotFound) => {
+                        return Err(ApiError::GroupMembershipError(
+                            GroupMembershipError::GroupMembershipNotFound,
+                        ))
+                    }
+                    Err(e) => {
+                        return Err(ApiError::DbError(DbError::SomethingWentWrong(e.to_string())))
+                    }
+                };
+
+                // Check if the user has already left the group
+                if membership.membership_status == MembershipStatus::Left {
+                    return Err(ApiError::GroupMembershipError(
+                        GroupMembershipError::UserAlreadyLeftGroup,
+                    ));
                 }
-            }
-            Err(sqlx::Error::RowNotFound) => {
-                Err(ApiError::GroupMembershipError(
-                    GroupMembershipError::GroupMembershipNotFound,
-                ))
-            }
-            Err(e) => {
-                // Handle specific database errors
-                let error_message = e.to_string();
-                if error_message.contains("23503") {
-                    // Foreign key violation
-                    Err(ApiError::DbError(DbError::ForeignKeyViolation(error_message)))
-                } else {
-                    Err(ApiError::DbError(DbError::SomethingWentWrong(
-                        format!("Failed to leave group: {}", e)
-                    )))
+
+                // Convert the DTO to an update entity
+                let update_membership = payload.to_update_group_membership();
+
+                // Update the membership to set left status
+                let left_membership = match self.group_membership_repo.update(update_membership).await {
+                    Ok(()) => {
+                        // Retrieve the updated membership to return it
+                        match self
+                            .find_by_id_and_user_id(payload.id, auth_user_id)
+                            .await
+                        {
+                            Ok(updated_membership) => GroupMembershipReadDto::from(updated_membership),
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    Err(sqlx::Error::RowNotFound) => {
+                        return Err(ApiError::GroupMembershipError(
+                            GroupMembershipError::GroupMembershipNotFound,
+                        ));
+                    }
+                    Err(e) => {
+                        return Err(ApiError::DbError(DbError::SomethingWentWrong(
+                            format!("Failed to leave group: {}", e)
+                        )));
+                    }
+                };
+
+                // Try to promote admin if none
+                match self.
+                    promote_admin_if_none(left_membership.group_chat_id)
+                    .await {
+                    Ok(new_possible_admin_membership) => {
+                        match new_possible_admin_membership {
+                            Some(membership) => {
+                                info!("New admin group membership promoted: {:?}", membership);
+                            },
+                            None => {
+                                info!("No new admin group membership promoted");
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        info!("Leave group tried group membership promoted, but got error: {:?}", e);
+                        return Err(e);
+                    }
                 }
-            }
-        }
+
+                Ok(GroupMembershipReadDto::from(left_membership))
+            }).await
     }
 }
 
+/*
 #[cfg(test)]
 mod group_membership_service_leave_group_tests {
     use super::*;
@@ -403,3 +422,4 @@ mod group_membership_service_leave_group_tests {
         }
     }
 }
+ */

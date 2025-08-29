@@ -1,8 +1,9 @@
+use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Error as SqlxError, Error};
 use mockall::automock;
-
-use crate::entity::group_membership::{MembershipStatus, NewGroupMembership, UpdateGroupMembership};
+use crate::config::database::Database;
+use crate::entity::group_membership::{GroupMembership, MembershipStatus, NewGroupMembership, UpdateGroupMembership};
 use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
 
 #[async_trait]
@@ -22,9 +23,12 @@ pub trait GroupMembershipRepositoryTrait: Send + Sync {
     async fn find_connected_users_and_online(
         &self,
         user_id: i32,
-    ) -> Result<Vec<i32>, Error>;
+    ) -> Result<Vec<i32>, SqlxError>;
+
+    async fn promote_admin_if_none(&self, group_chat_id: i32) -> Result<Option<GroupMembershipWithInvitationRow>, SqlxError>;
 
     /* // user_id is passed because the user can see all other memberships in the group
     // only if he is a member of the group
     async fn find_by_group_chat_id(&self, group_chat_id: i32, user_id: i32) -> Result<Vec<GroupMembership>, SqlxError>; */
+    fn db_conn(&self) -> Arc<Database>;
 }
