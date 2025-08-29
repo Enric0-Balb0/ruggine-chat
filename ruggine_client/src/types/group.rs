@@ -13,6 +13,12 @@ pub struct ApiSuccessResponseGroupChatReadDto {
     pub data: GroupChatReadDto,
 }
 
+/// Vector of group chats response wrapper from server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponseVecGroupChatReadDto {
+    pub data: Vec<GroupChatReadDto>,
+}
+
 /// Group chat data from server - exact structure from OpenAPI
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupChatReadDto {
@@ -59,6 +65,23 @@ impl From<ApiSuccessResponseGroupChatReadDto> for GroupChat {
             member_count: None, // Not provided by server, client-side enhancement
             is_active: true, // Default to true, client-side enhancement
         }
+    }
+}
+
+impl From<ApiSuccessResponseVecGroupChatReadDto> for Vec<GroupChat> {
+    fn from(response: ApiSuccessResponseVecGroupChatReadDto) -> Self {
+        response.data.into_iter().map(|group_data| {
+            GroupChat {
+                id: group_data.id,
+                name: group_data.name,
+                description: group_data.description,
+                created_by: group_data.created_by,
+                created_at: group_data.created_at.parse().unwrap_or_default(),
+                updated_at: group_data.updated_at.parse().unwrap_or_default(),
+                member_count: None,
+                is_active: true,
+            }
+        }).collect()
     }
 }
 

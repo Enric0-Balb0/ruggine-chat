@@ -34,6 +34,6 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
         }
     });
 
-    // Return the memoized value (do not provide context here; AppLayout will provide an Option)
-    ws.get()
+    // Return the memoized value without tracking (reading outside a reactive context intentionally)
+    ws.get_untracked()
 }

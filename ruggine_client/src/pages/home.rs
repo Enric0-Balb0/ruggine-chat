@@ -29,9 +29,13 @@ pub fn HomePage() -> impl IntoView {
     create_effect(move |_| {
         let groups = groups_list.get();
         let unread_counts = unread_counts.clone();
+        // access unread_message_ids context to store the ids per group
+        use crate::context::unread_counts_context::use_unread_message_ids_context;
+        let unread_message_ids = use_unread_message_ids_context();
         let api_client = api_client.clone();
         spawn_local(async move {
             let mut map = HashMap::new();
+            let mut ids_map: HashMap<i32, Vec<i32>> = HashMap::new();
             let message_service = MessageService::new(api_client.http_client.clone(), api_client.storage_service.clone());
             for group in &groups {
                 let group_id = group.membership.group_chat_id;
@@ -39,13 +43,27 @@ pub fn HomePage() -> impl IntoView {
                     Ok(page) => {
                         let count = page.data.len() as u32;
                         map.insert(group_id, count);
+                        // collect ids to populate unread_message_ids
+                        let ids: Vec<i32> = page.data.iter().map(|m| m.id).collect();
+                        ids_map.insert(group_id, ids);
                     },
                     Err(_) => {
                         map.insert(group_id, 0);
                     }
                 }
             }
-            unread_counts.set(map);
+            // Merge counts: update existing map entries and insert missing ones.
+            unread_counts.update(|existing| {
+                for (k, v) in map.iter() {
+                    existing.insert(*k, *v);
+                }
+            });
+            // Merge ids map similarly to avoid clobbering concurrent removals
+            unread_message_ids.update(|existing| {
+                for (k, v) in ids_map.iter() {
+                    existing.insert(*k, v.clone());
+                }
+            });
         });
     });
     

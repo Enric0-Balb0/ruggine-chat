@@ -7,6 +7,7 @@ use crate::types::message_ws::WsStatus;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::types::message_ws::{ServerEvent, GroupEvent};
 use crate::utils::storage::StorageService;
+use crate::hooks::unread_helpers::increment_unread_map;
 
 #[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
@@ -38,18 +39,18 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
             });
 
             // If this is a Group NewMessage event, increment the global unread_counts
-            if let WebSocketMessage::Event { event, .. } = &msg {
-                if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
-                    // avoid increment for messages sent by current user
-                    let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
-                    if Some(*sender_id) != current_user_id {
-                        let mut cloned = unread_counts.get().clone();
-                        let prev = cloned.get(group_id).cloned().unwrap_or(0);
-                        cloned.insert(*group_id, prev.saturating_add(1));
-                        unread_counts.set(cloned);
+                    if let WebSocketMessage::Event { event, .. } = &msg {
+                        if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
+                            // avoid increment for messages sent by current user
+                            let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
+                            if Some(*sender_id) != current_user_id {
+                                // Update in-place to avoid clobbering concurrent updates from other tasks
+                                unread_counts.update(|map| {
+                                    increment_unread_map(map, *group_id, Some(*sender_id), current_user_id);
+                                });
+                            }
+                        }
                     }
-                }
-            }
         }
     });
 

@@ -42,6 +42,7 @@ pub fn use_group_user_cache(group_id: i32) -> RwSignal<HashMap<i32, UserProfile>
                                     gender: crate::types::user::Gender::Other,
                                     user_type: crate::types::user::UserType::EndUser,
                                     user_status: crate::types::user::UserStatus::Active,
+                                    current_action: crate::types::membership::CurrentAction::Waiting,
                                     is_online: false,
                                     created_at: chrono::Utc::now(),
                                     updated_at: chrono::Utc::now(),

@@ -25,10 +25,12 @@ pub fn MessageInputArea(
     let message_text_signal = message_text.clone();
     let sending = create_rw_signal(false);
 
-    let handle_send = {
+    // Extract send logic into an Rc-wrapped function so it can be called
+    // from both the send button and the textarea key handler.
+    let handle_send_fn: Rc<dyn Fn()> = {
         let on_message_sent = on_message_sent;
         let set_message_text = set_message_text.clone();
-        move |_| {
+        Rc::new(move || {
             let message = message_text_signal.get().trim().to_string();
             if !message.is_empty() {
                 let storage_service = StorageService::new();
@@ -58,13 +60,16 @@ pub fn MessageInputArea(
                     set_message_text.set(String::new());
                 });
             }
-        }
+        })
     };
 
 
 
     // Clone ws_ctx for each closure to avoid move errors
-    let ws_ctx_for_class = ws_ctx.clone();
+    let _ws_ctx_for_class = ws_ctx.clone();
+    // Clone handle_send_fn for use in multiple closures below
+    let handle_send_for_key = handle_send_fn.clone();
+    let handle_send_for_click = handle_send_fn.clone();
     view! {
         <div class="px-6 py-4 border-t border-gray-200 dark:border-border-dark bg-gray-50 dark:bg-gray-900/20">
             <div class="relative flex items-center bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded overflow-hidden min-h-[44px]">
@@ -79,6 +84,13 @@ pub fn MessageInputArea(
                     rows="1-8"
                     prop:value=move || message_text.get()
                     on:input=handle_input
+            on:keydown=move |ev: web_sys::KeyboardEvent| {
+                        // Send on Enter, allow Shift+Enter for newline
+                        if ev.key() == "Enter" && !ev.shift_key() {
+                            ev.prevent_default();
+                (handle_send_for_key)();
+                        }
+                    }
                 />
                 <button
                     class=move || {
@@ -88,7 +100,11 @@ pub fn MessageInputArea(
                             "absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded flex items-center justify-center text-sm bg-brand-primary dark:bg-brand-primary-dark text-white hover:bg-brand-secondary-light dark:hover:bg-brand-secondary-dark cursor-pointer"
                         }
                     }
-                    on:click=handle_send
+                    on:click=move |ev| {
+                        // keep button click behavior (ignore the event)
+                        let _ = ev;
+                        (handle_send_for_click)();
+                    }
                     disabled=move || message_text.get().trim().is_empty() || sending.get()
                 >
                     "→"

@@ -165,12 +165,16 @@ pub fn Sidebar(
             </div>
 
             {/* Sezione fissa in fondo: Inviti e Crea gruppo */}
-            <div class="p-4 border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col gap-2">
-                {/* Bottone Crea gruppo */}
-                <CreateGroupButton on_create_click=handle_create_click />
-                {/* Bottone Inviti */}
-                <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={invites.get().iter().filter(|i| i.status.to_string() == "pending").count()} />
-            </div>
+            {move || {
+                view! {
+                    <div class="p-4 border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col gap-2">
+                        {/* Bottone Crea gruppo */}
+                        <CreateGroupButton on_create_click=handle_create_click />
+                        {/* Bottone Inviti */}
+                        <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={invites.get().iter().filter(|i| i.status.to_string() == "pending").count()} />
+                    </div>
+                }.into_view()
+            }}
 
             {/* Modal Inviti */}
             <ShowInvitesModal
