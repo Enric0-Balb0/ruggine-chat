@@ -21,6 +21,16 @@ pub struct TextMessageInfoReadAtDtoUpdate {
     pub read_at: String, // date-time
 }
 
+/// Text message info read DTO (corresponds to server TextMessageInfoReadDto)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextMessageInfoReadDto {
+    pub id: i32,
+    pub user_id: i32,
+    pub text_message_id: i32,
+    pub sent_at: Option<String>,
+    pub read_at: Option<String>,
+}
+
 /// DTO risposta update lettura (ApiSuccessResponseUserReadDto, solo se serve lato client)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiSuccessResponseUserReadDto {

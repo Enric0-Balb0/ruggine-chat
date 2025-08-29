@@ -171,6 +171,7 @@ impl TestFactory {
             left_at: None, // Add missing field
             membership_status: MembershipStatus::Active, // Add missing field
             invitation_id: counter as i32, // Add missing field
+            current_action: CurrentAction::Waiting,
             group_name: Some(format!("Mock Group {}", counter)), // Add missing field
             user_name: Some(format!("Test User {}", counter)), // Add missing field
         }

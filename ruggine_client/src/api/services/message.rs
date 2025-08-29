@@ -65,9 +65,15 @@ impl MessageService {
         use crate::types::message::TextMessageInfoReadAtDtoUpdate;
         let req = TextMessageInfoReadAtDtoUpdate { text_message_id, read_at };
         // La risposta non viene usata, ma si può gestire se serve
-        let _resp: crate::types::message::ApiSuccessResponseUserReadDto =
-            self.http_client.patch(ApiEndpoints::TEXT_MESSAGE_UPDATE_READ_AT, &req).await.map_err(AuthError::from)?;
-
-        Ok(())
+    // No debug logging
+        // Server returns the updated message-info DTO (TextMessageInfoReadDto).
+        // Deserialize into the client-side equivalent to match the server shape.
+        let resp: Result<crate::types::common::ApiSuccessResponse<crate::types::message::TextMessageInfoReadDto>, crate::error::AuthError> =
+            self.http_client.patch(ApiEndpoints::TEXT_MESSAGE_UPDATE_READ_AT, &req).await.map_err(AuthError::from);
+        // Ignore response body for now; return Ok/Err based on HTTP result
+        match resp {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 }

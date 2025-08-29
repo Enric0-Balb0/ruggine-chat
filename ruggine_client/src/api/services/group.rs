@@ -3,6 +3,7 @@ use crate::utils::storage::StorageService;
 use crate::error::AuthError;
 use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::group::{GroupChatCreateRequest, ApiSuccessResponseGroupChatReadDto, GroupChat};
+use crate::types::membership::{ApiSuccessResponseVecGroupMembershipReadDto, GroupMembership};
 use serde::{Deserialize, Serialize};
 
 /// Group chat management service
@@ -47,6 +48,16 @@ impl GroupChatService {
             .map_err(AuthError::from)?;
 
         Ok(GroupChat::from(response))
+    }
+
+    /// Get group memberships for the current user
+    pub async fn get_user_groups(&self) -> Result<Vec<GroupMembership>, AuthError> {
+        let response: ApiSuccessResponseVecGroupMembershipReadDto = self.http_client
+            .get(ApiEndpoints::USER_GROUPS)
+            .await
+            .map_err(AuthError::from)?;
+
+        Ok(Vec::from(response))
     }
 
     /// Update group information

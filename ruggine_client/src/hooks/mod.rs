@@ -8,6 +8,8 @@ pub mod use_groups;
 pub mod groups_provider;
 pub mod use_group_message_ws;
 pub mod use_group_socket_messages;
+pub mod unread_helpers;
 
 pub use use_groups::*;
 pub use groups_provider::*;
+pub use unread_helpers::*;

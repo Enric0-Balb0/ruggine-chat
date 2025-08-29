@@ -1,10 +1,12 @@
 // Unit tests for client types
 // Testing type behavior, serialization, and business logic
 
-use ruggine_client_ui::types::user::{UserProfile, UserType, UserStatus, CurrentAction, Gender, UserRegisterRequest};
+use ruggine_client_ui::types::user::{UserProfile, UserType, UserStatus, Gender, UserRegisterRequest};
 use ruggine_client_ui::types::auth::{LoginRequest, TokenResponse};
 use ruggine_client_ui::types::common::LoadingState;
 use chrono::{DateTime, NaiveDate};
+use ruggine_client_ui::types::membership::{ApiSuccessResponseGroupMembershipReadDto, ApiSuccessResponseVecGroupMembershipReadDto, GroupMembershipReadDto, GroupMembership, CurrentAction};
+use ruggine_client_ui::types::invitation::{MemberRole, MembershipStatus};
 
 #[cfg(test)]
 mod user_types_tests {
@@ -91,6 +93,54 @@ mod user_types_tests {
         assert!(!request.last_name.is_empty());
         assert_eq!(request.birthday, "1990-01-01");
         assert_eq!(request.gender, Gender::Male);
+    }
+}
+
+#[cfg(test)]
+mod membership_types_tests {
+    use super::*;
+
+    #[test]
+    fn test_membership_conversion_current_action() {
+        let dto = ApiSuccessResponseGroupMembershipReadDto {
+            data: GroupMembershipReadDto {
+                id: 1,
+                user_id: 2,
+                group_chat_id: 3,
+                role: MemberRole::Member,
+                joined_at: "2024-01-01T12:00:00Z".to_string(),
+                left_at: None,
+                membership_status: MembershipStatus::Active,
+                invitation_id: 10,
+                current_action: CurrentAction::Waiting,
+            }
+        };
+
+        let membership: GroupMembership = dto.into();
+        assert_eq!(membership.current_action, CurrentAction::Waiting);
+        assert_eq!(membership.id, 1);
+        assert_eq!(membership.user_id, 2);
+    }
+
+    #[test]
+    fn test_membership_vec_conversion_preserves_current_action() {
+        let vec_dto = ApiSuccessResponseVecGroupMembershipReadDto {
+            data: vec![GroupMembershipReadDto {
+                id: 5,
+                user_id: 6,
+                group_chat_id: 7,
+                role: MemberRole::Admin,
+                joined_at: "2024-02-01T12:00:00Z".to_string(),
+                left_at: None,
+                membership_status: MembershipStatus::Active,
+                invitation_id: 11,
+                current_action: CurrentAction::Writing,
+            }]
+        };
+
+        let memberships: Vec<GroupMembership> = vec_dto.into();
+        assert_eq!(memberships.len(), 1);
+        assert_eq!(memberships[0].current_action, CurrentAction::Writing);
     }
 }
 

@@ -12,6 +12,8 @@ impl fmt::Display for Gender {
 }
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+// Re-export CurrentAction from membership for backwards compatibility with tests
+pub use crate::types::membership::CurrentAction;
 
 // =============================================================================
 // ENUMS - Server synchronized
@@ -121,6 +123,7 @@ pub struct UserProfile {
     pub gender: Gender,
     pub user_type: UserType,
     pub user_status: UserStatus,
+    pub current_action: CurrentAction,
     pub is_online: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -153,6 +156,7 @@ impl From<ApiSuccessResponseUserReadDto> for UserProfile {
             gender: user_data.gender,
             user_type: user_data.user_type,
             user_status: user_data.user_status,
+            current_action: CurrentAction::Waiting,
             is_online: user_data.is_online, // Now correctly mapped from server
             created_at: user_data.created_at.parse().unwrap_or_default(), // Convert from string
             updated_at: user_data.updated_at.parse().unwrap_or_default(), // Convert from string
@@ -233,6 +237,7 @@ mod tests {
             gender: Gender::Male,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
             is_online: true, // Added missing field
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -262,6 +267,7 @@ mod tests {
             gender: Gender::Male,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -283,6 +289,7 @@ mod tests {
             gender: Gender::Female,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
@@ -304,6 +311,7 @@ mod tests {
             gender: Gender::Other,
             user_type: UserType::EndUser,
             user_status: UserStatus::Active,
+            current_action: CurrentAction::Waiting,
             is_online: true,
             created_at: DateTime::from_timestamp(1000000000, 0).unwrap(),
             updated_at: DateTime::from_timestamp(1000000000, 0).unwrap(),

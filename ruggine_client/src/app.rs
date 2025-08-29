@@ -11,6 +11,7 @@ use crate::context::unread_counts_context::provide_unread_counts_context;
 pub fn App() -> impl IntoView {
     provide_auth_context();
     provide_unread_counts_context();
+    // Startup: no debug logging in production
     view! {
         <ThemeProvider>
             <ToastProvider>
