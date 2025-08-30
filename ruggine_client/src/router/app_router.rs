@@ -47,6 +47,15 @@ pub fn AppRouter() -> impl IntoView {
                         </AuthGuard>
                     }
                 } />
+                <Route path="/admin/cpu-logs" view=|| {
+                    view! {
+                        <AuthGuard>
+                            <AppLayout>
+                                <crate::pages::CpuLogsPage />
+                            </AppLayout>
+                        </AuthGuard>
+                    }
+                } />
                 
                 // Fallback route - redirect to home which will handle auth
                 <Route path="/*any" view=|| {

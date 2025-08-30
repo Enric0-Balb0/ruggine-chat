@@ -20,6 +20,7 @@ pub fn AppNavbar() -> impl IntoView {
 
     // Recupera i dati dell'utente corrente
     let user_profile = auth_service.get_current_user();
+    let is_admin = user_profile.as_ref().map(|u| u.is_admin()).unwrap_or(false);
     
     // State for hamburger menu dropdown
     let (is_menu_open, set_is_menu_open) = create_signal(false);
@@ -46,7 +47,7 @@ pub fn AppNavbar() -> impl IntoView {
         let navigate = navigate.clone();
         let set_is_menu_open = set_is_menu_open;
         
-        Callback::new(move |_| {
+    Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             let auth_service = auth_service.clone();
             let toast = toast.clone();
@@ -70,7 +71,7 @@ pub fn AppNavbar() -> impl IntoView {
     let handle_settings = {
         let toast = toast.clone();
         let set_is_menu_open = set_is_menu_open;
-        Callback::new(move |_| {
+    Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             toast.info("Impostazioni - Funzionalità in sviluppo");
         })
@@ -79,7 +80,7 @@ pub fn AppNavbar() -> impl IntoView {
     let handle_profile = {
         let set_is_menu_open = set_is_menu_open;
         let navigate = navigate.clone();
-        Callback::new(move |_| {
+    Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             navigate("/profile", Default::default());
         })
@@ -88,7 +89,7 @@ pub fn AppNavbar() -> impl IntoView {
     let handle_notifications = {
         let toast = toast.clone();
         let set_is_menu_open = set_is_menu_open;
-        Callback::new(move |_| {
+    Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             toast.info("Notifiche - Funzionalità in sviluppo");
         })
@@ -97,7 +98,7 @@ pub fn AppNavbar() -> impl IntoView {
     let handle_help = {
         let toast = toast.clone();
         let set_is_menu_open = set_is_menu_open;
-        Callback::new(move |_| {
+    Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             toast.info("Aiuto & Supporto - Funzionalità in sviluppo");
         })
@@ -106,17 +107,17 @@ pub fn AppNavbar() -> impl IntoView {
     let handle_stats = {
         let toast = toast.clone();
         let set_is_menu_open = set_is_menu_open;
-        Callback::new(move |_| {
+        Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             toast.info("Statistiche - Funzionalità in sviluppo");
         })
     };
 
     view! {
-    <header class="h-12 bg-brand-primary dark:bg-brand-primary-dark text-white flex items-center justify-between pl-2 pr-6 border-b border-border dark:border-border-dark flex-shrink-0 relative">
+    <header class="h-12 bg-brand-primary dark:bg-brand-primary-dark text-white flex items-center justify-between pl-2 pr-6 flex-shrink-0 relative">
             <div class="flex items-center gap-4">
                 <img 
-                    src="public/logos/logo-full-white.png" 
+                    src="/public/logos/logo-full-white.png" 
                     alt="Ruggine" 
                     class="h-8 w-auto"
                 />
@@ -193,13 +194,19 @@ pub fn AppNavbar() -> impl IntoView {
                                                 <span>Aiuto & Supporto</span>
                                             </button>
                                             
-                                            <button 
-                                                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                                                on:click={let handler = handle_stats.clone(); move |e| handler.call(e)}
-                                            >
-                                                <LucideIcon name="bar-chart-3" size=IconSize::MEDIUM />
-                                                <span>Statistiche</span>
-                                            </button>
+                                            {if is_admin {
+                                                view! {
+                                                    <button 
+                                                        class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                                                        on:click={let navigate = navigate.clone(); let set_is_menu_open = set_is_menu_open; move |_| { set_is_menu_open.set(false); navigate("/admin/cpu-logs", Default::default()); }}
+                                                    >
+                                                        <LucideIcon name="server" size=IconSize::MEDIUM />
+                                                        <span>"CPU Logs"</span>
+                                                    </button>
+                                                }.into_view()
+                                            } else {
+                                                view! { <div></div> }.into_view()
+                                            }}
                                             
                                             <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                             

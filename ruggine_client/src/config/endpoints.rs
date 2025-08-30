@@ -6,7 +6,7 @@ impl ApiEndpoints {
     // Authentication endpoints
     pub const AUTH_LOGIN: &'static str = "/auth/login";
     pub const AUTH_LOGOUT: &'static str = "/auth/logout";
-    pub const AUTH_REFRESH: &'static str = "/auth/refresh";
+    // NOTE: /auth/refresh is not exposed by the server; removed to avoid accidental calls
     pub const AUTH_VERIFY: &'static str = "/auth/verify";
 
     // User endpoints
@@ -41,6 +41,8 @@ impl ApiEndpoints {
     // Message endpoints
     pub const TEXT_MESSAGE_CREATE: &'static str = "/text_message/create";
     pub const TEXT_MESSAGE_UPDATE_READ_AT: &'static str = "/text_message/update_read_at";
+    // Cpu usage log endpoint
+    pub const CPU_USAGE_LOG: &'static str = "/cpu_usage_log";
     
     // Utility methods for dynamic endpoints
     pub fn group_by_id(group_id: &str) -> String {

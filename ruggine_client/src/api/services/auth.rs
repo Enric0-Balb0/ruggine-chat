@@ -132,24 +132,10 @@ impl AuthService {
 
     /// Refresh authentication token
     pub async fn refresh_token(&self) -> Result<(), AuthError> {
-        let _current_token = self.storage_service.get_token()
-            .ok_or(AuthError::NotAuthenticated)?;
-
-        let token_response: ApiSuccessResponseTokenReadDto = self.http_client
-            .post(ApiEndpoints::AUTH_REFRESH, &())
-            .await
-            .map_err(AuthError::from)?;
-
-        let dto_token = TokenResponse {
-            token: token_response.data.token,
-            iat: token_response.data.iat,
-            exp: token_response.data.exp,
-        };
-
-        self.storage_service.store_token(&dto_token)
-            .map_err(AuthError::from)?;
-
-        Ok(())
+    // The backend does not expose a token refresh endpoint.
+    // Keep this method for API compatibility but return an explicit NotAuthenticated error
+    // to indicate refresh is not supported client-side via HTTP call.
+    Err(AuthError::NotAuthenticated)
     }
 
     /// Verify current token validity

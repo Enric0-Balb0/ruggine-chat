@@ -23,6 +23,9 @@ pub mod membership;
 /// Message types and utilities
 pub mod message;
 
+/// Cpu usage log types
+pub mod cpu_usage_log;
+
 /// WebSocket message types
 pub mod message_ws;
 
@@ -48,6 +51,8 @@ pub use invitation::{
 
 // Message types
 
+pub use message::*;
+
 // WebSocket message types
 pub use crate::types::message_ws::{
     WebSocketMessage, ClientAction, GroupAction
@@ -55,3 +60,6 @@ pub use crate::types::message_ws::{
 
 // Common types
 pub use common::ApiSuccessResponseInvitationUpdateDto;
+
+// Cpu usage types
+pub use cpu_usage_log::{CpuUsageLogReadDto, PaginatedCpuUsageLogResponse, CpuUsagePage};
