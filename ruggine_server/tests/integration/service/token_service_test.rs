@@ -198,13 +198,13 @@ mod token_service_integration_tests {
         let token_data = result.unwrap();
         
         // Token should expire in approximately 30 minutes (1800 seconds)
-        let expected_exp_min = now_before + (TokenService::TOKEN_EXPIRATION * 60) - 10; // Allow 10 seconds tolerance
-        let expected_exp_max = now_after + (TokenService::TOKEN_EXPIRATION * 60) + 10;
+        let expected_exp_min = now_before + (token_service.expiration * 60) - 10; // Allow 10 seconds tolerance
+        let expected_exp_max = now_after + (token_service.expiration * 60) + 10;
         
         assert!(
             token_data.exp >= expected_exp_min && token_data.exp <= expected_exp_max,
             "Token expiration time should be approximately {} minutes from now. Expected between {} and {}, got {}",
-            TokenService::TOKEN_EXPIRATION,
+            token_service.expiration,
             expected_exp_min,
             expected_exp_max,
             token_data.exp

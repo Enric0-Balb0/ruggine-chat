@@ -1,13 +1,17 @@
+use chrono::Utc;
 use crate::config::database::DatabaseTrait;
-use crate::dto::text_message_dto::{TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageReadDto};
+use crate::dto::text_message_dto::{
+    TextMessageCreateDto, TextMessageInfoCreateDto, TextMessageReadDto,
+};
 use crate::entity::group_membership::MembershipStatus;
-use crate::error::api_error::ApiError;
-use crate::error::group_membership_error::GroupMembershipError;
-use crate::error::group_chat_error::GroupChatError;
-use crate::error::text_message_error::TextMessageError;
-use crate::error::db_error::DbError;
 use crate::entity::text_message::NewTextMessage;
+use crate::error::api_error::ApiError;
+use crate::error::db_error::DbError;
+use crate::error::group_chat_error::GroupChatError;
+use crate::error::group_membership_error::GroupMembershipError;
+use crate::error::text_message_error::TextMessageError;
 use crate::service::text_message_service::{TextMessageService, TextMessageServiceTrait};
+use tracing::{debug, error, info};
 
 impl TextMessageService {
     pub async fn create_internal(
@@ -15,41 +19,57 @@ impl TextMessageService {
         payload: TextMessageCreateDto,
         sender_id: i32,
     ) -> Result<TextMessageReadDto, ApiError> {
-        self.text_message_repo
+        info!("Trying to create a new text message...");
+        // Check if the group exists first
+        self.group_chat_service
+            .find_by_id(payload.group_chat_id)
+            .await
+            .map_err(|e| match e {
+                ApiError::GroupChatError(GroupChatError::GroupChatNotFound) => {
+                    ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
+                }
+                _ => e,
+            })?;
+
+        info!("Check if the group exists first done");
+
+        // Check if the sender has active membership in the group
+        let membership = self
+            .group_membership_service
+            .find_active_by_user_id_and_group_id(sender_id, payload.group_chat_id)
+            .await
+            .map_err(|e| match e {
+                ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
+                    ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
+                }
+                _ => e,
+            })?;
+        if membership.membership_status != MembershipStatus::Active {
+            return Err(ApiError::TextMessageError(
+                TextMessageError::UserCannotAccessMessages,
+            ));
+        }
+
+        info!("Check if the sender has active membership in the group done");
+
+        // Create the new text message entity
+        let new_text_message = NewTextMessage {
+            content: payload.content.clone(),
+            sender_id,
+            group_chat_id: payload.group_chat_id,
+        };
+
+        let memberships = self.group_membership_service
+            .find_by_group_chat_id(payload.group_chat_id)
+            .await?;
+
+        info!("find_by_group_chat_id done");
+
+        info!("Trying to insert new message in the db...");
+
+        let message_mock = self.text_message_repo
             .db_conn()
             .with_tx(|db| async move {
-                // Check if the group exists first
-                self.group_chat_service
-                    .find_by_id(payload.group_chat_id)
-                    .await
-                    .map_err(|e| match e {
-                        ApiError::GroupChatError(GroupChatError::GroupChatNotFound) => {
-                            ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
-                        }
-                        _ => e,
-                    })?;
-
-                // Check if the sender has active membership in the group
-                let membership = self.group_membership_service
-                    .find_active_by_user_id_and_group_id(sender_id, payload.group_chat_id)
-                    .await
-                    .map_err(|e| match e {
-                        ApiError::GroupMembershipError(GroupMembershipError::GroupMembershipNotFound) => {
-                            ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages)
-                        }
-                        _ => e,
-                    })?;
-                if membership.membership_status != MembershipStatus::Active {
-                    return Err(ApiError::TextMessageError(TextMessageError::UserCannotAccessMessages));
-                }
-
-                // Create the new text message entity
-                let new_text_message = NewTextMessage {
-                    content: payload.content.clone(),
-                    sender_id,
-                    group_chat_id: payload.group_chat_id,
-                };
-
                 // Insert the message into the database
                 let message_id = self
                     .text_message_repo
@@ -67,34 +87,77 @@ impl TextMessageService {
                         _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
                     })?;
 
-                // Insert the text message infos in the database
-                let memberships = self.group_membership_service
-                    .find_by_group_chat_id(payload.group_chat_id)
-                    .await?;
+                info!("New text message id {} stored in the db, now trying to create message infos...", message_id);
 
+                // Insert the text message infos in the database
                 for membership in memberships {
-                    let payload = TextMessageInfoCreateDto {
+                    let new_text_message_info = crate::entity::text_message::NewTextMessageInfo {
                         user_id: membership.user_id,
                         text_message_id: message_id,
                     };
-                    self.create_info(payload, sender_id).await?;
+                    
+                    // Skip the validation checks since we're already in a transaction and know the message exists
+                    self.text_message_repo
+                        .insert_text_message_info(new_text_message_info)
+                        .await
+                        .map_err(|e| match e {
+                            sqlx::Error::Database(db_err) => {
+                                if let Some(code) = db_err.code() {
+                                    match code.as_ref() {
+                                        "23503" => ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string())),
+                                        "P0001" => {
+                                            // Trigger failure
+                                            if db_err.message().contains("NULL") {
+                                                ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt)
+                                            } else {
+                                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow)
+                                            }
+                                        }
+                                        _ => ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())),
+                                    }
+                                } else {
+                                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+                                }
+                            }
+                            _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
+                        })?;
                 }
 
-                // Retrieve the created message to return it
-                self.text_message_repo
-                    .find(message_id)
-                    .await
-                    .map_err(|e| match e {
-                        sqlx::Error::RowNotFound => {
-                            ApiError::TextMessageError(TextMessageError::MessageNotFound)
-                        }
-                        sqlx::Error::Database(db_err) => {
-                            ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                        }
-                        _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-                    })
-                    .map(TextMessageReadDto::from)
-            }).await
+
+                let aa: Result<TextMessageReadDto, ApiError> = Ok(TextMessageReadDto {
+                    id: message_id,
+                    content: "".to_string(),
+                    sender_id: 0,
+                    group_chat_id: 0,
+                    sent_at: Utc::now()
+                });
+
+                aa
+            }).await?;
+
+        // Retrieve the created message to return it
+        let result = self.text_message_repo
+            .find(message_mock.id)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => {
+                    ApiError::TextMessageError(TextMessageError::MessageNotFound)
+                }
+                sqlx::Error::Database(db_err) => {
+                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+                }
+                _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
+            })
+            .map(TextMessageReadDto::from);
+
+        if result.is_ok() {
+            info!("Successfully created new text message");
+        }
+        else {
+            error!("Something went wrong creating the message: {:?} ", result.clone().unwrap_err());
+        }
+
+        result
     }
 }
 
@@ -121,7 +184,7 @@ mod create_service_tests {
     ) -> TextMessageService {
         let mut mock_membership_service = MockGroupMembershipServiceTrait::new();
         let mut mock_group_chat_service = MockGroupChatServiceTrait::new();
-        
+
         // Mock successful group chat lookup
         let group_chat = GroupChatFactory::fake_group_chat_read_dto();
         mock_group_chat_service
@@ -134,12 +197,12 @@ mod create_service_tests {
                     async move { Ok(group_chat) }
                 })
             });
-        
+
         // Mock successful membership check
         let mut membership = GroupMembershipFactory::fake_group_membership_with_invitation_row();
         membership.user_id = sender_id;
         membership.group_chat_id = group_chat_id;
-        
+
         mock_membership_service
             .expect_find_active_by_user_id_and_group_id()
             .with(eq(sender_id), eq(group_chat_id))
@@ -163,21 +226,21 @@ mod create_service_tests {
         let message_id = 1;
         let payload = TextMessageFactory::fake_text_message_create_dto_with_group_id(group_chat_id);
         let expected_message = TextMessageFactory::fake_text_message_with_ids(message_id, sender_id, group_chat_id);
-        
+
         // Mock successful insert
         mock_repo
             .expect_insert()
             .with(function({
                 let payload = payload.clone();
                 move |new_msg: &NewTextMessage| {
-                    new_msg.content == payload.content && 
-                    new_msg.sender_id == sender_id && 
+                    new_msg.content == payload.content &&
+                    new_msg.sender_id == sender_id &&
                     new_msg.group_chat_id == group_chat_id
                 }
             }))
             .times(1)
             .returning(move |_| Box::pin(async move { Ok(message_id) }));
-        
+
         // Mock successful find after insert
         mock_repo
             .expect_find()
@@ -214,7 +277,7 @@ mod create_service_tests {
         let sender_id = 1;
         let group_chat_id = 999; // Non-existent group
         let payload = TextMessageFactory::fake_text_message_create_dto_with_group_id(group_chat_id);
-        
+
         // Mock failed group chat lookup
         mock_group_chat_service
             .expect_find_by_id()
@@ -244,7 +307,7 @@ mod create_service_tests {
         let sender_id = 999; // User not in group
         let group_chat_id = 1;
         let payload = TextMessageFactory::fake_text_message_create_dto_with_group_id(group_chat_id);
-        
+
         // Mock successful group chat lookup
         let group_chat = GroupChatFactory::fake_group_chat_read_dto();
         mock_group_chat_service
@@ -257,7 +320,7 @@ mod create_service_tests {
                     async move { Ok(group_chat) }
                 })
             });
-        
+
         // Mock failed membership check
         mock_membership_service
             .expect_find_active_by_user_id_and_group_id()
@@ -341,8 +404,8 @@ mod create_service_tests {
         mock_repo
             .expect_insert()
             .times(1)
-            .returning(|_| Box::pin(async move { 
-                Err(MockDatabaseError::foreign_key_violation()) 
+            .returning(|_| Box::pin(async move {
+                Err(MockDatabaseError::foreign_key_violation())
             }));
 
         let service = create_mock_service_with_validations(mock_repo, sender_id, group_chat_id);
@@ -370,7 +433,7 @@ mod create_service_tests {
             .expect_insert()
             .times(1)
             .returning(move |_| Box::pin(async move { Ok(message_id) }));
-        
+
         // Mock failed find after insert
         mock_repo
             .expect_find()

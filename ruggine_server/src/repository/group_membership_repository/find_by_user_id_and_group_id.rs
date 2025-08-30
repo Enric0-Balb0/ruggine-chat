@@ -11,7 +11,7 @@ impl GroupMembershipRepository {
         group_id: i32,
         membership_statuses: Vec<MembershipStatus>,
     ) -> Result<Vec<GroupMembershipWithInvitationRow>, Error> {
-        let rows = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
+        let query = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
             r#"
             SELECT 
                 gm.id,
@@ -32,11 +32,14 @@ impl GroupMembershipRepository {
         )
         .bind(user_id)
         .bind(group_id)
-        .bind(&membership_statuses)
-        .fetch_all(self.db_conn.get_pool())
-        .await?;
+        .bind(&membership_statuses);
 
-        Ok(rows)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_all(&mut *tx_ref).await
+        } else {
+            query.fetch_all(self.db_conn.get_pool()).await
+        }
     }
 }
 

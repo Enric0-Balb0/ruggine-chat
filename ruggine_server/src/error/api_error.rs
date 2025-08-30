@@ -7,7 +7,7 @@ use crate::error::group_membership_error::GroupMembershipError;
 use crate::error::invitation_error::InvitationError;
 use crate::error::text_message_error::TextMessageError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum ApiError {
     #[error(transparent)]
     TokenError(#[from] TokenError),

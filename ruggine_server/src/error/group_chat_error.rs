@@ -6,7 +6,7 @@ use axum::{
 use thiserror::Error;
 use tracing::error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum GroupChatError {
     #[error("GroupChat not found")]
     GroupChatNotFound,

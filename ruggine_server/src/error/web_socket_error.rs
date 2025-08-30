@@ -7,7 +7,7 @@ use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 use crate::websocket::message::WsError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum WebSocketError {
     #[error(transparent)]
     GroupChatError(#[from] GroupChatError),

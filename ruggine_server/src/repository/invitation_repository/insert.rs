@@ -27,7 +27,11 @@ impl InvitationRepository {
             response = query.fetch_one(&mut *tx_ref).await
         } else {
             println!("Using pool");
-            response = query.fetch_one(self.db_conn.get_pool()).await
+            response = if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+                query.fetch_one(&mut *tx_ref).await
+            } else {
+                query.fetch_one(self.db_conn.get_pool()).await
+            }
         }
 
         match response {

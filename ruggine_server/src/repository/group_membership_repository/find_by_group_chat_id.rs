@@ -5,7 +5,7 @@ use sqlx::Error as SqlxError;
 
 impl GroupMembershipRepository {
     pub async fn find_by_group_chat_id_inner(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
-        let rows = sqlx::query_as!(
+        let query = sqlx::query_as!(
             GroupMembershipWithInvitationRow,
             r#"
             SELECT 
@@ -25,23 +25,24 @@ impl GroupMembershipRepository {
             ORDER BY gm.joined_at ASC
             "#,
             group_id
-        )
-        .fetch_all(self.db_conn.get_pool())
-        .await?;
+        );
 
-        Ok(rows)
+        // se c'è una transazione, usala; altrimenti usa la pool
+        if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_all(&mut *tx_ref).await
+        } else {
+            query.fetch_all(self.db_conn.get_pool()).await
+        }
     }
 }
 
 #[cfg(test)]
 mod group_membership_repository_find_by_group_chat_id_tests {
-    use mockall::predicate::*;
+    use crate::entity::group_membership::MembershipStatus;
+    use crate::factory::group_membership_factory::GroupMembershipFactory;
     use crate::repository::group_membership_repository::group_membership_repository_trait::MockGroupMembershipRepositoryTrait;
     use crate::repository::group_membership_repository::GroupMembershipRepositoryTrait;
-    use crate::factory::group_membership_factory::GroupMembershipFactory;
-    use crate::entity::group_membership::{MembershipStatus, MemberRole};
-    use crate::model::group_membership_model::GroupMembershipWithInvitationRow;
-    use chrono::Utc;
+    use mockall::predicate::*;
     use sqlx::Error;
 
     #[tokio_shared_rt::test(shared)]

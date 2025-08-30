@@ -1,7 +1,7 @@
 use crate::{ websocket::message::WsError};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum ConnectionError {
     #[error("Connection not found")]
     ConnectionNotFound,

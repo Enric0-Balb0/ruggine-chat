@@ -4,10 +4,12 @@ use crate::error::token_error::TokenError;
 use chrono;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use mockall::automock;
+use crate::config::parameter;
 
 #[derive(Clone)]
 pub struct TokenService {
     secret: String,
+    pub expiration: i64,
 }
 
 #[automock]
@@ -22,12 +24,15 @@ pub trait TokenServiceTrait {
 
 impl TokenService {
     pub fn new(secret: String) -> Self {
+        let expiration = parameter::get("JWT_TTL_IN_MINUTES")
+            .parse::<i64>()
+            .expect("Invalid JWT_TTL_IN_MINUTES");
+
         Self {
-            secret
+            secret,
+            expiration,
         }
     }
-
-    pub const TOKEN_EXPIRATION: i64 = 30;
 }
 
 impl TokenServiceTrait for TokenService {
@@ -45,7 +50,7 @@ impl TokenServiceTrait for TokenService {
     fn generate_token(&self, user: User) -> Result<TokenReadDto, TokenError> {
         let iat = chrono::Utc::now().timestamp();
         let exp = chrono::Utc::now()
-            .checked_add_signed(chrono::Duration::minutes(Self::TOKEN_EXPIRATION))
+            .checked_add_signed(chrono::Duration::minutes(self.expiration))
             .unwrap()
             .timestamp();
 

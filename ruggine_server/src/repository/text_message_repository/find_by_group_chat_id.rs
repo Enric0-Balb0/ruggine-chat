@@ -6,9 +6,9 @@ use crate::repository::text_message_repository::TextMessageRepository;
 
 impl TextMessageRepository {
     pub async fn find_by_group_chat_id_paginated_inner(&self, group_chat_id: i32, cursor: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<TextMessage>, Error> {
-        let messages = match cursor {
+        let rows = match cursor {
             Some(cursor_datetime) => {
-                sqlx::query_as!(
+                let query = sqlx::query_as!(
                     TextMessage,
                     r#"
                     SELECT id, content, sender_id, group_chat_id, sent_at
@@ -20,13 +20,18 @@ impl TextMessageRepository {
                     group_chat_id,
                     cursor_datetime,
                     limit as i64
-                )
-                    .fetch_all(self.db_conn.get_pool())
-                    .await?
+                );
+
+                // se c'è una transazione, usala; altrimenti usa la pool
+                if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+                    query.fetch_all(&mut *tx_ref).await
+                } else {
+                    query.fetch_all(self.db_conn.get_pool()).await
+                }
             }
             None => {
                 // First page - get latest messages
-                sqlx::query_as!(
+                let query = sqlx::query_as!(
                     TextMessage,
                     r#"
                     SELECT id, content, sender_id, group_chat_id, sent_at
@@ -37,13 +42,18 @@ impl TextMessageRepository {
                     "#,
                     group_chat_id,
                     limit as i64
-                )
-                    .fetch_all(self.db_conn.get_pool())
-                    .await?
+                );
+
+                // se c'è una transazione, usala; altrimenti usa la pool
+                if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+                    query.fetch_all(&mut *tx_ref).await
+                } else {
+                    query.fetch_all(self.db_conn.get_pool()).await
+                }
             }
         };
 
-        Ok(messages)
+        rows
     }
 }
 

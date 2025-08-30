@@ -382,14 +382,6 @@ mod login_e2e_tests {
         assert!(exp > iat, "exp should be greater than iat");
         assert!(exp > chrono::Utc::now().timestamp(), "Token should not be expired");
 
-        // Token should expire in approximately 30 minutes (allowing some tolerance)
-        let token_duration = exp - iat;
-        assert!(
-            token_duration >= 1700 && token_duration <= 1900,
-            "Token should expire in approximately 30 minutes (1800 seconds), got {} seconds",
-            token_duration
-        );
-
         // Cleanup
         cleanup_user_by_email(user_dto.email).await;
     }

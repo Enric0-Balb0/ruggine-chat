@@ -56,6 +56,9 @@ impl DatabaseTrait for Database {
     }
 
     fn get_pool(&self) -> &Pool<Postgres> {
+        if self.get_tx_mut().is_some() {
+            error!("get_pool called, but a transaction is active")
+        }
         &self.pool
     }
 
@@ -93,9 +96,11 @@ impl DatabaseTrait for Database {
         self.tx_map.insert(task_id, tx);
 
         // 2. esegue la closure nel contesto del task-local
+        info!("Started transaction task");
         let result = CURRENT_TASK_ID
             .scope(task_id, async { f(self).await })
             .await;
+        info!("Finished transaction task");
 
         // 3. commit/rollback + cleanup
         match result {

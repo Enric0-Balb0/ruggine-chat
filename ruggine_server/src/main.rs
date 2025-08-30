@@ -56,8 +56,14 @@ async fn main() {
                 .allow_headers(Any)
         );
 
-    let mut cpu_usage_log_service = CpuUsageLogService::new(Arc::new(CpuUsageLogRepository::new(&connection_arc)));
-    cpu_usage_log_service.set_monitoring_interval_ms(120000);
+    let mut cpu_usage_log_service = CpuUsageLogService::new(
+        Arc::new(CpuUsageLogRepository::new(&connection_arc))
+    );
+    cpu_usage_log_service.set_monitoring_interval_ms(
+        parameter::get("LOG_IN_MILLISECONDS")
+            .parse::<u64>()
+            .expect("Invalid LOG_IN_MILLISECONDS")
+    );
     match cpu_usage_log_service.start_monitoring().await {
         Ok(_) => {
             axum::serve(listener, app)

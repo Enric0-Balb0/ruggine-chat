@@ -4,11 +4,15 @@ use crate::repository::user_repository::UserRepository;
 
 impl UserRepository {
     pub async fn find_by_email_inner(&self, email: String) -> Option<User> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email = $1")
-            .bind(email)
-            .fetch_optional(self.db_conn.get_pool())
-            .await
-            .unwrap_or(None);
+        let query = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email = $1")
+            .bind(email);
+
+        let user = if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
+            query.fetch_optional(&mut *tx_ref).await.unwrap_or(None)
+        } else {
+            query.fetch_optional(self.db_conn.get_pool()).await.unwrap_or(None)
+        };
+
         user
     }
 }
