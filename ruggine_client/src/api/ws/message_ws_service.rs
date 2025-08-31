@@ -3,23 +3,30 @@ use leptos::logging::log;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket, Event, ErrorEvent, CloseEvent};
-use leptos::{RwSignal, SignalSet, SignalGet};
+use leptos::{RwSignal, SignalSet, SignalGetUntracked};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::types::message_ws::WsStatus;
 
 // WebSocket service for managing group messages
 pub struct MessageWsService {
     ws: Option<WebSocket>,
-    status: RwSignal<WsStatus>,
-    on_message: Option<Box<dyn Fn(WebSocketMessage) + 'static>>,
+    // store the signal inside an Rc<RefCell<Option<...>>> so closures can check
+    // whether the signal still exists before attempting to set it. This avoids
+    // updating a signal after its leptos scope has been disposed.
+    status: Rc<RefCell<Option<RwSignal<WsStatus>>>>,
+    // use an Rc<RefCell<..>> so the JS closure can safely access the optional callback
+    // even if the service mutates or drops the stored callback later
+    on_message: Rc<RefCell<Option<Box<dyn Fn(WebSocketMessage) + 'static>>>>,
 }
 
 impl MessageWsService {
     pub fn new(status: RwSignal<WsStatus>) -> Self {
         Self {
             ws: None,
-            status,
-            on_message: None,
+            status: Rc::new(RefCell::new(Some(status))),
+            on_message: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -28,54 +35,66 @@ impl MessageWsService {
     where
         F: Fn(WebSocketMessage) + 'static,
     {
-        self.on_message = Some(Box::new(callback));
+        self.on_message.borrow_mut().replace(Box::new(callback));
     }
 
     // Connect to the WebSocket (full url, e.g. ws://...)
     pub fn connect(&mut self, url: &str) {
         log!("[SOCKET] Connecting to {}", url);
         let ws = WebSocket::new(url).expect("WebSocket creation failed");
-        self.status.set(WsStatus::Connecting);
+
+        // set connecting if the signal is still available
+        if let Some(s) = self.status.borrow().as_ref() {
+            s.set(WsStatus::Connecting);
+        }
 
         // Setup basic WebSocket events
-        let status = self.status;
+        let status_rc = self.status.clone();
         let url_clone = url.to_string();
         let onopen = Closure::wrap(Box::new(move |_e: Event| {
             log!("[SOCKET] Connected to {}", url_clone);
-            status.set(WsStatus::Open);
+            if let Some(s) = status_rc.borrow().as_ref() {
+                s.set(WsStatus::Open);
+            }
         }) as Box<dyn FnMut(_)>);
         ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));
         onopen.forget();
 
-        let status = self.status;
+        let status_rc = self.status.clone();
         let url_clone = url.to_string();
         let onerror = Closure::wrap(Box::new(move |e: ErrorEvent| {
             log!("[SOCKET] Error on {}: {}", url_clone, e.message());
-            status.set(WsStatus::Error(e.message()));
+            if let Some(s) = status_rc.borrow().as_ref() {
+                s.set(WsStatus::Error(e.message()));
+            }
         }) as Box<dyn FnMut(_)>);
         ws.set_onerror(Some(onerror.as_ref().unchecked_ref()));
         onerror.forget();
-        let status = self.status;
+        let status_rc = self.status.clone();
         let url_clone = url.to_string();
         let onclose = Closure::wrap(Box::new(move |e: CloseEvent| {
             log!("[SOCKET] Disconnected from {} (code: {}, reason: {})", url_clone, e.code(), e.reason());
-            status.set(WsStatus::Closed);
+            if let Some(s) = status_rc.borrow().as_ref() {
+                s.set(WsStatus::Closed);
+            }
         }) as Box<dyn FnMut(_)>);
         ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
         onclose.forget();
 
-        // Handle incoming messages
-        let on_message_cb = self.on_message.as_ref().map(|cb| cb as *const _);
-        let url_clone = url.to_string();
+    // Handle incoming messages. Clone the Rc so the JS closure can access the
+    // optionally stored callback at runtime. This avoids creating a raw pointer
+    // to a box that may be moved/dropped later and prevents calling into
+    // leptos signals after the app has cleaned up.
+    let on_message_rc = self.on_message.clone();
+    let url_clone = url.to_string();
         let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
             if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
                 let txt: String = txt.into();
                 log!("[SOCKET] Message received on {}: {}", url_clone, txt);
                 match serde_json::from_str::<WebSocketMessage>(&txt) {
                     Ok(msg) => {
-                        if let Some(cb_ptr) = on_message_cb {
-                            // SAFETY: cb_ptr is valid as long as self lives
-                            let cb: &Box<dyn Fn(WebSocketMessage)> = unsafe { &*cb_ptr };
+                        // Borrow the optional callback at runtime and call if present
+                        if let Some(cb) = on_message_rc.borrow().as_ref() {
                             cb(msg);
                         }
                     }
@@ -121,11 +140,22 @@ impl MessageWsService {
             log!("[SOCKET] Tried to disconnect but socket is not initialized");
         }
         self.ws = None;
-        self.status.set(WsStatus::Closed);
+    // Clear the on_message callback so any incoming frames that arrive during
+    // shutdown won't try to call into leptos signals which may have been dropped.
+    self.on_message.borrow_mut().take();
+    // Clear the stored status signal reference so closures won't try to update
+    // it after the leptos scope has been disposed.
+    self.status.borrow_mut().take();
     }
 
     pub fn status(&self) -> WsStatus {
-        let s = self.status.get();
-        s
+        // Avoid reactive tracking here; callers expect a plain snapshot. If the
+        // stored status signal was already cleared (e.g. after disconnect/cleanup)
+        // return Closed.
+        if let Some(s) = self.status.borrow().as_ref() {
+            s.get_untracked()
+        } else {
+            WsStatus::Closed
+        }
     }
 }

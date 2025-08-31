@@ -4,6 +4,7 @@ use crate::components::modals::ShowInvitesModal;
 use crate::api::services::invitation::InvitationService;
 use crate::types::Invitation;
 use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
+use crate::components::ui::feedback::use_toast;
 use crate::context::unread_counts_context::use_unread_counts_context;
 
 use crate::hooks::use_global_group_unread_ws;
@@ -97,6 +98,7 @@ pub fn Sidebar(
         set_show_invites_modal.set(false);
     };
 
+
     view! {
     <div class="w-[320px] bg-bg-sidebar dark:bg-bg-sidebar-dark border-r border-border dark:border-border-dark flex flex-col h-full">
             {/* Sezione gruppi scrollabile */}
@@ -107,18 +109,20 @@ pub fn Sidebar(
                 <div class="flex-1 overflow-y-auto max-h-[340px] pr-1">
                     
                     {move || {
-                        if let Some(_error_msg) = error.get() {
+                        if let Some(err_msg) = error.get() {
                             view! {
-                                <div class="flex flex-col items-center justify-center py-4 space-y-2">
-                                    <div class="text-sm text-red-500">
-                                        "Errore nel caricamento"
+                                <div class="flex flex-col items-center justify-center py-4 px-3 space-y-3 text-center">
+                                    <div class="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"></path>
+                                        </svg>
                                     </div>
-                                    <button 
-                                        class="text-xs text-brand-primary-light hover:underline"
-                                        on:click=move |_| groups_hook.refresh_groups.dispatch(())
-                                    >
-                                        "Riprova"
-                                    </button>
+                                    <div class="text-sm font-medium text-text-primary dark:text-text-primary-dark">
+                                        "Impossibile caricare i gruppi"
+                                    </div>
+                                    <div class="text-xs text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+                                        "Controlla la connessione e riprova. Se il problema persiste, prova a riavviare l'app."
+                                    </div>
                                 </div>
                             }.into_view()
                         } else {

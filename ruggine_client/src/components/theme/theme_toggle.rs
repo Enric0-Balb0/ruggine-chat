@@ -14,16 +14,10 @@ pub fn ThemeToggle() -> impl IntoView {
         }
     };
 
-    let icon_name = {
-        let theme = theme_ctx.theme;
-        move || match theme.get() {
-            Theme::Light => "moon", // Moon for switching to dark
-            Theme::Dark => "sun",  // Sun for switching to light
-        }
-    };
+    let theme_signal = theme_ctx.theme;
 
     let tooltip = {
-        let theme = theme_ctx.theme;
+        let theme = theme_signal.clone();
         move || match theme.get() {
             Theme::Light => "Attiva tema scuro",
             Theme::Dark => "Attiva tema chiaro",
@@ -36,7 +30,10 @@ pub fn ThemeToggle() -> impl IntoView {
             on:click=toggle_theme
             title=tooltip
         >
-            <LucideIcon name=icon_name() size=20 class="text-white" />
+            {move || match theme_signal.get() {
+                Theme::Light => view! { <LucideIcon name="moon" size=20 class="text-white" /> },
+                Theme::Dark => view! { <LucideIcon name="sun" size=20 class="text-white" /> },
+            }}
         </button>
     }
 }

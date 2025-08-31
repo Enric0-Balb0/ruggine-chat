@@ -3,6 +3,9 @@ use leptos_router::*;
 use crate::components::{UserAvatar, ThemeSlider, LucideIcon, IconSize, use_toast};
 use crate::api::services::AuthService;
 use crate::utils::StorageService;
+use crate::hooks::use_group_message_ws::UseGroupMessageWs;
+use crate::types::WebSocketMessage;
+use crate::types::{ClientAction, GroupAction};
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 
@@ -17,6 +20,7 @@ pub fn AppNavbar() -> impl IntoView {
     // Toast for user feedback
     let toast = use_toast();
     let navigate = use_navigate();
+    let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
 
     // Recupera i dati dell'utente corrente
     let user_profile = auth_service.get_current_user();
@@ -42,18 +46,27 @@ pub fn AppNavbar() -> impl IntoView {
     
     // Handle menu item clicks
     let handle_logout = {
-        let auth_service = auth_service.clone();
-        let toast = toast.clone();
-        let navigate = navigate.clone();
-        let set_is_menu_open = set_is_menu_open;
+    let auth_service = auth_service.clone();
+    let toast = toast.clone();
+    let navigate = navigate.clone();
+    let set_is_menu_open = set_is_menu_open;
+    let ws_ctx_opt = ws_ctx_opt.clone();
         
     Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             let auth_service = auth_service.clone();
             let toast = toast.clone();
             let navigate = navigate.clone();
-            
+            let ws_to_use = ws_ctx_opt.clone();
+
             spawn_local(async move {
+                if let Some(Some(ws)) = ws_to_use.clone() {
+                    ws.send_message.set(Some(WebSocketMessage::Request {
+                        request_id: uuid::Uuid::new_v4().to_string(),
+                        action: ClientAction::Groups(GroupAction::Leave {}),
+                    }));
+                }
+
                 match auth_service.logout().await {
                     Ok(_) => {
                         toast.success("Logout effettuato con successo!");
@@ -63,6 +76,10 @@ pub fn AppNavbar() -> impl IntoView {
                         leptos::logging::error!("Logout failed: {:?}", error);
                         toast.error("Errore durante il logout. Riprova.");
                     }
+                }
+
+                if let Some(Some(ws)) = ws_to_use.clone() {
+                    ws.disconnect.set(true);
                 }
             });
         })
@@ -119,7 +136,8 @@ pub fn AppNavbar() -> impl IntoView {
                 <img 
                     src="/public/logos/logo-full-white.png" 
                     alt="Ruggine" 
-                    class="h-8 w-auto"
+                    class="h-8 w-auto cursor-pointer"
+                    on:click={let navigate = navigate.clone(); move |_| { navigate("/", Default::default()); }}
                 />
             </div>
 
