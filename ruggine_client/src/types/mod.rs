@@ -47,6 +47,8 @@ pub use invitation::{
 };
 
 // Membership types
+pub use membership::ApiSuccessResponseVecUserId;
+pub use membership::GroupMembership;
 
 
 // Message types

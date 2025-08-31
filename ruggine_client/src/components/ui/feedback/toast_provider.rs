@@ -70,7 +70,7 @@ pub fn ToastContainer() -> impl IntoView {
 
     view! {
         <div class="fixed inset-0 pointer-events-none z-50">
-            <div class="absolute top-4 right-4 space-y-2">
+    <div class="absolute top-20 right-4 space-y-2">
                 <For
                     each=move || {
                         toast_context.toasts.get().into_iter().collect::<Vec<_>>()

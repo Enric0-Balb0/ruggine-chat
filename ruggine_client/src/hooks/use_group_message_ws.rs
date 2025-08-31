@@ -33,6 +33,12 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     ws_service.borrow_mut().set_on_message({
         let ws_service = ws_service.clone();
         move |msg: WebSocketMessage| {
+            // Log the parsed message JSON for debugging (helps correlate with raw frames)
+            match serde_json::to_string(&msg) {
+                Ok(json) => leptos::logging::log!("[WS RAW CALLBACK] Parsed message JSON: {}", json),
+                Err(e) => leptos::logging::log!("[WS RAW CALLBACK] Failed to serialize parsed message: {:?}", e),
+            }
+
             // push incoming message into local messages buffer
             set_messages_shared.update(|msgs| {
                 msgs.push(msg.clone());
@@ -40,6 +46,12 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
 
             // If this is a Group NewMessage event, increment the global unread_counts
                     if let WebSocketMessage::Event { event, .. } = &msg {
+                        // Log presence events for debugging
+                        if let ServerEvent::Groups(GroupEvent::Joined { user_id }) = event {
+                            leptos::logging::log!("[WS DEBUG] Joined event received for user {}", user_id);
+                        } else if let ServerEvent::Groups(GroupEvent::Left { user_id }) = event {
+                            leptos::logging::log!("[WS DEBUG] Left event received for user {}", user_id);
+                        }
                         if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
                             // avoid increment for messages sent by current user
                             let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
@@ -64,8 +76,13 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
         let set_send_message = set_send_message.clone();
         create_effect(move |_| {
             if let Some(msg) = send_message.get() {
-                ws_service.borrow_mut().send(&msg);
-                set_send_message.set(None);
+                let ws_service = ws_service.clone();
+                let set_send_message = set_send_message.clone();
+                // perform mutable borrow inside a separate task to avoid re-entrant RefCell borrows
+                spawn_local(async move {
+                    ws_service.borrow_mut().send(&msg);
+                    set_send_message.set(None);
+                });
             }
         });
     }
@@ -76,15 +93,22 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
         let set_disconnect = set_disconnect.clone();
         create_effect(move |_| {
             if disconnect.get() {
-                ws_service.borrow_mut().disconnect();
-                set_disconnect.set(false);
+                let ws_service = ws_service.clone();
+                let set_disconnect = set_disconnect.clone();
+                spawn_local(async move {
+                    ws_service.borrow_mut().disconnect();
+                    set_disconnect.set(false);
+                });
             }
         });
     }
 
     // Cleanup on unmount
     on_cleanup(move || {
-        ws_service.borrow_mut().disconnect();
+        let ws_service = ws_service.clone();
+        spawn_local(async move {
+            ws_service.borrow_mut().disconnect();
+        });
     });
 
     UseGroupMessageWs {

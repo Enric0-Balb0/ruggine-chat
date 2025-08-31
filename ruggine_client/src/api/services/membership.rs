@@ -6,6 +6,7 @@ use crate::types::membership::{
     ApiSuccessResponseVecGroupMembershipReadDto,
     ApiSuccessResponseGroupMembershipReadDto,
     GroupMembership,
+    ApiSuccessResponseVecUserId,
 };
 use serde::Serialize;
 
@@ -67,6 +68,15 @@ impl GroupMembershipService {
     }
 
     // Qui puoi aggiungere altri metodi membership-specifici (leave, join, ecc.)
+
+    /// Get connected users currently online (returns vector of user ids)
+    pub async fn find_connected_users_and_online(&self) -> Result<Vec<i32>, AuthError> {
+        let response: ApiSuccessResponseVecUserId = self.http_client
+            .get(ApiEndpoints::group_membership_connected_users_online())
+            .await
+            .map_err(AuthError::from)?;
+        Ok(response.data)
+    }
 }
 
 impl Default for GroupMembershipService {

@@ -66,6 +66,51 @@ pub fn ShowInvitesModal(
         }
     });
 
+    // Tab state: 0 = Ricevuti (received), 1 = Inviati (sent)
+    let (active_tab, set_active_tab) = create_signal(0i32);
+    // Local copy of invites for the current tab
+    let (local_invites, set_local_invites) = create_signal(Vec::<Invitation>::new());
+
+    // helper to load invites for the active tab (Rc so it can be cloned into multiple callbacks)
+    let load_invites_for_tab = std::rc::Rc::new(move |tab: i32| {
+        let set_local_invites = set_local_invites.clone();
+        spawn_local(async move {
+            let storage_service = StorageService::new();
+            let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            if let Some(token_response) = storage_service.get_token() {
+                http_client.set_auth_token(Some(token_response.token));
+            }
+            let invitation_service = crate::api::services::invitation::InvitationService::new(http_client, storage_service);
+            if let Ok(all_invites) = invitation_service.get_user_invitations().await {
+                // determine current user id
+                let current_user_id = crate::utils::storage::StorageService::new()
+                    .get_user_profile()
+                    .map(|u| u.id);
+                let filtered = match (tab, current_user_id) {
+                    (1, Some(uid)) => all_invites.into_iter().filter(|inv| inv.from_user_id == uid).collect::<Vec<_>>(),
+                    // default: received
+                    _ => all_invites.into_iter().filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1)).collect::<Vec<_>>()
+                };
+                set_local_invites.set(filtered);
+            }
+        });
+    });
+
+    // initial load for received invites
+    {
+        let load = load_invites_for_tab.clone();
+        (load)(0);
+    }
+
+    // Reload invites whenever the active tab changes
+    {
+        let load = load_invites_for_tab.clone();
+        create_effect(move |_| {
+            let tab = active_tab.get();
+            (load)(tab);
+        });
+    }
+
     let groups_ctx = use_groups_context();
     let handle_close = move |_| {
         // Refetch gruppi quando si chiude il modal
@@ -85,10 +130,23 @@ pub fn ShowInvitesModal(
     // Funzione per accettare un invito
     let set_invites_signal = set_invites.clone();
     let toast = use_toast();
+    // Track pending invite actions to disable buttons per-invite
+    let (pending_invites, set_pending_invites) = create_signal(std::collections::HashSet::<i32>::new());
+    // prepare clones for closures to avoid move-after-use
+    let toast_for_accept = toast.clone();
+    let toast_for_reject = toast.clone();
+    let set_pending_for_accept = set_pending_invites.clone();
+    let set_pending_for_reject = set_pending_invites.clone();
+    let on_accept_cb_clone = on_accept.clone();
+    let on_reject_cb_clone = on_reject.clone();
     let handle_accept_invite = Callback::new(move |invitation_id: i32| {
         let set_invites_signal = set_invites_signal.clone();
-        let toast = toast.clone();
+        let toast = toast_for_accept.clone();
+        let set_pending = set_pending_for_accept.clone();
+        let on_accept_cb = on_accept_cb_clone.clone();
         spawn_local(async move {
+            // mark pending
+            set_pending.update(|s| { s.insert(invitation_id); });
             let storage_service = StorageService::new();
             let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage_service.get_token() {
@@ -102,11 +160,59 @@ pub fn ShowInvitesModal(
             if let Ok(_res) = invitation_service.update_invitation_status(&req).await {
                 // Aggiorna la lista inviti dopo l'accettazione
                 if let Ok(new_list) = invitation_service.get_user_invitations().await {
+                    // clone before moving into set to allow creating filtered local list
+                    let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
+                    // refresh local tab view
+                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1)).collect());
                 }
                 // Toast di successo
                 toast.success("Invito accettato! Ora fai parte del gruppo.");
+                // notify optional external handler
+                if let Some(cb) = on_accept.as_ref() {
+                    cb.call(invitation_id);
+                }
             }
+            // clear pending
+            set_pending.update(|s| { s.remove(&invitation_id); });
+        });
+    });
+
+    // Funzione per rifiutare un invito (gestita internamente qui)
+    let set_invites_signal_rej = set_invites.clone();
+    let handle_reject_invite_internal = Callback::new(move |invitation_id: i32| {
+        let set_invites_signal = set_invites_signal_rej.clone();
+        let toast = toast_for_reject.clone();
+        let set_pending = set_pending_for_reject.clone();
+        let on_reject_cb = on_reject_cb_clone.clone();
+        spawn_local(async move {
+            set_pending.update(|s| { s.insert(invitation_id); });
+            let storage_service = StorageService::new();
+            let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            if let Some(token_response) = storage_service.get_token() {
+                http_client.set_auth_token(Some(token_response.token));
+            }
+            let invitation_service = crate::api::services::invitation::InvitationService::new(http_client, storage_service);
+            let req = crate::types::invitation::InvitationUpdateRequest {
+                status: crate::types::invitation::InvitationStatus::Rejected,
+                invitation_id,
+            };
+            if let Ok(_res) = invitation_service.update_invitation_status(&req).await {
+                if let Ok(new_list) = invitation_service.get_user_invitations().await {
+                    let cloned = new_list.clone();
+                    set_invites_signal.set(new_list);
+                    // refresh local tab view
+                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1)).collect());
+                }
+                toast.success("Invito rifiutato.");
+                // Call external callback if present (for side-effects like refresh)
+                if let Some(cb) = on_reject_cb.as_ref() {
+                    cb.call(invitation_id);
+                }
+            } else {
+                toast.error("Errore durante il rifiuto dell'invito.");
+            }
+            set_pending.update(|s| { s.remove(&invitation_id); });
         });
     });
 
@@ -137,7 +243,7 @@ pub fn ShowInvitesModal(
                     >
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark m-0">
-                                "Inviti ricevuti"
+                                "Inviti ai Gruppi"
                             </h2>
                             <button
                                 type="button"
@@ -166,9 +272,39 @@ pub fn ShowInvitesModal(
                                 </div>
                             </div>
                         </div>
-                        <div class="divide-y divide-border dark:divide-border-dark max-h-[340px] overflow-y-auto">
+                        // Tab switcher: placed under description, buttons attached with sliding indicator
+                        <div class="mt-3">
+                                <div class="relative inline-block rounded overflow-hidden w-full max-w-xs">
+                                <div class="flex w-full divide-x divide-border dark:divide-border-dark">
+                                    <button
+                                        class=move || if active_tab.get() == 0 { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200 transition-colors" } else { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-transparent text-text-secondary dark:text-text-secondary-dark transition-colors" }
+                                        on:click=move |_| { set_active_tab.set(0); }
+                                    >
+                                        "Ricevuti"
+                                    </button>
+                                    <button
+                                        class=move || if active_tab.get() == 1 { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200 transition-colors" } else { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-transparent text-text-secondary dark:text-text-secondary-dark transition-colors" }
+                                        on:click=move |_| { set_active_tab.set(1); }
+                                    >
+                                        "Inviati"
+                                    </button>
+                                </div>
+                                <div class="absolute bottom-0 h-0.5 bg-blue-500 dark:bg-blue-400 transition-all duration-300" style=move || {
+                                    if active_tab.get() == 0 { "left:0%; width:50%;".to_string() } else { "left:50%; width:50%;".to_string() }
+                                }></div>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-border dark:divide-border-dark overflow-hidden" style=move || {
+                            // make the invites list scroll when it grows beyond a reasonable number
+                            let list = local_invites.get();
+                            if list.len() > 6 {
+                                "max-height: 340px; overflow-y: auto;".to_string()
+                            } else {
+                                "max-height: none; overflow-y: visible;".to_string()
+                            }
+                        }>
                             {move || {
-                                let list = invites.get();
+                                let list = local_invites.get();
                                 let on_accept_cb = on_accept.clone();
                                 let on_reject_cb = on_reject.clone();
                                 if list.is_empty() {
@@ -186,6 +322,8 @@ pub fn ShowInvitesModal(
                                                 let status = inv.status.clone();
                                                 let sent_at = inv.created_at.format(" %d/%m/%Y %H:%M ").to_string();
                                                 let is_pending = status.to_string() == "pending";
+                                                // check if an action (accept/reject) for this invitation is currently pending
+                                                let is_action_pending = pending_invites.get().contains(&id);
                                                 let on_accept_cb = on_accept_cb.clone();
                                                 let on_reject_cb = on_reject_cb.clone();
                                                 let role = match &inv.role_at_join {
@@ -200,22 +338,32 @@ pub fn ShowInvitesModal(
                                                         </div>
                                                         <div class="flex gap-2">
                                                             {if is_pending {
-                                                                view! {
-                                                                    <>
-                                                                        <button class="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition-colors" on:click=move |_| handle_accept_invite.call(id)>
-                                                                            "Accetta"
-                                                                        </button>
-                                                                        {on_reject_cb.as_ref().map(|cb| {
-                                                                            let cb = cb.clone();
-                                                                            view! {
-                                                                                <button class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition-colors" on:click=move |_| cb.call(id)>
-                                                                                    "Rifiuta"
-                                                                                </button>
-                                                                            }
-                                                                        })}
-                                                                    </>
-                                                                }.into_view()
+                                                                // invitation is pending -> show actionable buttons
+                                                                if is_action_pending {
+                                                                    view! {
+                                                                        <>
+                                                                            <button class="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition-colors opacity-60 cursor-not-allowed" disabled=true>
+                                                                                "Accetta"
+                                                                            </button>
+                                                                            <button class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition-colors opacity-60 cursor-not-allowed" disabled=true>
+                                                                                "Rifiuta"
+                                                                            </button>
+                                                                        </>
+                                                                    }.into_view()
+                                                                } else {
+                                                                    view! {
+                                                                        <>
+                                                                            <button class="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition-colors" on:click=move |_| handle_accept_invite.call(id)>
+                                                                                "Accetta"
+                                                                            </button>
+                                                                            <button class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition-colors" on:click=move |_| handle_reject_invite_internal.call(id)>
+                                                                                "Rifiuta"
+                                                                            </button>
+                                                                        </>
+                                                                    }.into_view()
+                                                                }
                                                             } else {
+                                                                // not pending: show status label
                                                                 view! {
                                                                     <span class="px-3 py-1 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-default">
                                                                         {status.to_string().to_uppercase()}

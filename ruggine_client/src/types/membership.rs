@@ -30,6 +30,12 @@ pub struct ApiSuccessResponseVecGroupMembershipReadDto {
     pub data: Vec<GroupMembershipReadDto>,
 }
 
+/// Vector of user ids response wrapper (used by connected users online endpoint)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSuccessResponseVecUserId {
+    pub data: Vec<i32>,
+}
+
 /// Group membership data from server - exact structure from OpenAPI
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupMembershipReadDto {

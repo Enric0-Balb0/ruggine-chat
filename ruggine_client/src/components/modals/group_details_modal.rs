@@ -5,6 +5,9 @@ use crate::api::services::UserService;
 use crate::components::{ UserAvatar, LucideIcon};
 use crate::types::invitation::MemberRole;
 use chrono::{DateTime, Utc};
+use crate::hooks::use_group_message_ws::UseGroupMessageWs;
+use crate::types::WebSocketMessage;
+use crate::types::message_ws::{ServerEvent, GroupEvent};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupMember {
@@ -52,7 +55,10 @@ pub fn GroupDetailsModal(
     }
     let membership_service = crate::api::services::GroupMembershipService::new(http_client.clone(), storage_service.clone());
     let user_service = UserService::new(http_client.clone(), storage_service.clone());
-    let group_service = crate::api::services::GroupChatService::new(http_client, storage_service);
+    let group_service = crate::api::services::GroupChatService::new(http_client, storage_service.clone());
+    // Optional WebSocket context (provided by AppLayout). This returns
+    // Option<UseGroupMessageWs> wrapped in Option from use_context.
+    let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
 
     create_effect(move |_| {
         if is_open.get() {
@@ -62,6 +68,7 @@ pub fn GroupDetailsModal(
             let membership_service = membership_service.clone();
             let user_service = user_service.clone();
             let group_service = group_service.clone();
+            let storage_service = storage_service.clone();
             spawn_local(async move {
                 // Fetch group info
                 match group_service.get_group_by_id(&group_id.to_string()).await {
@@ -125,6 +132,29 @@ pub fn GroupDetailsModal(
                         }
                         let results = futures::future::join_all(tasks).await;
                         group_members.extend(results);
+
+                        // Fetch connected online user ids and mark members accordingly
+                        match membership_service.find_connected_users_and_online().await {
+                            Ok(online_ids) => {
+                                let current_user_id = storage_service.get_user_profile().map(|u| u.id);
+                                for gm in &mut group_members {
+                                    let is_online = online_ids.contains(&gm.user_profile.id)
+                                        || current_user_id.map_or(false, |id| id == gm.user_profile.id);
+                                    gm.user_profile.is_online = is_online;
+                                }
+                            }
+                            Err(_) => {
+                                // If API call fails, still mark current user as online if available
+                                if let Some(current_id) = storage_service.get_user_profile().map(|u| u.id) {
+                                    for gm in &mut group_members {
+                                        if gm.user_profile.id == current_id {
+                                            gm.user_profile.is_online = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         set_members_signal.set(group_members);
                     }
                     Err(_e) => {
@@ -134,6 +164,53 @@ pub fn GroupDetailsModal(
             });
         }
     });
+
+            // Listen to WebSocket messages (if available) and update member online state in real-time
+            {
+                let ws_ctx_opt = ws_ctx_opt.clone();
+                let set_members_signal = set_members_signal.clone();
+                let members_signal = members_signal.clone();
+
+                create_effect(move |_| {
+                    // ws_ctx_opt: Option<Option<UseGroupMessageWs>>
+                    if let Some(Some(ws)) = ws_ctx_opt.as_ref() {
+                        // read the current messages buffer (clone) and inspect the last one
+                        let msgs = ws.messages.get();
+                        if let Some(last_msg) = msgs.last().cloned() {
+                            match last_msg {
+                                WebSocketMessage::Event { event, .. } => {
+                                    if let ServerEvent::Groups(group_event) = event {
+                                        match group_event {
+                                            GroupEvent::Joined { user_id } => {
+                                                // mark member online if present
+                                                set_members_signal.update(|members| {
+                                                    for gm in members.iter_mut() {
+                                                        if gm.user_profile.id == user_id {
+                                                            gm.user_profile.is_online = true;
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            GroupEvent::Left { user_id } => {
+                                                // mark member offline if present
+                                                set_members_signal.update(|members| {
+                                                    for gm in members.iter_mut() {
+                                                        if gm.user_profile.id == user_id {
+                                                            gm.user_profile.is_online = false;
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                });
+            }
 
     // Animation states
     let (is_visible, set_is_visible) = create_signal(false);
@@ -179,8 +256,20 @@ pub fn GroupDetailsModal(
     };
 
     // Calculate stats
+    let storage_service_for_memo = crate::utils::storage::StorageService::new();
     let online_count = create_memo(move |_| {
-        members_signal.get().iter().filter(|m| m.user_profile.is_online).count()
+        let members = members_signal.get();
+        let mut count = members.iter().filter(|m| m.user_profile.is_online).count();
+
+        // If current user exists and is not already counted as online among members, add 1
+        if let Some(current_user_id) = storage_service_for_memo.get_user_profile().map(|u| u.id) {
+            let current_counted = members.iter().any(|m| m.user_profile.id == current_user_id && m.user_profile.is_online);
+            if !current_counted {
+                count += 1;
+            }
+        }
+
+        count
     });
     let admin_count = create_memo(move |_| {
         members_signal.get().iter().filter(|m| m.role == MemberRole::Admin).count()

@@ -31,6 +31,7 @@ impl ApiEndpoints {
     pub const GROUP_MEMBERSHIP_BY_ID: &'static str = "/group_membership"; // + /{id}
     pub const GROUP_MEMBERSHIP_BY_GROUP_CHAT: &'static str = "/group_membership/group_chat"; // + /{group_id}
     pub const GROUP_MEMBERSHIP_LEAVE: &'static str = "/group_membership/leave";
+    pub const GROUP_MEMBERSHIP_CONNECTED_USERS_ONLINE: &'static str = "/group_membership/connected_users_online";
 
     // Invitation endpoints
     pub const INVITATION_SEND: &'static str = "/invitation/send";
@@ -51,6 +52,10 @@ impl ApiEndpoints {
 
     pub fn group_membership_by_group_chat(group_id: &str) -> String {
         format!("{}/{}", Self::GROUP_MEMBERSHIP_BY_GROUP_CHAT, group_id)
+    }
+
+    pub fn group_membership_connected_users_online() -> &'static str {
+        Self::GROUP_MEMBERSHIP_CONNECTED_USERS_ONLINE
     }
     
     pub fn group_participants(group_id: &str) -> String {
