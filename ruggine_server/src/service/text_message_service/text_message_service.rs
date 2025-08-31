@@ -4,12 +4,14 @@ use crate::service::group_membership_service::GroupMembershipServiceTrait;
 use crate::service::group_chat_service::GroupChatServiceTrait;
 use crate::service::text_message_service::text_message_service_trait::TextMessageServiceTrait;
 use async_trait::async_trait;
+use tokio::sync::Semaphore;
 
 #[derive(Clone)]
 pub struct TextMessageService {
     pub(crate) text_message_repo: Arc<dyn TextMessageRepositoryTrait>,
     pub(crate) group_membership_service: Arc<dyn GroupMembershipServiceTrait>,
     pub(crate) group_chat_service: Arc<dyn GroupChatServiceTrait>,
+    pub (crate) insert_text_message_info_semaphore: Arc<Semaphore>,
 }
 
 impl TextMessageService {
@@ -22,6 +24,7 @@ impl TextMessageService {
             text_message_repo,
             group_membership_service,
             group_chat_service,
+            insert_text_message_info_semaphore: Arc::new(Semaphore::new(1)),
         }
     }
     

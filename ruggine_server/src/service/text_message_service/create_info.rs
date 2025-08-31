@@ -86,12 +86,14 @@ mod create_info_service_tests {
     use crate::utils::mock_database_error::MockDatabaseError;
     use mockall::predicate::*;
     use std::sync::Arc;
+    use tokio::sync::Semaphore;
 
     fn create_service_with_mock_repo(mock_repo: MockTextMessageRepositoryTrait) -> TextMessageService {
         TextMessageService {
             text_message_repo: Arc::new(mock_repo),
             group_membership_service: Arc::new(MockGroupMembershipServiceTrait::new()),
-            group_chat_service: Arc::new(MockGroupChatServiceTrait::new())
+            group_chat_service: Arc::new(MockGroupChatServiceTrait::new()),
+            insert_text_message_info_semaphore: Arc::new(Semaphore::new(1)),
         }
     }
 

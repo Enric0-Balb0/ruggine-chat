@@ -1,5 +1,6 @@
 use crate::{entity::text_message::NewTextMessageInfo, repository::text_message_repository::TextMessageRepository};
 use sqlx::Error as SqlxError;
+use tracing::info;
 use crate::config::database::DatabaseTrait;
 
 impl TextMessageRepository {
@@ -16,10 +17,10 @@ impl TextMessageRepository {
 
         let response;
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
-            println!("Using transaction");
+            info!("Using transaction");
             response = query.fetch_one(&mut *tx_ref).await
         } else {
-            println!("Using pool");
+            info!("Using pool");
             response = query.fetch_one(self.db_conn.get_pool()).await
         }
 

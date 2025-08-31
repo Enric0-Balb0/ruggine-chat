@@ -47,6 +47,13 @@ pub trait DatabaseTrait {
 #[async_trait]
 impl DatabaseTrait for Database {
     async fn init(database_url: String) -> Result<Self, Error> {
+        /* let pool = PgPoolOptions::new()
+            .max_connections(200)                             // numero massimo di connessioni nel pool
+            .min_connections(50)                              // numero minimo di connessioni già pronte
+            .acquire_timeout(std::time::Duration::from_secs(5)) // tempo massimo di attesa per una connessione libera
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to test database");*/
         let pool = PgPool::connect(&database_url).await?;
         Ok(Self {
             pool,
@@ -80,7 +87,7 @@ impl DatabaseTrait for Database {
         }
 
         // 1. apre la transazione
-        let tx = match self.pool.begin().await {
+        let mut tx = match self.pool.begin().await {
             Ok(tx) => tx,
             Err(e) => {
                 error!("Failed to start transaction: {}", e);
@@ -90,6 +97,21 @@ impl DatabaseTrait for Database {
                 .into())
             }
         };
+
+        // 1.b: prende un advisory lock legato alla transazione
+        let lock_key: i64 = 42; // <-- Chiave per TUTTE le transazioni, sono poche per ora e va bene
+        sqlx::query("SELECT pg_advisory_xact_lock($1)")
+            .bind(lock_key)
+            .execute(&mut tx)
+            .await
+            .map_err(|e| {
+                error!("Failed to acquire advisory lock: {}", e);
+                ApiError::DbError(DbError::SomethingWentWrong(
+                    "Impossible to acquire advisory lock".to_string(),
+                ))
+            })?;
+        info!("Acquired advisory lock");
+
         info!("Started transaction");
         let task_id = self.task_counter.fetch_add(1, Ordering::SeqCst);
 

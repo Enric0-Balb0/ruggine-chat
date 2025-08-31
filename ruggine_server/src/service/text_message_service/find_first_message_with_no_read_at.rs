@@ -1,3 +1,5 @@
+use tracing::{debug, info};
+
 use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageLastSentAtDto, TextMessageReadDto};
 use crate::entity::group_membership::MembershipStatus;
 use crate::error::api_error::ApiError;
@@ -47,7 +49,7 @@ impl TextMessageService {
             },
             None => {
                 // nessun record trovato
-                println!("No first sent message found for user {}", auth_user_id);
+                debug!("Not found first message with no read for user {}", auth_user_id);
             }
         }
 

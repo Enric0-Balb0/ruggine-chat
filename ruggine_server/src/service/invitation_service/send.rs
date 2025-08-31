@@ -46,8 +46,6 @@ impl InvitationService {
             }
         }
 
-
-        // TODO: Check from membership if you are admin
         match self.group_membership_service
             .find_active_by_user_id_and_group_id(from_user_id, group_chat.id)
             .await

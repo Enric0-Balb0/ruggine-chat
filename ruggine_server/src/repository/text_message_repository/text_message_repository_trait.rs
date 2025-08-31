@@ -13,6 +13,7 @@ pub trait TextMessageRepositoryTrait: Send + Sync {
     async fn find(&self, id: i32) -> Result<TextMessage, Error>;
     async fn insert(&self, new_text_message: NewTextMessage) -> Result<i32, SqlxError>;
     async fn insert_text_message_info(&self, text_message_info: NewTextMessageInfo) -> Result<i32, SqlxError>;
+    async fn insert_with_text_message_infos(&self, new_text_message: NewTextMessage) -> Result<i32, SqlxError>;
     async fn find_by_group_chat_id_paginated(&self, group_chat_id: i32, cursor: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<TextMessage>, Error>;
     async fn find_info_by_id(&self, id: i32) -> Result<TextMessageInfo, Error>;
     async fn find_info_by_message_id(&self, message_id: i32) -> Result<Vec<TextMessageInfo>, Error>;

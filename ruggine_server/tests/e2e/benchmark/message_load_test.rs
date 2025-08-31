@@ -21,10 +21,16 @@ mod benchmark_tests {
     use futures::stream::{self, StreamExt};
     use reqwest::Client;
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use futures_util::stream::FuturesUnordered;
     use tokio::sync::Semaphore;
     use tokio::time::{timeout, Duration, Instant};
     use tracing::info;
-    use crate::create_admin_login_and_get_token;
+    use ruggine_server::config::parameter;
+    use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
+    use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
+    use ruggine_server::utils::service_initializer::ServiceInitializer;
+    use crate::{common, create_admin_login_and_get_token, get_database};
 
     fn init_tracing() {
         let _ = tracing_subscriber::fmt()
@@ -38,23 +44,23 @@ mod benchmark_tests {
     /// Benchmark test: N users creating M messages concurrently
     #[tokio_shared_rt::test(shared)]
     #[serial]
-    async fn test_concurrent_message_creation_benchmark() {
-        // Abilita log durante il test
-        // init_tracing();
-
-        // Set variabile ENV per CPU logging
-        std::env::set_var("LOG_IN_MILLISECONDS", "100000");
-
+    async fn test_concurrent_message_creation_benchmark_large() {
         // Cleanup iniziale
         cleanup_all_cpu_usage_log().await;
 
-        // Parametri del test
-        const NUM_USERS: usize = 2000;
-        const MESSAGES_PER_USER: usize = 10;
-        const TOTAL_MESSAGES: usize = NUM_USERS * MESSAGES_PER_USER;
+        let db = get_database().await;
+        let mut cpu_usage_log_service = CpuUsageLogService::new(
+            Arc::new(CpuUsageLogRepository::new(&db))
+        );
+        cpu_usage_log_service.set_monitoring_interval_ms(1000);
+        cpu_usage_log_service.start_monitoring().await.expect("Failed to start CPU monitoring");
 
-        info!("🚀 Avvio benchmark: {} utenti, {} messaggi ciascuno ({} totali)",
-              NUM_USERS, MESSAGES_PER_USER, TOTAL_MESSAGES);
+        // Parametri
+        const NUM_GROUPS: usize = 100;
+        const USERS_PER_GROUP: usize = 10;
+        const MSGS_PER_USER: usize = 100;
+
+        info!("🚀 Benchmark: {} gruppi × {} utenti × {} messaggi", NUM_GROUPS, USERS_PER_GROUP, MSGS_PER_USER);
 
         // Avvio server di test
         let (addr, shutdown) = start_test_server().await;
@@ -62,191 +68,141 @@ mod benchmark_tests {
 
         let start_time = Instant::now();
 
-        // Creazione utenti e gruppo
-        let mut users = Vec::new();
-        let mut tokens = Vec::new();
+        // --- Creazione utenti globali ---
+        let mut users = Vec::with_capacity(NUM_GROUPS * USERS_PER_GROUP);
+        let mut tokens = Vec::with_capacity(NUM_GROUPS * USERS_PER_GROUP);
 
-        let (owner, _, owner_token) = create_admin_login_and_get_token("benchmark_owner".to_string()).await;
-        let group = create_test_group_chat_with_invitation_and_membership("benchmark_group", owner.id).await;
-
-        users.push(owner);
-        tokens.push(owner_token);
-
-        for i in 1..NUM_USERS {
-            let (user, _, token) = create_login_and_get_token(format!("benchmark_user_{}", i)).await;
-            add_test_user_to_a_group(user.id, &group).await;
+        for i in 0..(NUM_GROUPS * USERS_PER_GROUP) {
+            let (user, _, token) = create_login_and_get_token(format!("bench_user_{}", i)).await;
             users.push(user);
             tokens.push(token);
         }
 
-        info!("✅ Creati {} utenti e aggiunti al gruppo", NUM_USERS);
+        println!("✅ Creati {} utenti", users.len());
 
-        // HTTP client + semaphore
-        let client = Arc::new(Client::new());
-        let semaphore = Arc::new(Semaphore::new(50));
+        // --- Creazione gruppi e membership ---
+        let mut groups = Vec::with_capacity(NUM_GROUPS);
+        for g in 0..NUM_GROUPS {
+            let start_idx = g * USERS_PER_GROUP;
 
-        // Genera tutti i payload dei messaggi
+            let group = create_test_group_chat_with_invitation_and_membership(
+                format!("bench_group_{}", g).as_str(),
+                users[start_idx].id
+            ).await;
+
+            // Aggiungi altri utenti al gruppo
+            for u in &users[start_idx + 1..start_idx + USERS_PER_GROUP] {
+                add_test_user_to_a_group(u.id, &group).await;
+            }
+
+            groups.push(group);
+        }
+
+        println!("✅ Creati {} gruppi con membership", NUM_GROUPS);
+
+        // --- Preparazione payload messaggi ---
         let mut messages = Vec::new();
-        for (user_idx, token) in tokens.iter().enumerate() {
-            for msg_idx in 0..MESSAGES_PER_USER {
-                messages.push((
-                    token.clone(),
-                    json!({
-                        "content": format!("Benchmark message {} from user {}", msg_idx, user_idx),
+        for (group_idx, group) in groups.iter().enumerate() {
+            let start_idx = group_idx * USERS_PER_GROUP;
+            for u_idx in start_idx..start_idx + USERS_PER_GROUP {
+                for msg_idx in 0..MSGS_PER_USER {
+                    messages.push((
+                        tokens[u_idx].clone(),
+                        json!({
+                        "content": format!("Benchmark message {} from user {}", msg_idx, u_idx),
                         "group_chat_id": group.id
-                    }),
-                ));
+                    })
+                    ));
+                }
             }
         }
 
-        info!("🔄 Invio di {} messaggi concorrenti...", TOTAL_MESSAGES);
+        println!("🔄 Invio di {} messaggi concorrenti...", messages.len());
 
-        let payload =json!({
-            "content": format!("Benchmark message from user"),
-            "group_chat_id": group.id
-        });
+        // --- Invio concorrente ---
+        let client = Arc::new(Client::new());
+        let semaphore = Arc::new(Semaphore::new(20)); // concorrenza maggiore
+        let mut futures = FuturesUnordered::new();
 
-        let mut handles = vec![];
-        for _ in 0..5 {  // Ridotto da 20 a 5 per evitare deadlock
-            let payload = payload.clone();
-            let client = client.clone();
+        let total_messages = messages.len();
+        let progress_counter = Arc::new(AtomicUsize::new(0));
+        let progress_step = total_messages / 100; // 1% step
+
+        for (token, payload) in messages.clone() {
+            let client = Arc::clone(&client);
             let base_url = base_url.clone();
-            let token = tokens[0].clone();
+            let semaphore = Arc::clone(&semaphore);
+            let progress_counter = Arc::clone(&progress_counter);
 
-            let handle = tokio::spawn(async move {
-                match client
+            futures.push(async move {
+                let permit = semaphore.acquire().await.unwrap();
+
+                let fut = client
                     .post(&format!("{}/api/text_message/create", base_url))
                     .header("Authorization", format!("Bearer {}", token))
                     .header("Content-Type", "application/json")
                     .json(&payload)
-                    .send()
-                    .await
-                {
-                    Ok(response) => {
-                        println!("Success: {:?}", response.status());
+                    .send();
+
+                let res = timeout(Duration::from_secs(10), fut).await;
+                drop(permit);
+
+                // Aggiorna contatore e stampa progresso
+                let completed = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
+                if completed % progress_step == 0 {
+                    println!("📤 Progresso: {:.0}% ({}/{})", completed as f64 / total_messages as f64 * 100.0, completed, total_messages);
+                }
+
+                match res {
+                    Ok(Ok(resp)) if resp.status().is_success() => {
+                        resp.json::<serde_json::Value>().await.ok()
+                            .and_then(|j| j.get("data")?.get("id")?.as_i64())
+                            .map(|id| id as i32)
                     }
-                    Err(e) => {
-                        eprintln!("Error: {:?}", e);
-                    }
+                    _ => None,
                 }
             });
-
-            handles.push(handle);
         }
 
-        // Attendi tutti i task
-        for handle in handles {
-            let _ = handle.await;
+        let mut results = Vec::new();
+        while let Some(res) = futures.next().await {
+            results.push(res);
         }
 
-        println!("Finished");
+        let message_creation_duration = start_time.elapsed();
+        let successful_messages: usize = results.iter().filter(|r| r.is_some()).count();
 
-        // Esecuzione concorrente con buffer_unordered
-        /*let message_creation_start = Instant::now();
+        cpu_usage_log_service.stop_monitoring().await.expect("Failed to stop monitoring");
 
-        let results: Vec<_> = stream::iter(messages.into_iter())
-            .map(|(token, payload)| {
-                let client = Arc::clone(&client);
-                let base_url = base_url.clone();
-                let semaphore = Arc::clone(&semaphore);
+        println!("📊 RISULTATI BENCHMARK:");
+        println!("  Totale tentativi: {}", messages.len());
+        println!("  Successi: {}", successful_messages);
+        println!("  Falliti: {}", messages.len() - successful_messages);
+        println!("  Tempo creazione messaggi: {:?}", message_creation_duration);
+        println!("  Msg/s: {:.2}", successful_messages as f64 / message_creation_duration.as_secs_f64());
+        println!("  Tempo medio per messaggio: {:?}", message_creation_duration / successful_messages as u32);
 
-                async move {
-                    info!("⏳ Acquisizione semaforo...");
-                    let permit = semaphore.acquire().await.unwrap();
-                    info!("✅ Semaforo acquisito");
-
-                    let fut = client
-                        .post(&format!("{}/api/text_message/create", base_url))
-                        .header("Authorization", format!("Bearer {}", token))
-                        .header("Content-Type", "application/json")
-                        .json(&payload)
-                        .send();
-
-                    // Timeout massimo per ogni richiesta
-                    let response = timeout(Duration::from_secs(5), fut).await;
-
-                    drop(permit);
-                    info!("🔓 Semaforo rilasciato");
-
-                    match response {
-                        Ok(Ok(resp)) if resp.status().is_success() => {
-                            if let Ok(body) = resp.text().await {
-                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
-                                    if let Some(message_id) = json.get("data")
-                                        .and_then(|d| d.get("id"))
-                                        .and_then(|id| id.as_i64())
-                                    {
-                                        return Some(message_id as i32);
-                                    }
-                                }
-                            }
-                            None
-                        }
-                        Ok(Ok(resp)) => {
-                            eprintln!("❌ Fallito con status: {}", resp.status());
-                            None
-                        }
-                        Ok(Err(e)) => {
-                            eprintln!("❌ Errore nella richiesta: {}", e);
-                            None
-                        }
-                        Err(_) => {
-                            eprintln!("⏰ Timeout nella richiesta");
-                            None
-                        }
-                    }
-                }
-            })
-            .buffer_unordered(50) // max 50 richieste in flight
-            .collect()
-            .await;
-
-        let message_creation_duration = message_creation_start.elapsed();
-
-        // Analisi risultati
-        let mut created_message_ids = Vec::new();
-        let mut successful_messages = 0;
-
-        for r in results {
-            if let Some(mid) = r {
-                created_message_ids.push(mid);
-                successful_messages += 1;
-            }
-        }
-
-        info!("📊 RISULTATI BENCHMARK:");
-        info!("  Totale tentativi: {}", TOTAL_MESSAGES);
-        info!("  Successi: {}", successful_messages);
-        info!("  Falliti: {}", TOTAL_MESSAGES as i32 - successful_messages);
-        info!("  Tempo creazione messaggi: {:?}", message_creation_duration);
-        info!("  Msg/s: {:.2}", successful_messages as f64 / message_creation_duration.as_secs_f64());
-        info!("  Tempo medio per messaggio: {:?}", message_creation_duration / successful_messages as u32);
-
-        // Cleanup
+        // Cleanup batch
+        let created_message_ids: Vec<i32> = results.into_iter().flatten().collect();
         if !created_message_ids.is_empty() {
             cleanup_text_messages(created_message_ids).await;
-            info!("🧹 Puliti {} messaggi", successful_messages);
+        }
+
+        for g in 0..NUM_GROUPS {
+            let start_idx = g * USERS_PER_GROUP;
+            let group = &groups[g];
+            for u in &users[start_idx..start_idx + USERS_PER_GROUP] {
+                cleanup_test_user_from_a_group_chat(u.id, group.id).await;
+            }
+            cleanup_group_chat(group.id).await;
         }
 
         for user in &users {
-            cleanup_test_user_from_a_group_chat(user.id, group.id).await;
+            cleanup_user_by_email(user.email.clone()).await;
         }
-
-        cleanup_group_chat(group.id).await;
-        for user in users {
-            cleanup_user_by_email(user.email).await;
-        }
-
-        cleanup_all_cpu_usage_log().await;
 
         let _ = shutdown.send(());
 
-        let total_duration = start_time.elapsed();
-        info!("✅ Test completato in {:?}", total_duration);
-
-        // Almeno l'80% deve andare a buon fine
-        let success_rate = successful_messages as f64 / TOTAL_MESSAGES as f64;
-        assert!(success_rate >= 0.8, "Success rate troppo basso: {:.2}%", success_rate * 100.0);*/
+        assert_eq!(successful_messages, messages.len(), "Success rate troppo basso");
     }
-
 }

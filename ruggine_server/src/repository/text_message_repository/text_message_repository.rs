@@ -44,6 +44,10 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
         self.insert_inner(new_text_message).await
     }
 
+    async fn insert_with_text_message_infos(&self, new_text_message: NewTextMessage) -> Result<i32, Error> {
+        self.insert_with_text_message_infos_inner(new_text_message).await
+    }
+
     async fn find_by_group_chat_id_paginated(&self, group_chat_id: i32, cursor: Option<chrono::DateTime<chrono::Utc>>, limit: usize) -> Result<Vec<TextMessage>, Error> {
         self.find_by_group_chat_id_paginated_inner(group_chat_id, cursor, limit).await
     }

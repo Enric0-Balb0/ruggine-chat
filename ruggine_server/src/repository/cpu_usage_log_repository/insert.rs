@@ -1,5 +1,5 @@
 use sqlx::Error;
-use tracing::error;
+use tracing::{error, info};
 use crate::config::database::DatabaseTrait;
 use crate::entity::cpu_usage_log::NewCpuUsageLog;
 use crate::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
@@ -21,10 +21,10 @@ impl CpuUsageLogRepository {
         let response;
 
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
-            println!("Using transaction");
+            info!("Using transaction");
             response = query.fetch_one(&mut *tx_ref).await
         } else {
-            println!("Using pool");
+            info!("Using pool");
             response = query.fetch_one(self.db_conn.get_pool()).await
         }
 

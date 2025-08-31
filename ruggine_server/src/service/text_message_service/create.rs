@@ -67,77 +67,28 @@ impl TextMessageService {
 
         info!("Trying to insert new message in the db...");
 
-        let message_mock = self.text_message_repo
-            .db_conn()
-            .with_tx(|db| async move {
-                // Insert the message into the database
-                let message_id = self
-                    .text_message_repo
-                    .insert(new_text_message)
-                    .await
-                    .map_err(|e| match e {
-                        sqlx::Error::Database(db_err) => {
-                            if let Some(code) = db_err.code() {
-                                if code == "23503" {
-                                    return ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string()));
-                                }
-                            }
-                            ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
+        // Insert the message into the database
+        let message_id = self
+            .text_message_repo
+            .insert_with_text_message_infos(new_text_message)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::Database(db_err) => {
+                    if let Some(code) = db_err.code() {
+                        if code == "23503" {
+                            return ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string()));
                         }
-                        _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-                    })?;
-
-                info!("New text message id {} stored in the db, now trying to create message infos...", message_id);
-
-                // Insert the text message infos in the database
-                for membership in memberships {
-                    let new_text_message_info = crate::entity::text_message::NewTextMessageInfo {
-                        user_id: membership.user_id,
-                        text_message_id: message_id,
-                    };
-                    
-                    // Skip the validation checks since we're already in a transaction and know the message exists
-                    self.text_message_repo
-                        .insert_text_message_info(new_text_message_info)
-                        .await
-                        .map_err(|e| match e {
-                            sqlx::Error::Database(db_err) => {
-                                if let Some(code) = db_err.code() {
-                                    match code.as_ref() {
-                                        "23503" => ApiError::DbError(DbError::ForeignKeyViolation(db_err.to_string())),
-                                        "P0001" => {
-                                            // Trigger failure
-                                            if db_err.message().contains("NULL") {
-                                                ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt)
-                                            } else {
-                                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow)
-                                            }
-                                        }
-                                        _ => ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())),
-                                    }
-                                } else {
-                                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
-                                }
-                            }
-                            _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
-                        })?;
+                    }
+                    ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
                 }
+                _ => ApiError::DbError(DbError::SomethingWentWrong(e.to_string())),
+            })?;
 
-
-                let aa: Result<TextMessageReadDto, ApiError> = Ok(TextMessageReadDto {
-                    id: message_id,
-                    content: "".to_string(),
-                    sender_id: 0,
-                    group_chat_id: 0,
-                    sent_at: Utc::now()
-                });
-
-                aa
-            }).await?;
+        info!("New text message id {} stored in the db with also infos", message_id);
 
         // Retrieve the created message to return it
         let result = self.text_message_repo
-            .find(message_mock.id)
+            .find(message_id)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => {

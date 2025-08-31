@@ -1,4 +1,5 @@
 use sqlx::Error;
+use tracing::info;
 use crate::config::database::DatabaseTrait;
 use crate::entity::invitation::NewInvitation;
 use crate::repository::invitation_repository::InvitationRepository;
@@ -23,10 +24,10 @@ impl InvitationRepository {
         let response;
 
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
-            println!("Using transaction");
+            info!("Using transaction");
             response = query.fetch_one(&mut *tx_ref).await
         } else {
-            println!("Using pool");
+            info!("Using pool");
             response = if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
                 query.fetch_one(&mut *tx_ref).await
             } else {
