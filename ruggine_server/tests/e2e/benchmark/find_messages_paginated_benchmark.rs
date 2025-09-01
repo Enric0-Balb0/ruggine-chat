@@ -46,7 +46,7 @@ mod benchmark_tests {
     /// Benchmark test: N users creating M messages concurrently
     #[tokio_shared_rt::test(shared)]
     #[serial]
-    async fn test_concurrent_message_creation_benchmark_large() {
+    async fn test_concurrent_find_messages_paginated() {
         // Cleanup iniziale
         cleanup_all_cpu_usage_log().await;
 
@@ -60,7 +60,7 @@ mod benchmark_tests {
         // Parametri
         const NUM_GROUPS: usize = 100;
         const USERS_PER_GROUP: usize = 10;
-        const MSGS_PER_USER: usize = 10;
+        const MSGS_PER_USER: usize = 100;
 
         info!("🚀 Benchmark: {} gruppi × {} utenti × {} messaggi", NUM_GROUPS, USERS_PER_GROUP, MSGS_PER_USER);
 
@@ -197,15 +197,13 @@ mod benchmark_tests {
         // --- PARTE DI LETTURA DEI MESSAGGI ---
         println!("\n🔍 Avvio benchmark lettura messaggi...");
 
-        // Ottieni gli ID dei messaggi creati con successo e mantieni la mappatura con i gruppi
+        // Ottieni gli ID dei messaggi creati con successo
         let created_message_ids: Vec<i32> = results.iter().flatten().cloned().collect();
-
-        // println!("✅ Messaggi marcati come inviati per tutti gli utenti");
 
         // Pausa per permettere la propagazione
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Benchmark: Lettura concorrente dei messaggi non letti
+        // Benchmark: Lettura concorrente dei messaggi con paginazione
         let reading_start = Instant::now();
         let semaphore_read = Arc::new(Semaphore::new(20));
 
@@ -223,47 +221,74 @@ mod benchmark_tests {
                 reading_futures.push(async move {
                     let permit = semaphore_read.acquire().await.unwrap();
 
-                    // Prima otteniamo i messaggi non letti
-                    let get_fut = client
-                        .get(&format!("{}/api/text_message/group/{}/messages/not-read-yet", base_url, group_id))
-                        .header("Authorization", format!("Bearer {}", token))
-                        .send();
+                    let mut total_messages_read = 0;
+                    let mut total_pages_read = 0;
+                    let mut next_cursor: Option<String> = None;
+                    let mut has_more = true;
 
-                    let response_result = timeout(Duration::from_secs(10), get_fut).await;
+                    // Leggi tutti i messaggi del gruppo con paginazione da 100
+                    while has_more {
+                        let mut url = format!("{}/api/text_message/group/{}/messages?limit=100", base_url, group_id);
+                        if let Some(cursor) = &next_cursor {
+                            url.push_str(&format!("&cursor={}", cursor));
+                        }
 
-                    drop(permit);
+                        let get_fut = client
+                            .get(&url)
+                            .header("Authorization", format!("Bearer {}", token))
+                            .send();
 
-                    match response_result {
-                        Ok(Ok(resp)) if resp.status().is_success() => {
-                            match resp.json::<serde_json::Value>().await {
-                                Ok(json) => {
-                                    if let Some(data) = json.get("data").and_then(|d| d.as_array()) {
-                                        let messages_count = data.len();
-                                        Some((u_idx, messages_count, data.clone()))
-                                    } else {
-                                        eprintln!("❌ User {}: Nessun campo data nell'array", u_idx);
-                                        None
+                        let response_result = timeout(Duration::from_secs(10), get_fut).await;
+
+                        match response_result {
+                            Ok(Ok(resp)) if resp.status().is_success() => {
+                                match resp.json::<serde_json::Value>().await {
+                                    Ok(json) => {
+                                        if let Some(data) = json.get("data").and_then(|d| d.as_array()) {
+                                            total_messages_read += data.len();
+                                            total_pages_read += 1;
+
+                                            // Controlla la paginazione
+                                            if let Some(pagination) = json.get("pagination") {
+                                                has_more = pagination.get("has_more")
+                                                    .and_then(|v| v.as_bool())
+                                                    .unwrap_or(false);
+                                                
+                                                next_cursor = pagination.get("next_cursor")
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|s| s.to_string());
+                                            } else {
+                                                has_more = false;
+                                            }
+                                        } else {
+                                            eprintln!("❌ User {}: Nessun campo data nell'array", u_idx);
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("❌ User {}: Errore nel parsing JSON lettura: {}", u_idx, e);
+                                        break;
                                     }
                                 }
-                                Err(e) => {
-                                    eprintln!("❌ User {}: Errore nel parsing JSON lettura: {}", u_idx, e);
-                                    None
-                                }
+                            }
+                            Ok(Ok(resp)) => {
+                                eprintln!("❌ User {}: Lettura fallita con status: {}", u_idx, resp.status());
+                                break;
+                            }
+                            Ok(Err(e)) => {
+                                eprintln!("❌ User {}: Errore nella richiesta lettura: {}", u_idx, e);
+                                break;
+                            }
+                            Err(_) => {
+                                eprintln!("⏰ User {}: Timeout nella richiesta lettura", u_idx);
+                                break;
                             }
                         }
-                        Ok(Ok(resp)) => {
-                            eprintln!("❌ User {}: Lettura fallita con status: {}", u_idx, resp.status());
-                            None
-                        }
-                        Ok(Err(e)) => {
-                            eprintln!("❌ User {}: Errore nella richiesta lettura: {}", u_idx, e);
-                            None
-                        }
-                        Err(_) => {
-                            eprintln!("⏰ User {}: Timeout nella richiesta lettura", u_idx);
-                            None
-                        }
                     }
+
+                    drop(permit);
+                    
+                    Some((u_idx, total_messages_read, total_pages_read))
                 });
             }
         }
@@ -272,97 +297,18 @@ mod benchmark_tests {
         let mut read_results = Vec::new();
         let mut successful_reads = 0;
         let mut total_messages_read = 0;
+        let mut total_pages_read = 0;
 
         while let Some(result) = reading_futures.next().await {
-            if let Some((user_idx, messages_count, _messages_data)) = result {
-                read_results.push((user_idx, messages_count));
+            if let Some((user_idx, messages_count, pages_count)) = result {
+                read_results.push((user_idx, messages_count, pages_count));
                 successful_reads += 1;
                 total_messages_read += messages_count;
+                total_pages_read += pages_count;
             }
         }
 
         let reading_duration = reading_start.elapsed();
-
-        // Benchmark: Marcatura concorrente come "letti" - solo messaggi del proprio gruppo
-        let mark_read_start = Instant::now();
-        let semaphore_mark = Arc::new(Semaphore::new(20));
-
-        let mut mark_read_futures = FuturesUnordered::new();
-
-        // Per ogni gruppo, gli utenti marcano solo i messaggi del loro gruppo
-        for (group_idx, group) in groups.iter().enumerate() {
-            let start_idx = group_idx * USERS_PER_GROUP;
-
-            // Trova i messaggi che appartengono a questo gruppo
-            let group_messages = {
-                let map = group_to_message_ids.lock().await;
-                map.get(&group.id).cloned().unwrap_or_default()
-            };
-
-            // Per ogni utente del gruppo
-            for u_idx in start_idx..start_idx + USERS_PER_GROUP {
-                // Per ogni messaggio del gruppo
-                for message_id in &group_messages {
-                    let client = Arc::clone(&client);
-                    let base_url = base_url.clone();
-                    let token = tokens[u_idx].clone();
-                    let semaphore_mark = Arc::clone(&semaphore_mark);
-                    let message_id = *message_id;
-
-                    mark_read_futures.push(async move {
-                        let permit = semaphore_mark.acquire().await.unwrap();
-
-                        let read_at = Utc::now();
-                        let mark_read_payload = json!({
-                            "text_message_id": message_id,
-                            "read_at": read_at
-                        });
-
-                        let fut = client
-                            .patch(&format!("{}/api/text_message/update_read_at", base_url))
-                            .header("Authorization", format!("Bearer {}", token))
-                            .header("Content-Type", "application/json")
-                            .json(&mark_read_payload)
-                            .send();
-
-                        let response_result = timeout(Duration::from_secs(5), fut).await;
-
-                        drop(permit);
-
-                        match response_result {
-                            Ok(Ok(resp)) if resp.status().is_success() => {
-                                Some((u_idx, message_id))
-                            }
-                            Ok(Ok(resp)) => {
-                                eprintln!("❌ User {}: Mark read fallito per messaggio {} con status: {}", u_idx, message_id, resp.status());
-                                None
-                            }
-                            Ok(Err(e)) => {
-                                eprintln!("❌ User {}: Errore nella richiesta mark read per messaggio {}: {}", u_idx, message_id, e);
-                                None
-                            }
-                            Err(_) => {
-                                eprintln!("⏰ User {}: Timeout nella richiesta mark read per messaggio {}", u_idx, message_id);
-                                None
-                            }
-                        }
-                    });
-                }
-            }
-        }
-
-        // Raccogliamo i risultati del mark as read
-        let mut marked_read = Vec::new();
-        let mut successful_mark_reads = 0;
-
-        while let Some(result) = mark_read_futures.next().await {
-            if let Some((user_idx, message_id)) = result {
-                marked_read.push((user_idx, message_id));
-                successful_mark_reads += 1;
-            }
-        }
-
-        let mark_read_duration = mark_read_start.elapsed();
 
         cpu_usage_log_service.stop_monitoring().await.expect("Failed to stop CPU monitoring");
 
@@ -387,18 +333,14 @@ mod benchmark_tests {
         println!("  Messaggi totali creati: {}", successful_messages);
         println!("  Letture riuscite: {}/{}", successful_reads, total_users);
         println!("  Tempo lettura messaggi: {:?}", reading_duration);
-        println!("  Tempo medio per lettura: {:?}", reading_duration / successful_reads.max(1));
-        println!("  **Tempo medio per lettura singolo messaggio**: {:?}", Duration::from_nanos(reading_duration.as_nanos() as u64 / total_messages_read as u64));
+        println!("  Tempo medio per lettura completa: {:?}", reading_duration / successful_reads.max(1));
+        println!("  **Tempo medio per lettura singolo messaggio**: {:?}", Duration::from_nanos(reading_duration.as_nanos() as u64 / total_messages_read.max(1) as u64));
         println!("  Letture/s: {:.2}", successful_reads as f64 / reading_duration.as_secs_f64());
         println!("  Messaggi totali letti: {}", total_messages_read);
+        println!("  Pagine totali lette: {}", total_pages_read);
         println!("  Media messaggi per utente: {:.2}", total_messages_read as f64 / successful_reads.max(1) as f64);
-
-        println!("\n=== MARCATURA COME LETTI ===");
-        println!("  Mark as read riuscite: {}/{}", successful_mark_reads, expected_mark_reads);
-        println!("  Tempo mark as read: {:?}", mark_read_duration);
-        println!("  Tempo medio per mark as read: {:?}", mark_read_duration / successful_mark_reads.max(1));
-        println!("  Mark reads/s: {:.2}", successful_mark_reads as f64 / mark_read_duration.as_secs_f64());
-        println!("  Success rate mark as read: {:.2}%", (successful_mark_reads as f64 / expected_mark_reads as f64) * 100.0);
+        println!("  Media pagine per utente: {:.2}", total_pages_read as f64 / successful_reads.max(1) as f64);
+        println!("  Media messaggi per pagina: {:.2}", total_messages_read as f64 / total_pages_read.max(1) as f64);
 
         // Cleanup delle info dei messaggi (read_at, sent_at)
         for message_id in &created_message_ids {
@@ -427,10 +369,8 @@ mod benchmark_tests {
 
         // Verifiche finali
         let read_success_rate = successful_reads as f64 / total_users as f64;
-        let mark_read_success_rate = successful_mark_reads as f64 / expected_mark_reads as f64;
 
         assert_eq!(successful_messages, messages.len(), "Success rate creazione messaggi troppo basso");
         assert!(read_success_rate >= 0.95, "Success rate lettura troppo basso: {:.2}%", read_success_rate * 100.0);
-        assert!(mark_read_success_rate >= 0.95, "Success rate mark-as-read troppo basso: {:.2}%", mark_read_success_rate * 100.0);
     }
 }

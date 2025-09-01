@@ -21,6 +21,7 @@ impl TextMessageRepository {
               AND tm.group_chat_id = $2
               AND tmi.read_at IS NULL
             ORDER BY tm.sent_at ASC
+            LIMIT 1
             "#,
             user_id,
             group_chat_id

@@ -130,7 +130,7 @@ async fn test_find_info_by_message_id_message_not_found() {
         ApiError::TextMessageError(TextMessageError::MessageNotFound) => {
             // Expected error type
         }
-        _ => panic!("Expected MessageNotFound error"),
+        e => panic!("Expected MessageNotFound error, got {:?}", e),
     }
 
     // Cleanup

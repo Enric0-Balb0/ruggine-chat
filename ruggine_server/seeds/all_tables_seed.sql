@@ -279,6 +279,23 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Index for find messages
+CREATE INDEX idx_tmi_user_unread_msg_partial
+    ON text_message_info (user_id, text_message_id)
+    WHERE read_at IS NULL;
+
+CREATE INDEX idx_tmi_user_unsent
+    ON text_message_info (user_id, text_message_id)
+    WHERE sent_at IS NULL;
+
+CREATE INDEX idx_tmi_user_msg
+    ON text_message_info (user_id, text_message_id);
+
+CREATE INDEX idx_tm_group_sent
+    ON text_message (group_chat_id, sent_at);
+
+
+
 -- Trigger su INSERT e UPDATE
 CREATE TRIGGER check_text_message_info
 BEFORE INSERT OR UPDATE ON text_message_info

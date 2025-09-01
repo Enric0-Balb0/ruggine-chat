@@ -277,7 +277,9 @@ async fn mark_user_online_and_signal_user_joined(user_id: i32, state: &Arc<WebSo
 
 async fn mark_user_offline_and_signal_user_left(user_id: i32, state: &Arc<WebSocketState>) -> Result<(), WsError> {
     // Don't signal if user still have some connections
-    if state.group_service.get_connections_number_for_user_id(user_id).await > 0 {
+    let connections_number = state.group_service.get_connections_number_for_user_id(user_id).await;
+    if connections_number > 0 {
+        info!("User {} still have {} connections opened", user_id, connections_number);
         return Ok(());
     }
 
@@ -286,7 +288,9 @@ async fn mark_user_offline_and_signal_user_left(user_id: i32, state: &Arc<WebSoc
         .user_service
         .update_online(user_id, UpdateOnlineDto {online: false})
         .await {
-        Ok(_) => (),
+        Ok(_) => {
+            info!("User {} marked offline in the db", user_id);
+        },
         Err(e) => {
             error!("Failed to mark user {} offline: {:?}", user_id, e);
             return Err(WsError {
@@ -316,6 +320,7 @@ async fn mark_user_offline_and_signal_user_left(user_id: i32, state: &Arc<WebSoc
             continue;
         }
     }
+    info!("Signaled all users connected that user {} left group ws", user_id);
     Ok(())
 }
 
