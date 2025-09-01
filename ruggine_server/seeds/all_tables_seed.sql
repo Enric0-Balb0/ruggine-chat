@@ -52,6 +52,8 @@ CREATE TABLE "user" (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_user_status_online ON "user" (user_status, is_online);
+
 INSERT INTO "user" (first_name, last_name, username, email, password, user_type, user_status, birthday, is_online, address, gender)
 VALUES
 ('Test1', 'User1', 'testuser1', 'test.user1@example.com', '$2b$04$somethinghashed', 'developer', 'active', '1990-01-01', false, '123 Main St', 'male');
@@ -315,3 +317,5 @@ VALUES
     (12.50),
     (37.89),
     (85.20);
+
+CREATE INDEX idx_cpu_usage_log_timestamp ON cpu_usage_log (timestamp DESC);

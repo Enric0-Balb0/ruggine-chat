@@ -124,6 +124,17 @@ pub async fn handle_chat_websocket_connection(
 
     WebSocketConnection::await_connection_tasks(send_task, connection, receive_task).await;
 
+    // Handle connection closed or user left
+    arc_state
+        .group_service
+        .unsubscribe(user_id, &*connection_id)
+        .await;
+
+    info!(
+        "User {} successfully left group via connection {}",
+        user_id, connection_id
+    );
+
     match mark_user_offline_and_signal_user_left(user_id, &arc_state).await {
         Ok(_) => {},
         Err(e) => error!("Something went wrong signaling users of {} left: {:?}", user_id, e),
@@ -178,10 +189,7 @@ pub async fn handle_chat_client_message(
                         "User {} requesting to leave group via connection {}",
                         user_id, connection_id
                     );
-                    arc_state
-                        .group_service
-                        .unsubscribe(user_id, connection_id)
-                        .await;
+
 
                     let message = WebSocketMessage::Response {
                         request_id,
@@ -194,11 +202,6 @@ pub async fn handle_chat_client_message(
                         .send_to_connection(connection_id, message)
                         .await
                         .map_err(|e| <ConnectionError as Into<WsError>>::into(e))?;
-
-                    info!(
-                        "User {} successfully left group via connection {}",
-                        user_id, connection_id
-                    );
                     
                     return Err(WsError {
                         code: 0,
