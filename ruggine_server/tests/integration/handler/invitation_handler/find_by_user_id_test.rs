@@ -220,15 +220,16 @@ mod find_by_user_id_handler_integration_tests {
         let (sender2, _password2) = create_test_user("find_by_user_id_handler_order_sender2").await;
         let (recipient_user, _password3) = create_test_user("find_by_user_id_handler_order_recipient").await;
         
-        let group_chat = create_test_group_chat("find_by_user_id_handler_order_group", sender1.id).await;
+        let group_chat1 = create_test_group_chat("find_by_user_id_handler_order_group", sender1.id).await;
+        let group_chat2 = create_test_group_chat("find_by_user_id_handler_order_group", sender2.id).await;
         
         // Create invitations with some delay to ensure different sent_at times
-        let invitation_id_1 = create_test_invitation(sender1.id, recipient_user.id, group_chat.id).await.id;
+        let invitation_id_1 = create_test_invitation(sender1.id, recipient_user.id, group_chat1.id).await.id;
         
         // Small delay to ensure different timestamps
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-        let invitation_id_2 = create_test_invitation(sender2.id, recipient_user.id, group_chat.id).await.id;
+        let invitation_id_2 = create_test_invitation(sender2.id, recipient_user.id, group_chat2.id).await.id;
 
         let invitation_state = create_invitation_state().await;
         // Act: Call find_by_user_id handler
@@ -250,7 +251,8 @@ mod find_by_user_id_handler_integration_tests {
         // Cleanup
         cleanup_invitation(invitation_id_1).await;
         cleanup_invitation(invitation_id_2).await;
-        cleanup_group_chat(group_chat.id).await;
+        cleanup_group_chat(group_chat1.id).await;
+        cleanup_group_chat(group_chat2.id).await;
         cleanup_user_by_email(sender1.email).await;
         cleanup_user_by_email(sender2.email).await;
         cleanup_user_by_email(recipient_user.email).await;

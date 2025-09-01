@@ -172,12 +172,12 @@ mod send_invitation_e2e_tests {
         // Arrange: Create router, admin user, group chat, and target user
         let app = create_invitation_router().await;
         let (admin_user, _password, token) = create_login_and_get_token("e2e_send_duplicate_admin".to_string()).await;
-        let group_chat = create_test_group_chat_with_invitation_and_membership("e2e_send_duplicate_group", admin_user.id).await;
+        let group_chat1 = create_test_group_chat_with_invitation_and_membership("e2e_send_duplicate_group1", admin_user.id).await;
         let (target_user, _target_password) = create_test_user("e2e_send_duplicate_target").await;
 
-        let send_payload = json!({
+        let send_payload1 = json!({
             "to_user_id": target_user.id,
-            "group_chat_id": group_chat.id,
+            "group_chat_id": group_chat1.id,
             "role_at_join": "member",
         });
 
@@ -187,7 +187,7 @@ mod send_invitation_e2e_tests {
             .uri("/send")
             .header("content-type", "application/json")
             .header("authorization", format!("Bearer {}", token))
-            .body(Body::from(send_payload.to_string()))
+            .body(Body::from(send_payload1.to_string()))
             .unwrap();
 
         let response1 = app.clone().oneshot(request1).await.unwrap();
@@ -199,7 +199,7 @@ mod send_invitation_e2e_tests {
             .uri("/send")
             .header("content-type", "application/json")
             .header("authorization", format!("Bearer {}", token))
-            .body(Body::from(send_payload.to_string()))
+            .body(Body::from(send_payload1.to_string()))
             .unwrap();
 
         let response2 = app.oneshot(request2).await.unwrap();
@@ -216,9 +216,9 @@ mod send_invitation_e2e_tests {
         let data = &response_json["data"];
 
         // Cleanup
-        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat.id).await;
+        cleanup_test_user_from_a_group_chat(admin_user.id, group_chat1.id).await;
         cleanup_invitation(data["id"].as_i64().unwrap() as i32).await;
-        cleanup_group_chat(group_chat.id).await;
+        cleanup_group_chat(group_chat1.id).await;
         cleanup_user_by_email(admin_user.email).await;
         cleanup_user_by_email(target_user.email).await;
     }

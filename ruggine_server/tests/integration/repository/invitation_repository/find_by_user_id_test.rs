@@ -244,7 +244,8 @@ mod invitation_repository_find_by_user_id_integration_tests {
         let (user2, _) = create_test_user("find_by_user_id_order_user2").await;
         let (user3, _) = create_test_user("find_by_user_id_order_user3").await;
         
-        let group_chat = create_test_group_chat("find_by_user_id_order_group", user1.id).await;
+        let group_chat1 = create_test_group_chat("find_by_user_id_order_group", user1.id).await;
+        let group_chat2 = create_test_group_chat("find_by_user_id_order_group", user1.id).await;
         
         let db = get_database().await;
         let repository = InvitationRepository::new(&db);
@@ -253,7 +254,7 @@ mod invitation_repository_find_by_user_id_integration_tests {
         let invitation_id_1 = repository.insert(NewInvitation {
             from_user_id: user2.id,
             to_user_id: user1.id, // received by user1
-            group_chat_id: group_chat.id,
+            group_chat_id: group_chat1.id,
             role_at_join: MemberRole::Member
         }).await.unwrap();
         
@@ -263,7 +264,7 @@ mod invitation_repository_find_by_user_id_integration_tests {
         let invitation_id_2 = repository.insert(NewInvitation {
             from_user_id: user3.id,
             to_user_id: user1.id, // received by user1
-            group_chat_id: group_chat.id,
+            group_chat_id: group_chat2.id,
             role_at_join: MemberRole::Member
         }).await.unwrap();
 
@@ -282,7 +283,8 @@ mod invitation_repository_find_by_user_id_integration_tests {
         // Cleanup
         cleanup_invitation(invitation_id_1).await;
         cleanup_invitation(invitation_id_2).await;
-        cleanup_group_chat(group_chat.id).await;
+        cleanup_group_chat(group_chat1.id).await;
+        cleanup_group_chat(group_chat2.id).await;
         cleanup_user_by_email(user1.email).await;
         cleanup_user_by_email(user2.email).await;
         cleanup_user_by_email(user3.email).await;

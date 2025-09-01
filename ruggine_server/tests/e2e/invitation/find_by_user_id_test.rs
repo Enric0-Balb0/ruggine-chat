@@ -274,15 +274,16 @@ mod find_by_user_id_invitation_e2e_tests {
         let (sender2, _password2, _sender2_token) = create_login_and_get_token("e2e_find_by_user_id_order_sender2".to_string()).await;
         let (recipient_user, _password3, recipient_token) = create_login_and_get_token("e2e_find_by_user_id_order_recipient".to_string()).await;
         
-        let group_chat = create_test_group_chat("e2e_find_by_user_id_order_group", sender1.id).await;
-        
+        let group_chat1 = create_test_group_chat("e2e_find_by_user_id_order_group", sender1.id).await;
+        let group_chat2 = create_test_group_chat("e2e_find_by_user_id_order_group", sender2.id).await;
+
         // Create invitations with some delay to ensure different sent_at times
-        let invitation1 = create_test_invitation(sender1.id, recipient_user.id, group_chat.id).await;
+        let invitation1 = create_test_invitation(sender1.id, recipient_user.id, group_chat1.id).await;
         
         // Small delay to ensure different timestamps
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         
-        let invitation2 = create_test_invitation(sender2.id, recipient_user.id, group_chat.id).await;
+        let invitation2 = create_test_invitation(sender2.id, recipient_user.id, group_chat2.id).await;
 
         // Act: Send GET request to /user
         let request = Request::builder()
@@ -321,7 +322,8 @@ mod find_by_user_id_invitation_e2e_tests {
         // Cleanup
         cleanup_invitation(invitation1.id).await;
         cleanup_invitation(invitation2.id).await;
-        cleanup_group_chat(group_chat.id).await;
+        cleanup_group_chat(group_chat1.id).await;
+        cleanup_group_chat(group_chat2.id).await;
         cleanup_user_by_email(sender1.email).await;
         cleanup_user_by_email(sender2.email).await;
         cleanup_user_by_email(recipient_user.email).await;

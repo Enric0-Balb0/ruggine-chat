@@ -121,7 +121,7 @@ CREATE TABLE invitation (
 
 -- Crea vincolo su inviti
 CREATE UNIQUE INDEX unique_pending_invitation
-ON invitation (from_user_id, group_chat_id, to_user_id)
+ON invitation (group_chat_id, to_user_id)
 WHERE status = 'pending';
 
 CREATE INDEX idx_invitation_to_user_group
