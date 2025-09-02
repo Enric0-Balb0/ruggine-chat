@@ -59,7 +59,10 @@ impl ApiClient {
     /// Aggiunge headers comuni alla request
     fn add_common_headers(&self, builder: RequestBuilder) -> RequestBuilder {
         let mut builder = builder
-            .header("Content-Type", "application/json")
+            // Do not set Content-Type globally: adding Content-Type to GET requests
+            // forces browsers to perform a CORS preflight (OPTIONS). We only set
+            // Accept here and rely on `RequestBuilder::json()` to add the proper
+            // Content-Type for requests with a body (POST/PUT/PATCH).
             .header("Accept", "application/json");
 
         if let Ok(auth_token) = self.auth_token.lock() {

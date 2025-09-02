@@ -2,6 +2,7 @@ use leptos::*;
 use leptos::wasm_bindgen::JsCast;
 use crate::types::user::{UserProfile, UserStatus, UserType, Gender};
 use crate::api::services::UserService;
+use crate::hooks::fetch_missing_users::fetch_missing_users;
 use crate::components::{ UserAvatar, LucideIcon};
 use crate::types::invitation::MemberRole;
 use chrono::{DateTime, Utc};
@@ -78,64 +79,75 @@ pub fn GroupDetailsModal(
                 // Fetch memberships
                 match membership_service.get_by_group_chat_id(&group_id.to_string()).await {
                     Ok(memberships) => {
+                        // Build placeholder members and collect missing ids to batch-fetch profiles
                         let mut group_members = Vec::with_capacity(memberships.len());
-                        let mut tasks = Vec::with_capacity(memberships.len());
-                        for m in memberships {
-                            let user_service = user_service.clone();
+                        let mut missing_ids = Vec::with_capacity(memberships.len());
+                        for m in memberships.into_iter() {
                             let user_id = m.user_id;
-                            let role = m.role;
-                            let joined_at = m.joined_at;
-                            tasks.push(async move {
-                                let user_profile = match user_service.get_user_by_id(&user_id.to_string()).await {
-                                    Ok(profile) => UserProfile {
-                                        id: user_id,
-                                        email: profile.email,
-                                        first_name: profile.first_name,
-                                        last_name: profile.last_name,
-                                        username: profile.username,
-                                        birthday: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-                                        address: String::new(),
-                                        gender: Gender::Other,
-                                        user_type: UserType::EndUser,
-                                        user_status: UserStatus::Active,
-                                        current_action: crate::types::membership::CurrentAction::Waiting,
-                                        is_online: false,
-                                        created_at: chrono::Utc::now(),
-                                        updated_at: chrono::Utc::now(),
-                                        last_login: None,
-                                    },
-                                    Err(_) => UserProfile {
-                                        id: user_id,
-                                        email: String::new(),
-                                        first_name: String::from(""),
-                                        last_name: String::from(""),
-                                        username: String::from(""),
-                                        birthday: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-                                        address: String::new(),
-                                        gender: Gender::Other,
-                                        user_type: UserType::EndUser,
-                                        user_status: UserStatus::Active,
-                                        current_action: crate::types::membership::CurrentAction::Waiting,
-                                        is_online: false,
-                                        created_at: chrono::Utc::now(),
-                                        updated_at: chrono::Utc::now(),
-                                        last_login: None,
-                                    }
-                                };
-                                GroupMember {
-                                    user_profile,
-                                    role,
-                                    joined_at,
-                                    is_creator: false,
-                                }
+                            missing_ids.push(user_id);
+                            // Insert a placeholder UserProfile; real data will be populated by fetch_missing_users
+                            let user_profile = UserProfile {
+                                id: user_id,
+                                email: String::new(),
+                                first_name: String::from(""),
+                                last_name: String::from(""),
+                                username: String::from(""),
+                                birthday: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+                                address: String::new(),
+                                gender: Gender::Other,
+                                user_type: UserType::EndUser,
+                                user_status: UserStatus::Active,
+                                current_action: crate::types::membership::CurrentAction::Waiting,
+                                is_online: false,
+                                created_at: chrono::Utc::now(),
+                                updated_at: chrono::Utc::now(),
+                                last_login: None,
+                            };
+                            group_members.push(GroupMember {
+                                user_profile,
+                                role: m.role,
+                                joined_at: m.joined_at,
+                                is_creator: false,
                             });
                         }
-                        let results = futures::future::join_all(tasks).await;
-                        group_members.extend(results);
+
+                        // Populate the members signal with placeholders so UI can render immediately
+                        set_members_signal.set(group_members.clone());
+
+                        // Batch fetch missing user profiles into a temporary cache then update members
+                        // We reuse the existing user_service and a transient user cache to avoid changing global cache behavior here.
+                        // Create a small in-memory cache signal to receive fetched profiles
+                        let temp_cache = create_rw_signal(std::collections::HashMap::<i32, UserProfile>::new());
+                        fetch_missing_users(missing_ids, temp_cache.clone(), user_service.clone());
+
+                        // Wait a short time for fetches to complete and then merge profiles into group_members
+                        // (non-blocking: we schedule a follow-up task)
+                        let set_members_signal_clone = set_members_signal.clone();
+                        let members_signal_clone = members_signal.clone();
+                        spawn_local(async move {
+                            // Give the batched fetch a chance to complete; tuned delay to be small but allow network
+                            crate::utils::sleep_ms(150).await;
+                            let mut updated_members = members_signal_clone.get_untracked();
+                            let cache_snapshot = temp_cache.get_untracked();
+                            for gm in &mut updated_members {
+                                if let Some(profile) = cache_snapshot.get(&gm.user_profile.id) {
+                                    // Preserve the runtime presence flag if it was already set
+                                    let prev_online = gm.user_profile.is_online;
+                                    let mut merged = profile.clone();
+                                    merged.is_online = prev_online || merged.is_online;
+                                    gm.user_profile = merged;
+                                }
+                            }
+                            set_members_signal_clone.set(updated_members);
+                        });
 
                         // Fetch connected online user ids and mark members accordingly
                         match membership_service.find_connected_users_and_online().await {
                             Ok(online_ids) => {
+                                // Debug: log the online ids and group member ids to detect mismatches
+                                leptos::logging::log!("[GROUP DETAILS] connected online ids => {:?}", online_ids);
+                                let member_ids: Vec<i32> = group_members.iter().map(|gm| gm.user_profile.id).collect();
+                                leptos::logging::log!("[GROUP DETAILS] group member ids => {:?}", member_ids);
                                 let current_user_id = storage_service.get_user_profile().map(|u| u.id);
                                 for gm in &mut group_members {
                                     let is_online = online_ids.contains(&gm.user_profile.id)

@@ -32,7 +32,7 @@ pub async fn process_update_batch(
         let res = message_service.update_message_read_at(id_clone, now).await;
         match res {
             Ok(()) => {
-                // decrement unread counter for the group
+                // optimistic decrement locally
                 decrement_unread_for_group(&unread_counts, group_id);
                 // remove id from initial unread map if present
                 unread_message_ids.update(|map| {
@@ -47,5 +47,19 @@ pub async fn process_update_batch(
         }
         // small pause to avoid bursting the server
         crate::utils::timers::sleep_ms(UPDATE_INTER_CALL_MS).await;
+    }
+    // After processing the batch, reconcile with authoritative server value to handle multi-device cases.
+    // Fire-and-forget: spawn a task to fetch the authoritative not-read-yet list and overwrite local count.
+    {
+        let unread_counts_clone = unread_counts.clone();
+        let unread_message_ids_clone = unread_message_ids.clone();
+        leptos::spawn_local(async move {
+            use crate::context::unread_counts_context::refresh_unread_for_group;
+            if let Some(count) = refresh_unread_for_group(group_id).await {
+                // already applied inside refresh_unread_for_group via context, but ensure local variables are consistent
+                // (no-op here since refresh_mut updates the context directly)
+                let _ = (unread_counts_clone, unread_message_ids_clone, count);
+            }
+        });
     }
 }

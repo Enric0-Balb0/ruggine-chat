@@ -9,6 +9,14 @@ use crate::types::membership::{
     ApiSuccessResponseVecUserId,
 };
 use serde::Serialize;
+use once_cell::sync::Lazy;
+use std::sync::RwLock;
+use std::time::Duration;
+use crate::utils::timers::now_ms;
+
+// Simple in-memory cache: map group_id -> (timestamp_ms, data)
+static GROUP_MEMBERSHIP_CACHE: Lazy<RwLock<std::collections::HashMap<i32, (u64, Vec<GroupMembership>)>>> = Lazy::new(|| RwLock::new(std::collections::HashMap::new()));
+const CACHE_TTL_SECS: u64 = 5; // small TTL to avoid stale data but prevent rapid repeated calls
 
 /// Group membership management service
 #[derive(Clone)]
@@ -29,11 +37,32 @@ impl GroupMembershipService {
 
     /// Get group memberships by group_chat_id
     pub async fn get_by_group_chat_id(&self, group_chat_id: &str) -> Result<Vec<GroupMembership>, AuthError> {
+        // Try cache first
+        if let Ok(id_val) = group_chat_id.parse::<i32>() {
+            if let Ok(cache) = GROUP_MEMBERSHIP_CACHE.read() {
+                if let Some((ts_ms, data)) = cache.get(&id_val) {
+                    let elapsed = now_ms().saturating_sub(*ts_ms);
+                    if elapsed < (CACHE_TTL_SECS * 1000) {
+                        return Ok(data.clone());
+                    }
+                }
+            }
+        }
+
         let response: ApiSuccessResponseVecGroupMembershipReadDto = self.http_client
             .get(&ApiEndpoints::group_membership_by_group_chat(group_chat_id))
             .await
             .map_err(AuthError::from)?;
-        Ok(Vec::from(response))
+        let vec = Vec::from(response);
+
+        // Store into cache
+        if let Ok(id_val) = group_chat_id.parse::<i32>() {
+            if let Ok(mut cache) = GROUP_MEMBERSHIP_CACHE.write() {
+                cache.insert(id_val, (now_ms(), vec.clone()));
+            }
+        }
+
+        Ok(vec)
     }
 
     /// Leave a group membership

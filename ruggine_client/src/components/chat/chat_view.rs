@@ -9,6 +9,8 @@ use leptos_router::use_navigate;
 use crate::hooks::use_groups_context;
 use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
 use crate::hooks::use_group_socket_messages::use_group_socket_messages;
+use crate::api::client::ApiClient;
+use crate::config::constants::AppConstants;
 use crate::hooks::use_group_initial_messages::use_group_initial_messages;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
@@ -105,14 +107,18 @@ pub fn ChatView(
     );
     use std::collections::HashSet;
     use crate::types::message_ws::{WebSocketMessage, ServerEvent, GroupEvent};
-    // Presence tracking: set of online user ids (updated from WS events)
+    // Presence tracking: we initialize from the API and keep WS-derived deltas.
+    // Keep two sets and compute their union for the UI count so that if other clients
+    // are already online (before WS events arrive) we still display them.
     let ws_ctx_for_presence = ws_ctx.clone();
-    let (online_user_ids, set_online_user_ids) = create_signal(HashSet::<i32>::new());
+    let (ws_online_user_ids, set_ws_online_user_ids) = create_signal(HashSet::<i32>::new());
+    let (initial_online_user_ids, set_initial_online_user_ids) = create_signal(HashSet::<i32>::new());
+
+    // Rebuild WS-derived set from socket events (this represents realtime joins/lefts)
     {
         let ws_ctx_for_presence = ws_ctx_for_presence.clone();
-        let set_online_user_ids = set_online_user_ids.clone();
+        let set_ws_online_user_ids = set_ws_online_user_ids.clone();
         create_effect(move |_| {
-            // Rebuild the online-user set from WS events.
             if let Some(Some(ws)) = ws_ctx_for_presence.as_ref() {
                 let msgs = ws.messages.get();
                 let mut set: HashSet<i32> = HashSet::new();
@@ -127,16 +133,46 @@ pub fn ChatView(
                         }
                     }
                 }
-                leptos::logging::log!("[WS DEBUG] Rebuilt online set for group {} => {:?}", group_data.membership.group_chat_id, set);
-                set_online_user_ids.set(set);
+                leptos::logging::log!("[WS DEBUG] Rebuilt WS-derived online set for group {} => {:?}", group_data.membership.group_chat_id, set);
+                set_ws_online_user_ids.set(set);
             }
         });
     }
+
+    // On mount, fetch the current connected/online users from the API so we don't miss
+    // users that were already connected before this client opened the app.
+    {
+        let set_initial = set_initial_online_user_ids.clone();
+        leptos::spawn_local(async move {
+            use crate::utils::storage::StorageService;
+            let storage = StorageService::new();
+            let mut http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            if let Some(token_response) = storage.get_token() {
+                http.set_auth_token(Some(token_response.token));
+            }
+            let membership_service = GroupMembershipService::new(http, storage);
+            match membership_service.find_connected_users_and_online().await {
+                Ok(ids) => {
+                    let set: HashSet<i32> = ids.into_iter().collect();
+                    leptos::logging::log!("[CHAT] initial online ids => {:?}", set);
+                    set_initial.set(set);
+                }
+                Err(e) => {
+                    leptos::logging::log!("[CHAT] failed to load initial online ids: {:?}", e);
+                }
+            }
+        });
+    }
+
+    // Combined online count: union of API-initialized set and WS-derived set, +1 for self
     let online_count = create_memo(move |_| {
-        let mut count = online_user_ids.get().len();
+        let mut union_set = HashSet::<i32>::new();
+        for id in initial_online_user_ids.get().iter() { union_set.insert(*id); }
+        for id in ws_online_user_ids.get().iter() { union_set.insert(*id); }
+        let mut count = union_set.len();
         let storage = StorageService::new();
         if let Some(user) = storage.get_user_profile() {
-            if !online_user_ids.get().contains(&user.id) {
+            if !union_set.contains(&user.id) {
                 count += 1;
             }
         }
@@ -166,6 +202,8 @@ pub fn ChatView(
     let (first_unread_anchor, set_first_unread_anchor) = create_signal(None::<i32>);
     let (is_loading_local, set_is_loading_local) = create_signal(false);
     let (suppress_scroll_events, set_suppress_scroll_events) = create_signal(false);
+    // Show a floating "scroll to bottom" button when the user scrolled up
+    let (show_scroll_to_bottom, set_show_scroll_to_bottom) = create_signal(false);
     // Buffer for pending mark-as-read updates
     let pending_update_ids: std::rc::Rc<std::cell::RefCell<Vec<i32>>> = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     // Prev scroll metrics for restoring viewport when prepending older messages
@@ -622,6 +660,46 @@ pub fn ChatView(
         });
     }
 
+    // Track container scroll to toggle the floating "scroll to bottom" button and
+    // ensure we update the state both on scroll events and when messages change.
+    {
+        let messages_container_ref = messages_container_ref.clone();
+        let set_show = set_show_scroll_to_bottom.clone();
+        // Attach a scroll listener to update visibility
+        create_effect(move |_| {
+            if let Some(container) = messages_container_ref.get() {
+                let container_clone = container.clone();
+                let set_show_clone = set_show.clone();
+                let scroll_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+                    let scroll_top = container_clone.scroll_top();
+                    let remain = container_clone.scroll_height() - scroll_top;
+                    // show the button when we're more than 200px away from bottom
+                    set_show_clone.set(remain > 200);
+                }) as Box<dyn FnMut(_)>);
+                let _ = container.add_event_listener_with_callback("scroll", scroll_closure.as_ref().unchecked_ref());
+                // Set initial visibility
+                let scroll_top_init = container.scroll_top();
+                let remain_init = container.scroll_height() - scroll_top_init;
+                set_show.set(remain_init > 200);
+                scroll_closure.forget();
+            }
+        });
+
+        // Also update visibility when messages change (e.g. new messages appended)
+        let messages_for_visibility = messages.clone();
+        let messages_container_ref_for_visibility = messages_container_ref.clone();
+        create_effect(move |_| {
+            // small debounce: run a microtask after render
+            if let Some(container) = messages_container_ref_for_visibility.get() {
+                let scroll_top = container.scroll_top();
+                let remain = container.scroll_height() - scroll_top;
+                set_show.set(remain > 200);
+            }
+            // depend on messages so effect runs when messages change
+            messages_for_visibility.get();
+        });
+    }
+
     {
         let anchor_scroll_locked_local = anchor_scroll_locked.clone();
         let suppress_scroll_events = suppress_scroll_events.clone();
@@ -964,10 +1042,10 @@ pub fn ChatView(
             </div>
         </div>
     // Content area - base chat structure
-        <div class="flex flex-col h-full min-h-0">
+    <div class="flex flex-col h-full min-h-0 relative">
             
             <div
-                class="messages-container custom-scrollbar flex-1 min-h-0 overflow-y-auto px-12 py-4 space-y-4"
+                class="messages-container custom-scrollbar flex-1 min-h-0 overflow-y-auto px-12 py-4 space-y-4 relative"
                 node_ref=messages_container_ref
                 style=move || format!("{};padding-bottom:24px;", bg_url.get())
             >
@@ -1110,18 +1188,25 @@ pub fn ChatView(
                         Nessun messaggio ancora. Inizia la conversazione!
                     </div>
                 </Show>
+
             </div>
             
-            <div class="shrink-0 bg-inherit z-10">
+            
+
+            <div class="shrink-0 bg-inherit z-10 relative">
                 {move || {
                     use leptos::use_context;
                     let ws_ctx = use_context::<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>();
                     view! {
-                        <MessageInputArea
-                            ws_ctx=ws_ctx.flatten()
-                            group_id=group_data.membership.group_chat_id
-                            on_message_sent=add_message.clone()
-                        />
+                        <div class="relative w-full">
+                            <MessageInputArea
+                                ws_ctx=ws_ctx.flatten()
+                                group_id=group_data.membership.group_chat_id
+                                on_message_sent=add_message.clone()
+                            />
+                        </div>
+
+                        // Message input area (no duplicate scroll button here)
                     }
                 }}
             </div>
@@ -1139,7 +1224,7 @@ pub fn ChatView(
             on_close=handle_group_details_modal_close
             group_id=group_data_clone.membership.group_chat_id
         />
-        
+                
         <Show when=move || leave_modal_open.get()>
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
                 <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md">
