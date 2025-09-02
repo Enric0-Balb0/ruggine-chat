@@ -36,3 +36,43 @@ pub fn use_unread_message_ids_context() -> RwSignal<HashMap<i32, Vec<i32>>> {
         .expect("UnreadCountsContext not found!")
         .unread_message_ids
 }
+
+/// Refresh unread count and ids for a specific group from the server and overwrite local signals.
+pub async fn refresh_unread_for_group(group_id: i32) -> Option<u32> {
+    use crate::api::client::ApiClient;
+    use crate::config::constants::AppConstants;
+    use crate::api::services::message::MessageService;
+    use crate::utils::storage::StorageService;
+
+    // Try to access the context; if not present, skip.
+    let ctx = match use_context::<UnreadCountsContext>() {
+        Some(c) => c,
+        None => return None,
+    };
+
+    // Build client
+    let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+    let storage = StorageService::new();
+    if let Some(token) = storage.get_token() {
+        http_client.set_auth_token(Some(token.token));
+    }
+    let message_service = MessageService::new(http_client, storage);
+
+    // Call the endpoint that returns not-read-yet messages for the group
+    match message_service.get_messages_not_read_yet(group_id).await {
+        Ok(paginated) => {
+            let msgs = paginated.data;
+            let count = msgs.len() as u32;
+
+            // overwrite unread_counts and unread_message_ids
+            ctx.unread_counts.update(|map| {
+                map.insert(group_id, count);
+            });
+            ctx.unread_message_ids.update(|map| {
+                map.insert(group_id, msgs.iter().map(|m| m.id).collect());
+            });
+            Some(count)
+        }
+        Err(_) => None,
+    }
+}

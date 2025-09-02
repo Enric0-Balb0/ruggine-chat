@@ -32,9 +32,19 @@ pub fn Sidebar(
         groups_list.get().iter().map(|g| g.membership.group_chat_id).collect::<Vec<_>>()
     });
     // Initialize global badge hook with current group ids (no-op if not implemented)
+    // Also, perform an immediate authoritative refresh of unread counts for each group
+    // when the sidebar mounts / the groups list changes so badges are correct on startup.
     create_effect(move |_| {
         let ids = group_ids.get();
-        use_global_group_unread_ws(ids);
+        use_global_group_unread_ws(ids.clone());
+
+        // Fire a one-off authoritative refresh for each group id (async)
+        let ids_to_refresh = ids.clone();
+        spawn_local(async move {
+            for gid in ids_to_refresh.into_iter() {
+                let _ = crate::context::unread_counts_context::refresh_unread_for_group(gid).await;
+            }
+        });
     });
 
     // Load groups on mount
@@ -57,7 +67,11 @@ pub fn Sidebar(
     
     let handle_group_click = move |group_id: i32| {
         set_active_group.set(Some(group_id));
-        
+    // Force a refresh of unread counts for this group when user opens it (quick reconcile)
+    let gid = group_id;
+    spawn_local(async move {
+        let _ = crate::context::unread_counts_context::refresh_unread_for_group(gid).await;
+    });
     };
 
 

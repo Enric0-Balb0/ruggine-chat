@@ -1,7 +1,7 @@
 use leptos::*;
 use chrono::Local;
 use crate::types::message::Message;
-use crate::components::ui::icons::LucideIcon;
+// status icons removed: UI should not display ticks for messages
 use crate::components::ui::UserAvatar;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -21,10 +21,6 @@ pub fn ChatMessage(
     #[prop(optional, default = "".to_string())] sender_surname: String,
 ) -> impl IntoView {
     let time_str = message.sent_at.with_timezone(&Local).format("%H:%M").to_string();
-    let status_icon = match status {
-        MessageStatus::Sent => view! { <LucideIcon name="check" size=16 class="text-gray-400" /> },
-        MessageStatus::Delivered => view! { <LucideIcon name="check-check" size=16 class="text-blue-500" /> },
-    };
     let bubble_classes = if is_own {
         "bg-blue-100 dark:bg-blue-900 text-right ml-auto border-blue-200 dark:border-blue-700 rounded-lg"
     } else {
@@ -47,9 +43,7 @@ pub fn ChatMessage(
                     <span class="text-xs text-gray-400">{time_str}</span>
                 </div>
                 <div class="text-base text-gray-800 dark:text-gray-100 whitespace-pre-line">{message.content.clone()}</div>
-                <div class="flex justify-end items-center gap-1 mt-1">
-                    {status_icon}
-                </div>
+                // status icons intentionally omitted
             </div>
         </div>
     }

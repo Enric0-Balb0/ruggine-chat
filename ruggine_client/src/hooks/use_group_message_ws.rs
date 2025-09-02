@@ -1,5 +1,6 @@
 use leptos::*;
 use crate::api::MessageWsService;
+use crate::api::ws::global_ws;
 use crate::config::endpoints::WebSocketEndpoints;
 use crate::config::constants::AppConstants;
 use crate::types::WebSocketMessage;
@@ -19,7 +20,6 @@ pub struct UseGroupMessageWs {
 
 pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     // Basic version: no polling, no auto-reconnect, just instantiation and direct management
-    let status = leptos::create_rw_signal(WsStatus::Connecting);
     let (messages, set_messages) = create_signal(Vec::<WebSocketMessage>::new());
     let (send_message, set_send_message) = create_signal(None::<WebSocketMessage>);
     let (disconnect, set_disconnect) = create_signal(false);
@@ -29,7 +29,11 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
 
     // Clone the signal to ensure it is shared between closures and the hook
     let set_messages_shared = set_messages.clone();
-    let ws_service = std::rc::Rc::new(std::cell::RefCell::new(MessageWsService::new(status)));
+    // Attempt to reuse a global service keyed by token so refresh doesn't re-open a new connection
+    let (ws_service, global_status) = global_ws::get_or_create(&token);
+    // Instance identifier to help debug duplicate connections
+    let instance_id = uuid::Uuid::new_v4().to_string();
+    leptos::logging::log!("[WS INST] Created UseGroupMessageWs instance {} (reused)", instance_id);
     ws_service.borrow_mut().set_on_message({
         let ws_service = ws_service.clone();
         move |msg: WebSocketMessage| {
@@ -66,9 +70,10 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
         }
     });
 
-    // Manual connection on mount and cleanup
-    let url = WebSocketEndpoints::group_websocket_url(AppConstants::DEFAULT_SERVER_URL, &token);
-    ws_service.borrow_mut().connect(&url);
+    // Do NOT auto-connect here. Connection is triggered centrally (e.g. at login)
+    // to ensure the socket is opened only once when the user logs in and
+    // remains available across navigation. The global registry still provides
+    // the shared service and status signal.
 
     // Effect for sending messages
     {
@@ -103,16 +108,11 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
         });
     }
 
-    // Cleanup on unmount
-    on_cleanup(move || {
-        let ws_service = ws_service.clone();
-        spawn_local(async move {
-            ws_service.borrow_mut().disconnect();
-        });
-    });
+    // Note: do NOT disconnect on unmount — keep the global connection alive so
+    // page refreshes or navigations reuse the same socket.
 
     UseGroupMessageWs {
-        status: status.read_only(),
+    status: global_status,
         send_message: set_send_message,
         messages,
         disconnect: set_disconnect,
