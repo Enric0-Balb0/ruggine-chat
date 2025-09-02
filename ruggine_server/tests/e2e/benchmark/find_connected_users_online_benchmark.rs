@@ -53,8 +53,8 @@ mod benchmark_tests {
         cpu_usage_log_service.start_monitoring().await.expect("Failed to start CPU monitoring");
 
         // Parametri
-        const NUM_GROUPS: usize = 1000;
-        const USERS_PER_GROUP: usize = 10;
+        const NUM_GROUPS: usize = 100;
+        const USERS_PER_GROUP: usize = 100;
 
         info!("🚀 Benchmark: {} gruppi × {} utenti per find_connected_users_online", NUM_GROUPS, USERS_PER_GROUP);
 

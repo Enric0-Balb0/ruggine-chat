@@ -389,10 +389,10 @@ pub async fn handle_new_group_message(
     };
 
     for conn_id in connection_ids {
+        group_service.update_sent_at_for_a_user(conn_id.0, text_message.id).await;
         if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id.1, e);
             continue;
         }
-        group_service.update_sent_at_for_a_user(conn_id.0, text_message.id).await;
     }
 }

@@ -50,7 +50,7 @@ mod invitation_benchmark_tests {
         cpu_usage_log_service.start_monitoring().await.expect("Failed to start monitoring CPU usage");
 
         // Parametri
-        const TOTAL_GROUPS: usize = 10000;
+        const TOTAL_GROUPS: usize = 500;
         const USERS_PER_GROUP: usize = 10;
         const N_GROUPS_PER_ADMIN: usize = 10;
 

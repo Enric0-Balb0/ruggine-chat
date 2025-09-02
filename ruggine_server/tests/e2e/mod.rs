@@ -6,4 +6,4 @@ pub mod group_membership;
 pub mod text_message;
 pub mod websocket;
 pub mod cpu_usage_log;
-// pub mod benchmark;
+pub mod benchmark;

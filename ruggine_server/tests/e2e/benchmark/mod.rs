@@ -2,3 +2,4 @@ pub mod message_load_test;
 pub mod invitation_acceptance_benchmark;
 pub mod find_messages_paginated_benchmark;
 pub mod find_connected_users_online_benchmark;
+pub mod mixed_workload_benchmark;
