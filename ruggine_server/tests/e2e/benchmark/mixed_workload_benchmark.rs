@@ -9,6 +9,8 @@ use futures_util::{SinkExt, StreamExt};
 use reqwest::Client;
 use ruggine_server::websocket::group_message::{GroupAction, GroupEvent};
 use ruggine_server::websocket::message::{ClientAction, ServerEvent, WebSocketMessage};
+use ruggine_server::factory::{user_factory::UserFactory, group_chat_factory::GroupChatFactory};
+use ruggine_server::entity::invitation::InvitationStatus;
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -47,6 +49,11 @@ mod mixed_workload_benchmark_tests {
 
     #[derive(Debug)]
     struct BenchmarkStats {
+        users_registered: AtomicUsize,
+        users_login: AtomicUsize,
+        groups_created: AtomicUsize,
+        invitations_created: AtomicUsize,
+        update_invitation_status: AtomicUsize,
         messages_created: AtomicUsize,
         not_read_queries: AtomicUsize,
         paginated_queries: AtomicUsize,
@@ -60,6 +67,11 @@ mod mixed_workload_benchmark_tests {
     impl BenchmarkStats {
         fn new() -> Self {
             Self {
+                users_registered: AtomicUsize::new(0),
+                users_login: AtomicUsize::new(0),
+                groups_created: AtomicUsize::new(0),
+                invitations_created: AtomicUsize::new(0),
+                update_invitation_status: AtomicUsize::new(0),
                 messages_created: AtomicUsize::new(0),
                 not_read_queries: AtomicUsize::new(0),
                 paginated_queries: AtomicUsize::new(0),
@@ -125,7 +137,7 @@ mod mixed_workload_benchmark_tests {
         const NOT_READ_READERS_PER_GROUP: usize = 2;   // Utenti che leggono e marcano messaggi
         const PAGINATED_READERS_PER_GROUP: usize = 2; // Utenti che leggono paginated
         const WEBSOCKET_USERS_PER_GROUP: usize = 8;   // Utenti connessi al websocket
-        const WEBSOCKET_PASSIVE_USERS: usize = 8;     // Utenti che solo ricevono messaggi
+        const WEBSOCKET_PASSIVE_USERS: usize = 7;     // Utenti che solo ricevono messaggi
         const WEBSOCKET_ACTIVE_USERS: usize = 1;      // Utenti che ricevono E rispondono con update_read_at
 
         // ---------------- Intervalli in ms (con jitter) ----------------
@@ -159,45 +171,208 @@ mod mixed_workload_benchmark_tests {
         let (addr, shutdown) = start_test_server().await;
         let base_url = format!("http://{}", addr);
 
-        // --- Creazione utenti per ogni gruppo ---
+        // --- Creazione utenti e gruppi tramite API ---
+        let client = Client::new();
         let mut all_users = Vec::new();
-        let mut all_tokens = Vec::new();
+        let mut all_tokens = Vec::new(); 
         let mut groups = Vec::new();
 
         let users_per_group = MESSAGE_SENDERS_PER_GROUP + NOT_READ_READERS_PER_GROUP + PAGINATED_READERS_PER_GROUP + WEBSOCKET_USERS_PER_GROUP;
 
+        let stats = Arc::new(BenchmarkStats::new());
+
+        let start_time = Instant::now();
+
+        info!("🚀 Creazione di {} utenti e {} gruppi tramite API...", NUM_GROUPS * users_per_group, NUM_GROUPS);
+
+        // Task paralleli per la creazione di gruppi e utenti
+        let mut group_creation_tasks = Vec::new();
+        
         for g in 0..NUM_GROUPS {
-            // Creazione utenti per questo gruppo
-            let mut group_users = Vec::new();
-            let mut group_tokens = Vec::new();
+            let base_url = base_url.clone();
+            let client = client.clone();
+            let stats = stats.clone();
+            
+            let task = tokio::spawn(async move {
+                let mut group_users = Vec::new();
+                let mut group_tokens = Vec::new();
+                
+                // Creazione utenti per questo gruppo
+                for u in 0..users_per_group {
+                    let user_dto = UserFactory::unique_fake_user_register_dto(&format!("bench_g{}_u{}", g, u));
+                    
+                    // Registrazione utente
+                    let register_payload = json!({
+                        "email": user_dto.email,
+                        "password": user_dto.password,
+                        "username": user_dto.username,
+                        "first_name": user_dto.first_name,
+                        "last_name": user_dto.last_name,
+                        "birthday": user_dto.birthday.format("%Y-%m-%d").to_string(),
+                        "address": user_dto.address,
+                        "gender": user_dto.gender
+                    });
 
-            for u in 0..users_per_group {
-                let (user, _, token) = create_login_and_get_token(format!("bench_g{}_u{}", g, u)).await;
-                group_users.push(user);
-                group_tokens.push(token);
-            }
+                    let register_response = client
+                        .post(&format!("{}/api/user/register", base_url))
+                        .json(&register_payload)
+                        .send()
+                        .await
+                        .expect("Failed to register user");
 
-            // Creazione gruppo con il primo utente come proprietario
-            let group = create_test_group_chat_with_invitation_and_membership(
-                format!("bench_group_{}", g).as_str(),
-                group_users[0].id
-            ).await;
+                    if !register_response.status().is_success() {
+                        panic!("User registration failed for group {} user {}: {}", g, u, register_response.status());
+                    }
 
-            // Aggiunta di tutti gli altri utenti al gruppo
-            for user in &group_users[1..] {
-                add_test_user_to_a_group(user.id, &group).await;
-            }
+                    stats.users_registered.fetch_add(1, Ordering::SeqCst);
 
-            all_users.extend(group_users);
-            all_tokens.extend(group_tokens);
-            groups.push(group);
+                    let register_data: serde_json::Value = register_response.json().await
+                        .expect("Failed to parse register response");
+
+                    // Login utente 
+                    let login_payload = json!({
+                        "email": user_dto.email,
+                        "password": user_dto.password
+                    });
+
+                    let login_response = client
+                        .post(&format!("{}/api/auth/login", base_url))
+                        .json(&login_payload)
+                        .send()
+                        .await
+                        .expect("Failed to login user");
+
+                    if !login_response.status().is_success() {
+                        panic!("User login failed for group {} user {}: {}", g, u, login_response.status());
+                    }
+
+                    let login_data: serde_json::Value = login_response.json().await
+                        .expect("Failed to parse login response");
+
+                    stats.users_login.fetch_add(1, Ordering::SeqCst);
+
+                    let token = login_data["data"]["token"].as_str().unwrap().to_string();
+                    let user_data = &register_data["data"];
+                    
+                    group_users.push(user_data.clone());
+                    group_tokens.push(token);
+                }
+
+                // Creazione gruppo con il primo utente come proprietario
+                let group_dto = GroupChatFactory::unique_fake_group_chat_create_dto(&format!("bench_group_{}", g));
+                let group_payload = json!({
+                    "name": group_dto.name,
+                    "description": group_dto.description
+                });
+
+                let group_response = client
+                    .post(&format!("{}/api/group_chat/create", base_url))
+                    .bearer_auth(&group_tokens[0])
+                    .json(&group_payload)
+                    .send()
+                    .await
+                    .expect("Failed to create group");
+
+                if !group_response.status().is_success() {
+                    panic!("Group creation failed for group {}: {}", g, group_response.status());
+                }
+
+                let group_data: serde_json::Value = group_response.json().await
+                    .expect("Failed to parse group response");
+
+                stats.groups_created.fetch_add(1, Ordering::SeqCst);
+
+                let group_id = group_data["data"]["id"].as_i64().unwrap() as i32;
+
+                // Invio inviti agli altri utenti del gruppo
+                let mut invitation_tasks = Vec::new();
+                for user_idx in 1..users_per_group {
+                    let invitation_client = client.clone();
+                    let base_url = base_url.clone();
+                    let owner_token = group_tokens[0].clone();
+                    let invitee_user_data = group_users[user_idx].clone();
+                    let invitee_token = group_tokens[user_idx].clone();
+                    let stats = stats.clone();
+                    
+                    invitation_tasks.push(tokio::spawn(async move {
+                        let user_id = invitee_user_data["id"].as_i64().unwrap() as i32;
+                        
+                        // Invio invito
+                        let invitation_payload = json!({
+                            "to_user_id": user_id,
+                            "group_chat_id": group_id,
+                            "role_at_join": "member"
+                        });
+
+                        let invitation_response = invitation_client
+                            .post(&format!("{}/api/invitation/send", base_url))
+                            .bearer_auth(&owner_token)
+                            .json(&invitation_payload)
+                            .send()
+                            .await
+                            .expect("Failed to send invitation");
+
+                        if !invitation_response.status().is_success() {
+                            panic!("Invitation send failed: {}", invitation_response.status());
+                        }
+
+                        let invitation_data: serde_json::Value = invitation_response.json().await
+                            .expect("Failed to parse invitation response");
+
+                        stats.invitations_created.fetch_add(1, Ordering::SeqCst);
+
+                        let invitation_id = invitation_data["data"]["id"].as_i64().unwrap() as i32;
+
+                        // Accettazione invito
+                        let accept_payload = json!({
+                            "status": InvitationStatus::Accepted,
+                            "invitation_id": invitation_id,
+                        });
+
+                        let accept_response = invitation_client
+                            .patch(&format!("{}/api/invitation/update-status", base_url))
+                            .bearer_auth(&invitee_token)
+                            .json(&accept_payload)
+                            .send()
+                            .await
+                            .expect("Failed to accept invitation");
+
+                        if !accept_response.status().is_success() {
+                            panic!("Invitation acceptance failed: {}", accept_response.status());
+                        }
+
+                        stats.update_invitation_status.fetch_add(1, Ordering::SeqCst);
+
+                        (user_id, invitee_token)
+                    }));
+                }
+
+                // Attesa completamento inviti
+                let mut final_user_tokens = vec![group_tokens[0].clone()];
+                for task in invitation_tasks {
+                    let (_, token) = task.await.expect("Invitation task failed");
+                    final_user_tokens.push(token);
+                }
+
+                (group_users, final_user_tokens, group_id)
+            });
+            
+            group_creation_tasks.push(task);
         }
 
-        println!("✅ Creati {} utenti in {} gruppi", all_users.len(), NUM_GROUPS);
+        // Attesa completamento di tutti i gruppi
+        for task in group_creation_tasks {
+            let (group_users, group_tokens, group_id) = task.await.expect("Group creation task failed");
+            
+            all_users.extend(group_users);
+            all_tokens.extend(group_tokens);
+            groups.push(group_id);
+        }
+
+        println!("✅ Creati {} utenti in {} gruppi tramite API alle {}", all_users.len(), NUM_GROUPS, Utc::now().format("%Y-%m-%d %H:%M:%S"));
 
         // Strutture dati condivise
         let stop_flag = Arc::new(AtomicBool::new(false));
-        let stats = Arc::new(BenchmarkStats::new());
         let created_messages: Arc<Mutex<Vec<i32>>> = Arc::new(Mutex::new(Vec::new()));
 
         // --- Avvio task WebSocket users (devono connettersi prima) ---
@@ -205,7 +380,7 @@ mod mixed_workload_benchmark_tests {
         let mut user_idx = 0;
 
         for g in 0..NUM_GROUPS {
-            let group = &groups[g];
+            let group_id = groups[g];
             let ws_start_idx = user_idx + MESSAGE_SENDERS_PER_GROUP + NOT_READ_READERS_PER_GROUP + PAGINATED_READERS_PER_GROUP;
 
             // WebSocket passive users (solo ricevono messaggi)
@@ -213,7 +388,6 @@ mod mixed_workload_benchmark_tests {
                 let token = all_tokens[ws_user_idx].clone();
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
-                let group_id = group.id;
                 let mut rng = rng.clone();
 
                 let handle = tokio::spawn(async move {
@@ -271,7 +445,6 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let group_id = group.id;
                 let mut rng = rng.clone();
 
                 let handle = tokio::spawn(async move {
@@ -363,14 +536,12 @@ mod mixed_workload_benchmark_tests {
         // Pausa per permettere le connessioni WebSocket
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-        let start_time = Instant::now();
-
         // --- Avvio task NOT READ READERS ---
         let mut not_read_handles = Vec::new();
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
-            let group = &groups[g];
+            let group_id = groups[g];
             let readers_start_idx = user_idx + MESSAGE_SENDERS_PER_GROUP;
 
             for reader_idx in readers_start_idx..readers_start_idx + NOT_READ_READERS_PER_GROUP {
@@ -378,7 +549,6 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let group_id = group.id;
                 let mut rng = rng.clone();
 
                 let handle = tokio::spawn(async move {
@@ -472,7 +642,7 @@ mod mixed_workload_benchmark_tests {
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
-            let group = &groups[g];
+            let group_id = groups[g];
             let readers_start_idx = user_idx + MESSAGE_SENDERS_PER_GROUP + NOT_READ_READERS_PER_GROUP;
 
             for reader_idx in readers_start_idx..readers_start_idx + PAGINATED_READERS_PER_GROUP {
@@ -480,7 +650,6 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let group_id = group.id;
                 let mut rng = rng.clone();
 
                 let client = Client::new();
@@ -513,18 +682,15 @@ mod mixed_workload_benchmark_tests {
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
-            let group = &groups[g];
-
+            let group_id = groups[g];
+            
             for sender_idx in user_idx..user_idx + MESSAGE_SENDERS_PER_GROUP {
                 let token = all_tokens[sender_idx].clone();
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let created_messages = Arc::clone(&created_messages);
                 let base_url = base_url.clone();
-                let group_id = group.id;
-                let mut rng = rng.clone();
-
-                let handle = tokio::spawn(async move {
+                let mut rng = rng.clone();                let handle = tokio::spawn(async move {
                     let client = Client::new();
                     let mut message_counter = 0;
 

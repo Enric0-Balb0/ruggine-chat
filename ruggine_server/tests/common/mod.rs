@@ -65,9 +65,9 @@ pub async fn get_database() -> Arc<Database> {
                 .unwrap_or_else(|_| "postgres://testuser:testpass@localhost/ruggine_test".to_string());
 
             PgPoolOptions::new()
-                .max_connections(20)         // 👈 aumenta qui il numero massimo di connessioni
+                .max_connections(25)         // 👈 aumenta qui il numero massimo di connessioni
                 .min_connections(5)          // opzionale: connessioni tenute sempre pronte
-                .acquire_timeout(std::time::Duration::from_secs(5)) // timeout attesa connessione
+                .acquire_timeout(std::time::Duration::from_secs(10)) // timeout attesa connessione
                 .connect(&database_url)
                 .await
                 .expect("Failed to connect to test database")
