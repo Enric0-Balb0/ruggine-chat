@@ -66,6 +66,14 @@
         scrollbar-color: rgba(138, 136, 134, 0.6) rgba(243, 242, 241, 0.3) !important;
       }
     </style>
+    <!-- Force chat spacing overrides (injected last so it takes precedence) -->
+    <style>
+      /* Uniform intra-group gap */
+      .msg-wrapper.continued, div[id^="msg-"].continued { margin-bottom: 2px !important; }
+      /* First message: top margin separates groups; bottom matches intra-group */
+      .msg-wrapper.first, div[id^="msg-"].first { margin-top: 1rem !important; margin-bottom: 2px !important; }
+      .chat-msg { margin-bottom: 0 !important; }
+    </style>
   </head>
   <body></body>
 </html>

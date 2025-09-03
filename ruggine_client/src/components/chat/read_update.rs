@@ -12,6 +12,7 @@ pub async fn process_update_batch(
     batch: Vec<i32>,
     unread_counts: RwSignal<HashMap<i32, u32>>,
     unread_message_ids: RwSignal<HashMap<i32, Vec<i32>>>,
+    unread_marked_read: RwSignal<std::collections::HashMap<i32, std::collections::HashSet<i32>>>,
     group_id: i32,
 ) {
     use crate::api::client::ApiClient;
@@ -22,6 +23,14 @@ pub async fn process_update_batch(
 
     for id in batch.into_iter().rev() {
         let id_clone = id;
+        // Skip if we've already locally marked this message as read
+        let already_marked = {
+            let map = unread_marked_read.get_untracked();
+            map.get(&group_id).map(|s| s.contains(&id_clone)).unwrap_or(false)
+        };
+        if already_marked {
+            continue;
+        }
         let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
         let storage_service = StorageService::new();
         if let Some(token) = storage_service.get_token() {
@@ -40,6 +49,12 @@ pub async fn process_update_batch(
                         vec_ids.retain(|x| *x != id_clone);
                     }
                 });
+                // record locally that this id has been marked as read so it won't
+                // be sent again if the user scrolls around
+                unread_marked_read.update(|map| {
+                    let set = map.entry(group_id).or_insert_with(|| std::collections::HashSet::new());
+                    set.insert(id_clone);
+                });
             }
             Err(_e) => {
                 // ignore errors here; batch will retry when visibility triggers again
@@ -48,18 +63,9 @@ pub async fn process_update_batch(
         // small pause to avoid bursting the server
         crate::utils::timers::sleep_ms(UPDATE_INTER_CALL_MS).await;
     }
-    // After processing the batch, reconcile with authoritative server value to handle multi-device cases.
-    // Fire-and-forget: spawn a task to fetch the authoritative not-read-yet list and overwrite local count.
-    {
-        let unread_counts_clone = unread_counts.clone();
-        let unread_message_ids_clone = unread_message_ids.clone();
-        leptos::spawn_local(async move {
-            use crate::context::unread_counts_context::refresh_unread_for_group;
-            if let Some(count) = refresh_unread_for_group(group_id).await {
-                // already applied inside refresh_unread_for_group via context, but ensure local variables are consistent
-                // (no-op here since refresh_mut updates the context directly)
-                let _ = (unread_counts_clone, unread_message_ids_clone, count);
-            }
-        });
-    }
+    // NOTE: previously we reconciled the local unread counts with the server after
+    // processing a batch. That behavior overwrote local deltas coming from the WS and
+    // caused unexpected restores of the count. Per new requirements, unread counts are
+    // managed manually: +1 on incoming WS messages and -1 when an update_message_read_at
+    // call succeeds. Do not perform an automatic authoritative refresh here.
 }

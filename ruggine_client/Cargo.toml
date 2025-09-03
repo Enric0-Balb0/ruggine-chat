@@ -12,7 +12,7 @@ console_error_panic_hook = "0.1.7"
 reqwest = { version = "0.12", features = ["json"] }
 chrono = { version = "0.4", features = ["serde", "wasm-bindgen"] }
 thiserror = "1.0"
-web-sys = { version = "0.3", features = ["Performance", "IntersectionObserver", "IntersectionObserverEntry", "DomRect"] }
+web-sys = { version = "0.3", features = ["Performance", "IntersectionObserver", "IntersectionObserverEntry", "DomRect", "Blob", "Url", "Document", "HtmlAnchorElement"] }
 gloo-storage = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
 log = "0.4"

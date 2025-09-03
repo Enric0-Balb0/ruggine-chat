@@ -407,141 +407,177 @@
   gap: 12px;
 }
 
-/* Own messages styling */
-.message.own {
-  flex-direction: row-reverse;
+/* When messages are grouped together, remove the extra top margin introduced by the container's space-y utilities */
+.grouped-message {
+  margin-top: 0 !important;
 }
 
-.message.own .message-content {
-  background: #e8f4f8;
-  padding: 12px 16px;
-  border-radius: 12px 12px 4px 12px;
-  border: 1px solid #c7e0f4;
-  max-width: 70%;
+/* ChatMessage spacing control: put inside Tailwind's components layer so
+   the rules are preserved by the build pipeline and correctly emitted
+   into the final CSS. */
+@layer components {
+  /* Force wrapper-based spacing: target the real DOM wrapper divs first. */
+  div[id^="msg-"] {
+    display: flow-root !important; /* ensure a new formatting context to avoid margin collapse */
+  }
+
+  /* When the wrapper is marked as 'continued' (same sender), apply small spacing */
+  div[id^="msg-"].continued, .msg-wrapper.continued {
+    margin-bottom: 8px !important;
+  }
+
+  /* When the wrapper starts a new group, apply larger spacing */
+  div[id^="msg-"].first, .msg-wrapper.first {
+    margin-bottom: 1rem !important;
+  }
+
+  /* Ensure the inner .chat-msg doesn't itself add extra bottom margin that could be negated by wrapper issues */
+  .chat-msg {
+    margin-bottom: 0 !important;
+  }
+
+  /* Keep a lightweight visual outline during testing */
+  .msg-wrapper, div[id^="msg-"] {
+    outline: 1px solid rgba(0,0,0,0.02);
+  }
+
+  .msg-wrapper {
+    display: flow-root; /* establish new formatting context */
+    outline: 1px solid rgba(255,0,0,0.03);
+  }
+
+  .msg-wrapper.continued {
+    margin-bottom: 2px; /* uniform small gap inside a group */
+    outline: 1px solid rgba(0,0,255,0.03);
+  }
+
+  .msg-wrapper.first {
+    /* Use top margin for inter-group spacing so first->second gap matches continued gaps */
+    margin-top: 1rem;      /* separation from previous group */
+    margin-bottom: 2px;    /* same intra-group gap */
+  }
+
+  /* Fallback: for environments where the wrapper class isn't available or
+     in case of older build outputs, keep rules directly on the inner marker. */
+  /* Fallback (non-wrapper builds): approximate behaviour */
+  .chat-msg { margin-bottom: 2px; }
+  .chat-msg:not(.continued) { margin-top: 1rem; }
+}
+/* Dark mode specific overrides */
+.dark {
+  --tw-bg-opacity: 1;
+  background-color: rgb(17 24 39 / var(--tw-bg-opacity)) !important;
+  color: rgb(229 231 235) !important;
 }
 
-.message.own .message-header {
-  justify-content: flex-end;
-  text-align: right;
+.dark .chat-header {
+  background: rgb(31 41 55) !important;
+  border-bottom-color: rgb(75 85 99) !important;
 }
 
-.message.own .message-author {
-  color: #0078d4;
+.dark .chat-info {
+  color: rgb(229 231 235) !important;
 }
 
-.message.own .message-text {
-  color: #323130;
-  text-align: left;
+.dark .chat-controls .group-menu-btn {
+  background: rgb(31 41 55) !important;
+  border-color: rgb(75 85 99) !important;
+  color: rgb(229 231 235) !important;
 }
 
-/* Other users' messages */
-.message:not(.own) .message-content {
-  max-width: 80%;
+.dark .chat-controls .group-menu-btn:hover {
+  background: rgb(55 65 81) !important;
+  border-color: rgb(107 114 128) !important;
 }
 
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
+.dark .group-dropdown {
+  background: rgb(31 41 55) !important;
+  border-color: rgb(75 85 99) !important;
 }
 
-.message-avatar.sofia { background: #464775; }
-.message-avatar.marco { background: #c4314b; }
-.message-avatar.laura { background: #107c10; }
-.message-avatar.system { background: #605e5c; }
-
-.message-content {
-  flex: 1;
+.dark .group-dropdown .dropdown-item {
+  color: rgb(229 231 235) !important;
 }
 
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+.dark .group-dropdown .dropdown-item:hover {
+  background: rgb(55 65 81) !important;
 }
 
-.message-author {
-  font-size: 14px;
-  font-weight: 600;
-  color: #323130;
+.dark .chat-title {
+  color: rgb(229 231 235) !important;
 }
 
-.message-time {
-  font-size: 12px;
-  color: #605e5c;
+.dark .chat-subtitle {
+  color: rgb(156 163 175) !important;
 }
 
-.message-text {
-  font-size: 14px;
-  color: #323130;
-  line-height: 1.4;
-  margin-bottom: 4px;
+.dark .status-dot {
+  background: rgb(22 163 74) !important;
 }
 
-/* Input area */
-.input-area {
-  padding: 16px 24px;
-  border-top: 1px solid #e1dfdd;
-  background: #faf9f8;
+.dark .status-dot-large {
+  background: rgb(22 163 74) !important;
 }
 
-.input-container {
-  position: relative;
-  background: white;
-  border: 1px solid #e1dfdd;
-  border-radius: 4px;
-  overflow: hidden;
+.dark .loader-pulse {
+  animation: pulse-loader 1.5s ease-in-out infinite;
 }
 
-.message-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  padding: 12px 50px 12px 16px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: none;
-  min-height: 24px;
-  max-height: 120px;
+.dark .message.own .message-content {
+  background: rgb(37 99 235 / 0.1) !important;
+  border-color: rgb(37 99 235 / 0.3) !important;
 }
 
-.message-input::placeholder {
-  color: #a19f9d;
+.dark .message.own .message-author {
+  color: rgb(37 99 235) !important;
 }
 
-.send-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #464775;
-  border: none;
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: background 0.2s;
+.dark .message-avatar.sofia { background: rgb(55 65 81) !important; }
+.dark .message-avatar.marco { background: rgb(194 49 75) !important; }
+.dark .message-avatar.laura { background: rgb(16 124 16) !important; }
+.dark .message-avatar.system { background: rgb(96 125 139) !important; }
+
+.dark .message-header {
+  border-bottom: 1px solid rgb(75 85 99) !important;
 }
 
-.send-btn:hover:not(:disabled) {
-  background: #6264a7;
+.dark .message-time {
+  color: rgb(156 163 175) !important;
 }
 
-.send-btn:disabled {
-  background: #e1dfdd;
+.dark .message-text {
+  color: rgb(229 231 235) !important;
+}
+
+.dark .input-area {
+  background: rgb(31 41 55) !important;
+  border-top-color: rgb(75 85 99) !important;
+}
+
+.dark .input-container {
+  background: rgb(22 22 34) !important;
+  border-color: rgb(75 85 99) !important;
+}
+
+.dark .message-input {
+  color: rgb(229 231 235) !important;
+}
+
+.dark .message-input::placeholder {
+  color: rgb(107 114 128) !important;
+}
+
+.dark .send-btn {
+  background: rgb(55 65 81) !important;
+  color: rgb(229 231 235) !important;
+}
+
+.dark .send-btn:hover:not(:disabled) {
+  background: rgb(37 99 235) !important;
+}
+
+.dark .send-btn:disabled {
+  background: rgb(75 85 99) !important;
   cursor: not-allowed;
 }
 
