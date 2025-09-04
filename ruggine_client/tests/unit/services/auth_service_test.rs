@@ -407,7 +407,7 @@ mod auth_service_unit_tests {
         
         // Create mock token and profile data
         let mock_token = crate::common::TestFactory::mock_token_response();
-        let mock_profile = crate::common::TestFactory::mock_user_profile("logout_test");
+        let mock_profile = crate::common::TestFactory::mock_user_profile();
         
         // Store mock data
         let _ = storage_service.store_token(&mock_token);

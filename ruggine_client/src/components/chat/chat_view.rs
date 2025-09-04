@@ -254,9 +254,21 @@ pub fn ChatView(
                     Some(w) => match w.document() { Some(d) => d, None => return false },
                     None => return false,
                 };
-                if let Some(elem) = doc.get_element_by_id(&elem_id) {
-                    let _ = elem.scroll_into_view_with_bool(true);
-                    true
+                
+                // Try to find the unread separator first, fallback to message element
+                let separator_id = format!("unread-separator-{}", elem_id.trim_start_matches("msg-"));
+                let target_element = doc.get_element_by_id(&separator_id)
+                    .or_else(|| doc.get_element_by_id(&elem_id));
+                
+                if let Some(elem) = target_element {
+                    if let Some(c) = container {
+                        let desired = compute_bottom_aligned_scroll(&c, &elem);
+                        c.set_scroll_top(desired);
+                        true
+                    } else {
+                        let _ = elem.scroll_into_view_with_bool(true);
+                        true
+                    }
                 } else if let Some(c) = container {
                     if !anchor_for_scroll.get() {
                         c.set_scroll_top(c.scroll_height());
@@ -560,6 +572,38 @@ pub fn ChatView(
                                                     process_update_batch(batch, unread_counts_clone.clone(), unread_message_ids_clone.clone(), unread_marked_read.clone(), group_id_for_update).await;
                                                     crate::utils::timers::sleep_ms(10).await;
                                                 }
+                                                
+                                                // Sincronizza il counter con il server dopo tutti gli aggiornamenti
+                                                leptos::spawn_local({
+                                                    let unread_counts_sync = unread_counts_clone.clone();
+                                                    async move {
+                                                        use crate::api::client::ApiClient;
+                                                        use crate::config::constants::AppConstants;
+                                                        use crate::utils::storage::StorageService;
+                                                        use crate::api::services::message::MessageService;
+                                                        
+                                                        let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                                                        let storage_service = StorageService::new();
+                                                        if let Some(token) = storage_service.get_token() {
+                                                            http_client.set_auth_token(Some(token.token));
+                                                        }
+                                                        let message_service = MessageService::new(http_client, storage_service);
+                                                        
+                                                        match message_service.get_messages_not_read_yet(group_id_for_update).await {
+                                                            Ok(message_page) => {
+                                                                let actual_unread_count = message_page.data.len() as u32;
+                                                                // Aggiorna il counter locale con il valore reale del server
+                                                                unread_counts_sync.update(|counts| {
+                                                                    counts.insert(group_id_for_update, actual_unread_count);
+                                                                });
+                                                            },
+                                                            Err(e) => {
+                                                                log::warn!("Failed to sync unread count for group {}: {:?}", group_id_for_update, e);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                                
                                                 flush_flag.set(false);
                                             });
                                         }, std::time::Duration::from_millis(UPDATE_DEBOUNCE_MS));
@@ -641,6 +685,22 @@ pub fn ChatView(
                 set_show.set(remain > 200);
             }
             messages_for_visibility.get();
+        });
+    }
+
+    {
+        let first_unread_anchor = first_unread_anchor.clone();
+        let messages_for_anchor = messages.clone();
+        let set_show_anchor = set_show_scroll_to_bottom.clone();
+        create_effect(move |_| {
+            if let Some(anchor_id) = first_unread_anchor.get() {
+                let msgs = messages_for_anchor.get();
+                if let Some(pos) = msgs.iter().position(|m| m.id == anchor_id) {
+                    if pos + 1 < msgs.len() {
+                        set_show_anchor.set(true);
+                    }
+                }
+            }
         });
     }
 
@@ -1068,7 +1128,7 @@ pub fn ChatView(
                                 if msg.id == anchor_id {
                                     inserted_unread_separator = true;
                                     children.push(view! {
-                                        <div class="w-full flex justify-center">
+                                        <div id={format!("unread-separator-{}", anchor_id)} class="w-full flex justify-center">
                                             <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md py-1 px-3 my-2">"Messaggi non letti"</div>
                                         </div>
                                     });
@@ -1078,7 +1138,7 @@ pub fn ChatView(
                                 if unread_for_group.contains(&msg.id) {
                                     inserted_unread_separator = true;
                                     children.push(view! {
-                                        <div class="w-full flex justify-center">
+                                        <div id={format!("unread-separator-{}", msg.id)} class="w-full flex justify-center">
                                             <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md py-1 px-3 my-2">"Messaggi non letti"</div>
                                         </div>
                                     });

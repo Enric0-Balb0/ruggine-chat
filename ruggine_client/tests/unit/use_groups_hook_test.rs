@@ -9,7 +9,7 @@ use std::sync::Mutex;
 #[cfg(test)]
 mod use_groups_hook_tests {
     use super::*;
-    use crate::TestFactory;
+    use crate::common::TestFactory;
 
     // Mutex to serialize tests that use shared state
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
@@ -231,7 +231,7 @@ mod use_groups_hook_tests {
         
         let handles: Vec<_> = (0..3)
             .map(|i| {
-                let data_clone = Arc::clone(&shared_data);
+                let data_clone: Arc<Vec<GroupMembership>> = Arc::clone(&shared_data);
                 thread::spawn(move || {
                     // Simulate different threads accessing group data
                     let group_count = data_clone.len();
@@ -259,7 +259,7 @@ mod use_groups_hook_tests {
 // Test helper functions that might be used with the hook
 mod hook_test_helpers {
     use super::*;
-    use crate::TestFactory;
+    use crate::common::TestFactory;
     
     #[allow(dead_code)]
     pub fn simulate_groups_loading() -> LoadingState<Vec<GroupMembership>> {
