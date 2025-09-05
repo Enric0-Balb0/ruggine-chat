@@ -129,7 +129,7 @@ pub fn ShowInvitesModal(
                                                             } else {
                                                                 view! {
                                                                     <span class="px-3 py-1 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-default">
-                                                                        {status.to_string().to_uppercase()}
+                                                                        {status.display_name()}
                                                                     </span>
                                                                 }.into_view()
                                                             }}

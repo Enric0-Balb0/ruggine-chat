@@ -289,6 +289,53 @@
       },
       "problemMatcher": []
     }
+    ,
+    {
+      "label": "Client: Clean Installers",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy","Bypass","-Command",
+        "if (Test-Path 'target/release/bundle') { Remove-Item -Recurse -Force 'target/release/bundle'; Write-Host 'Old installers removed.' } else { Write-Host 'No previous bundle directory.' }"
+      ],
+      "options": { "cwd": "${workspaceFolder}/ruggine_client" },
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Client: Build WASM Release",
+      "type": "shell",
+      "command": "trunk",
+      "args": ["build","--release"],
+      "options": { "cwd": "${workspaceFolder}/ruggine_client" },
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Client: Build Tauri Installer",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["tauri","build"],
+      "options": { "cwd": "${workspaceFolder}/ruggine_client" },
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Client: Build Installers",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Client: Clean Installers",
+        "Tailwind: Build CSS",
+        "Client: Build WASM Release",
+        "Client: Build Tauri Installer"
+      ],
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    }
   ],
   "inputs": [
     {
