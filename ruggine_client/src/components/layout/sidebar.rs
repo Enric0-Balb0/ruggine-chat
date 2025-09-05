@@ -4,7 +4,6 @@ use crate::components::modals::ShowInvitesModal;
 use crate::api::services::invitation::InvitationService;
 use crate::types::Invitation;
 use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
-use crate::components::ui::feedback::use_toast;
 use crate::context::unread_counts_context::use_unread_counts_context;
 
 use crate::hooks::use_global_group_unread_ws;
@@ -123,7 +122,7 @@ pub fn Sidebar(
                 <div class="flex-1 overflow-y-auto max-h-[340px] pr-1">
                     
                     {move || {
-                        if let Some(err_msg) = error.get() {
+                        if let Some(_err_msg) = error.get() {
                             view! {
                                 <div class="flex flex-col items-center justify-center py-4 px-3 space-y-3 text-center">
                                     <div class="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">

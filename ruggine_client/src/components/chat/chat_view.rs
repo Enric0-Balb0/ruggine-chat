@@ -82,13 +82,13 @@ pub fn ChatView(
                             }
                         });
                     }
-                    Err(e) => {
+                    Err(_e) => {
                     }
                 }
             });
         })
     };
-    let (initial_messages, initial_loading, initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
+    let (initial_messages, initial_loading, _initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
 
     let ws_messages = use_group_socket_messages(
@@ -131,7 +131,7 @@ pub fn ChatView(
         leptos::spawn_local(async move {
             use crate::utils::storage::StorageService;
             let storage = StorageService::new();
-            let mut http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage.get_token() {
                 http.set_auth_token(Some(token_response.token));
             }
@@ -472,10 +472,6 @@ pub fn ChatView(
         });
     }
     {
-        use crate::api::services::message::MessageService;
-        use crate::config::constants::AppConstants;
-        use crate::utils::storage::StorageService;
-        use crate::api::client::ApiClient;
         let messages = messages.clone();
         let messages_container_ref = messages_container_ref.clone();
         
@@ -898,7 +894,7 @@ pub fn ChatView(
         }
     };
 
-    let handle_invite_member = move |invite_request: InviteMemberRequest| {
+    let _handle_invite_member = move |_invite_request: InviteMemberRequest| {
         set_invite_modal_open.set(false);
     };
 
@@ -1177,7 +1173,7 @@ pub fn ChatView(
                                     sender_username=sender_username_clone
                                     sender_name=sender_name_clone
                                     sender_surname=sender_surname_clone
-                                    status=MessageStatus::Delivered
+                                    _status=MessageStatus::Delivered
                                     is_own=is_own
                                     continued=continued
                                     show_sender=show_sender

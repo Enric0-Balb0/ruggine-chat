@@ -68,29 +68,29 @@ mod toast_component_tests {
 
 #[cfg(test)]
 mod icon_component_tests {
-    use ruggine_client_ui::components::ui::icons::lucide_icon::IconSize;
+    use ruggine_client_ui::components::ui::icon_size;
 
     #[test]
     fn test_icon_size_constants() {
         // Test that icon size constants are properly defined
-        assert_eq!(IconSize::SMALL, 16);
-        assert_eq!(IconSize::MEDIUM, 22);
+        assert_eq!(icon_size::SMALL, 16);
+        assert_eq!(icon_size::MEDIUM, 22);
         
         // Test ordering
-        assert!(IconSize::MEDIUM > IconSize::SMALL);
+        assert!(icon_size::MEDIUM > icon_size::SMALL);
     }
 
     #[test]
     fn test_icon_size_values() {
         // Test that size values make sense
-        assert!(IconSize::SMALL > 0);
-        assert!(IconSize::MEDIUM > 0);
-        assert!(IconSize::MEDIUM > IconSize::SMALL);
+        assert!(icon_size::SMALL > 0);
+        assert!(icon_size::MEDIUM > 0);
+        assert!(icon_size::MEDIUM > icon_size::SMALL);
     }
 
     #[test]
     fn test_icon_size_cloning() {
-        let size = IconSize::MEDIUM;
+        let size = icon_size::MEDIUM;
         // Icon sizes are primitive constants, just test they work
         assert_eq!(size, 22);
     }
@@ -98,7 +98,7 @@ mod icon_component_tests {
 
 #[cfg(test)]
 mod modal_component_tests {
-    use ruggine_client_ui::components::modals::invite_member_modal::{MemberRole, InviteMemberRequest};
+    use ruggine_client_ui::components::modals::member_invitation_modal::{MemberRole, InviteMemberRequest};
 
     #[test]
     fn test_member_role_variants() {
@@ -254,7 +254,7 @@ mod ui_layout_tests {
             "UI components working".to_string()
         );
         let theme = ruggine_client_ui::utils::theme::Theme::Dark;
-        let role = ruggine_client_ui::components::modals::invite_member_modal::MemberRole::Admin;
+        let role = ruggine_client_ui::components::modals::member_invitation_modal::MemberRole::Admin;
 
         // Test that different UI components can coexist
         assert_eq!(toast.toast_type, ruggine_client_ui::components::ui::feedback::toast::ToastType::Success);
@@ -265,10 +265,10 @@ mod ui_layout_tests {
     #[test]
     fn test_ui_constants_consistency() {
         // Test that UI constants are consistent
-        use ruggine_client_ui::components::ui::icons::lucide_icon::IconSize;
+        use ruggine_client_ui::components::ui::icon_size;
         
-        assert!(IconSize::SMALL > 0);
-        assert!(IconSize::MEDIUM > IconSize::SMALL);
+        assert!(icon_size::SMALL > 0);
+        assert!(icon_size::MEDIUM > icon_size::SMALL);
         // Note: LARGE and XLARGE constants are available but not actively used
     }
 

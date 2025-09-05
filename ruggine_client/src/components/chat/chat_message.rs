@@ -21,7 +21,7 @@ pub enum MessageStatus {
 pub fn ChatMessage(
     message: Message,
     sender_username: String,
-    #[prop(optional, default = MessageStatus::Sent)] status: MessageStatus,
+    #[prop(optional, default = MessageStatus::Sent)] _status: MessageStatus,
     #[prop(optional, default = false)] is_own: bool,
     // Per avatar: aggiungi opzionalmente nome/cognome se disponibili
     #[prop(optional, default = "".to_string())] sender_name: String,
@@ -36,8 +36,8 @@ pub fn ChatMessage(
     let avatar_username = sender_username.clone();
     let header_username = sender_username.clone();
     let compact_time = time_str.clone();
-    let header_time = time_str.clone();
-    let fallback_time = time_str.clone();
+    let _header_time = time_str.clone();
+    let _fallback_time = time_str.clone();
     // Evita warning se l'originale non viene più usato direttamente
     let _original_sender_username = sender_username;
     // entrance animation only the first time a given message id is mounted
@@ -129,11 +129,11 @@ pub fn ChatMessage(
                 <Show
                     when=move || show_sender
                     fallback=move || {
-                        let hm = header_margin.clone();
+                        let hm = header_margin;
                         view! { <div class=hm></div> }
                     }
                 >
-                    {let username_header = header_username.clone(); let hm = header_margin.clone();
+                    {let username_header = header_username.clone(); let hm = header_margin;
                         // Do not render username for messages sent by the current user; keep spacing consistent.
                         if is_own {
                             view! { <div class=hm></div> }

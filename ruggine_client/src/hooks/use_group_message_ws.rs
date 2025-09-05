@@ -1,8 +1,5 @@
 use leptos::*;
-use crate::api::MessageWsService;
 use crate::api::ws::global_ws;
-use crate::config::endpoints::WebSocketEndpoints;
-use crate::config::constants::AppConstants;
 use crate::types::WebSocketMessage;
 use crate::types::message_ws::WsStatus;
 use crate::context::unread_counts_context::use_unread_counts_context;
@@ -35,7 +32,7 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     let instance_id = uuid::Uuid::new_v4().to_string();
     leptos::logging::log!("[WS INST] Created UseGroupMessageWs instance {} (reused)", instance_id);
     ws_service.borrow_mut().set_on_message({
-        let ws_service = ws_service.clone();
+        let _ws_service = ws_service.clone();
         move |msg: WebSocketMessage| {
             // Log the parsed message JSON for debugging (helps correlate with raw frames)
             match serde_json::to_string(&msg) {

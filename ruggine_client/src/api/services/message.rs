@@ -9,12 +9,11 @@ use crate::types::message::{
 #[derive(Clone)]
 pub struct MessageService {
     http_client: ApiClient,
-    storage_service: StorageService,
 }
 
 impl MessageService {
-    pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
-        Self { http_client, storage_service }
+    pub fn new(http_client: ApiClient, _storage_service: StorageService) -> Self {
+        Self { http_client }
     }
 
     /// Crea un nuovo messaggio di testo

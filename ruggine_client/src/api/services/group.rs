@@ -10,15 +10,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone)]
 pub struct GroupChatService {
     http_client: ApiClient,
-    storage_service: StorageService,
 }
 
 impl GroupChatService {
     /// Create new group chat service
-    pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
+    pub fn new(http_client: ApiClient, _storage_service: StorageService) -> Self {
         Self {
             http_client,
-            storage_service,
         }
     }
 

@@ -1,4 +1,4 @@
-﻿use leptos::*;
+use leptos::*;
 use leptos::wasm_bindgen::JsCast;
 use crate::types::group::GroupChatCreateRequest;
 use crate::components::LucideIcon;
@@ -125,7 +125,7 @@ pub fn CreateGroupModal(
         {move || {
             if is_visible.get() {
                 view! {
-                    <div 
+                    <div
                         class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
                         style=move || {
                             if is_animating_in.get() {
@@ -136,7 +136,7 @@ pub fn CreateGroupModal(
                         }
                         on:click=handle_backdrop_click
                     >
-                        <div 
+                        <div
                             class="bg-white dark:bg-surface-dark shadow-2xl dark:shadow-black/50 border border-border dark:border-border-dark rounded-lg modal-container"
                             style=move || {
                                 let base_style = "width: 100%; max-width: 540px; margin: 0 20px; padding: 24px;";
@@ -157,10 +157,10 @@ pub fn CreateGroupModal(
                                 class="bg-transparent border-none text-text-secondary dark:text-text-secondary-dark cursor-pointer p-2 rounded-lg transition-all duration-200 w-9 h-9 flex items-center justify-center hover:bg-red-50 hover:text-red-600 hover:scale-110 dark:hover:bg-red-900/20 dark:hover:text-red-400 group"
                                 on:click=move |_| handle_close(())
                             >
-                                <svg 
+                                <svg
                                     class="w-5 h-5 transition-transform duration-300 group-hover:rotate-90"
-                                    fill="none" 
-                                    stroke="currentColor" 
+                                    fill="none"
+                                    stroke="currentColor"
                                     viewBox="0 0 24 24"
                                 >
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -184,12 +184,12 @@ pub fn CreateGroupModal(
 
                         // Error message con animazione
                         {move || error_message.get().map(|msg| view! {
-                            <div 
+                            <div
                                 class="mb-5 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
                                 style="transform: translateY(0px); opacity: 1; animation: slideInError 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"
                             >
                                 <p class="m-0 text-sm text-red-800 dark:text-red-200 flex items-center gap-2">
-                                    <span class="animate-pulse text-base">"⚠️"</span>
+                                    <span class="animate-pulse text-base">"⚠"</span>
                                     <LucideIcon name="alert-triangle" size=16 class="text-red-600 dark:text-red-400" />
                                     {msg}
                                 </p>
@@ -197,7 +197,7 @@ pub fn CreateGroupModal(
                         })}
 
                         // Form
-                        <form 
+                        <form
                             on:submit=move |e| {
                                 e.prevent_default();
                                 handle_submit(());
@@ -205,8 +205,8 @@ pub fn CreateGroupModal(
                         >
                             // Group Name Field
                             <div class="mb-4">
-                                <label 
-                                    for="group-name" 
+                                <label
+                                    for="group-name"
                                     class="block text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2"
                                 >
                                     "Nome del Gruppo"
@@ -246,8 +246,8 @@ pub fn CreateGroupModal(
 
                             // Group Description Field
                             <div class="mb-4">
-                                <label 
-                                    for="group-description" 
+                                <label
+                                    for="group-description"
                                     class="block text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2"
                                 >
                                     "Descrizione"
@@ -313,82 +313,13 @@ pub fn CreateGroupModal(
                                             "Creando..."
                                         }.into_view()
                                     } else {
-                                        view! { 
+                                        view! {
                                             "Crea Gruppo"
                                         }.into_view()
                                     }}
                                 </button>
                             </div>
                         </form>
-
-                        // CSS personalizzato per animazioni semplici
-                        <style>
-                            "
-                            @keyframes slideInError {
-                                0% {
-                                    transform: translateY(-10px) scale(0.95);
-                                    opacity: 0;
-                                }
-                                50% {
-                                    transform: translateY(2px) scale(1.02);
-                                }
-                                100% {
-                                    transform: translateY(0px) scale(1);
-                                    opacity: 1;
-                                }
-                            }
-                            
-                            @keyframes spin {
-                                from {
-                                    transform: rotate(0deg);
-                                }
-                                to {
-                                    transform: rotate(360deg);
-                                }
-                            }
-                            
-                            .modal-backdrop {
-                                will-change: opacity, backdrop-filter;
-                            }
-                            
-                            .modal-container {
-                                will-change: transform, opacity;
-                            }
-                            
-                            /* Smooth scrollbar per textarea */
-                            textarea::-webkit-scrollbar {
-                                width: 6px;
-                            }
-                            
-                            textarea::-webkit-scrollbar-track {
-                                background: rgba(0, 0, 0, 0.05);
-                                border-radius: 3px;
-                            }
-                            
-                            textarea::-webkit-scrollbar-thumb {
-                                background: rgba(0, 0, 0, 0.2);
-                                border-radius: 3px;
-                                transition: background 0.2s ease;
-                            }
-                            
-                            textarea::-webkit-scrollbar-thumb:hover {
-                                background: rgba(0, 0, 0, 0.3);
-                            }
-                            
-                            /* Dark mode scrollbar */
-                            .dark textarea::-webkit-scrollbar-track {
-                                background: rgba(255, 255, 255, 0.05);
-                            }
-                            
-                            .dark textarea::-webkit-scrollbar-thumb {
-                                background: rgba(255, 255, 255, 0.2);
-                            }
-                            
-                            .dark textarea::-webkit-scrollbar-thumb:hover {
-                                background: rgba(255, 255, 255, 0.3);
-                            }
-                            "
-                        </style>
                     </div>
                 </div>
                 }.into_view()

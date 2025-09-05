@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos::ev::MouseEvent;
 use crate::components::{AppNavbar, LucideIcon};
-use crate::components::ui::icons::IconSize;
+use crate::components::ui::icons::icon_size;
 use crate::api::services::CpuUsageLogService;
 use crate::api::client::ApiClient;
 use crate::utils::StorageService;
@@ -125,7 +125,7 @@ pub fn CpuLogsPage() -> impl IntoView {
         }
     };
     // Generic download function
-    fn trigger_download(bytes: &[u8], filename: &str, mime: &str) {
+    fn trigger_download(bytes: &[u8], filename: &str, _mime: &str) {
         use wasm_bindgen::JsCast;
         use web_sys::{Blob, Url};
         if let Some(window) = web_sys::window() {
@@ -172,7 +172,7 @@ pub fn CpuLogsPage() -> impl IntoView {
                                     let _ = win.history().and_then(|h| h.back());
                                 }
                             }}>
-                                <LucideIcon name="arrow-left" size=IconSize::SMALL class="text-gray-900 dark:text-white" />
+                                <LucideIcon name="arrow-left" size=icon_size::SMALL class="text-gray-900 dark:text-white" />
                             </button>
                             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">"CPU Usage Logs"</h1>
                             <div class="ml-auto flex items-center gap-2 relative" node_ref=download_dropdown_ref>

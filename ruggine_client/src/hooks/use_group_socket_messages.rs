@@ -16,7 +16,7 @@ pub fn use_group_socket_messages(
     // This hook focuses on assembling deduplicated messages for the chat view.
 
     create_effect(move |_| {
-        let current_user_id = crate::utils::storage::StorageService::new()
+        let _current_user_id = crate::utils::storage::StorageService::new()
             .get_user_profile()
             .map(|u| u.id);
         let ws_msgs = ws_ctx.as_ref().map(|w| w.messages.get());

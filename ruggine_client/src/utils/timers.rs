@@ -1,5 +1,4 @@
 use std::time::Duration;
-use wasm_bindgen::prelude::*;
 
 /// Async sleep for wasm using gloo_timers
 pub async fn sleep_ms(ms: u64) {

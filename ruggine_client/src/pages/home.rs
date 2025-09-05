@@ -3,9 +3,6 @@ use crate::components::{AppNavbar, Sidebar, CreateGroupModal, ChatView, use_toas
 use crate::types::group::GroupChatCreateRequest;
 use crate::api::facade::RuggineApiClient;
 use crate::hooks::{provide_groups_context, use_groups_list};
-use crate::context::unread_counts_context::use_unread_counts_context;
-use crate::api::services::message::MessageService;
-use std::collections::HashMap;
 
 #[component]
 pub fn HomePage() -> impl IntoView {

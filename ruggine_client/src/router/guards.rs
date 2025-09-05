@@ -31,7 +31,7 @@ pub fn AuthGuard(children: ChildrenFn) -> impl IntoView {
         // Triggera il controllo ogni volta che il counter cambia
         let _counter = auth_check_counter.get();
         let service = auth_service.get();
-        let current_path = location.pathname.get();
+        let _current_path = location.pathname.get();
         
         // Check if authenticated with valid token
         let authenticated = service.is_authenticated();
