@@ -29,5 +29,7 @@
         "Cargo.lock": "toml"
     },
     "rust-analyzer.testExplorer.enabled": true,
-    "testing.automaticallyOpenTestResults": "neverOpen"
+    "testing.automaticallyOpenTestResults": "neverOpen",
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }

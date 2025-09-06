@@ -982,19 +982,17 @@ Person(user, "User", "Uses the chat application")
 Person(admin, "Admin/Developer", "Monitors system performance")
 
 System_Boundary(ruggine, "Ruggine Chat System") {
-    Container(client_app, "Client Application", "Mobile/Desktop App", "Native mobile or desktop application for chat functionality")
+    Container(client_app, "Client Application", "Desktop App", "Desktop application for chat functionality")
     Container(server, "Chat Server", "Rust in Docker", "Handles authentication, messaging, and group management")
-    ContainerDb(database, "Database", "MySQL/PostgreSQL in Docker", "Stores user data, messages, and group information")
-    Container(log_system, "Logging System", "File System", "CPU usage logs and system monitoring")
+    ContainerDb(database, "Database", "PostgreSQL 17 in Docker", "Stores user data, messages, and group information")
     Container(auth_service, "Authentication Service", "JWT/Token-based", "User authentication and authorization")
 }
 
-Rel(user, client_app, "Uses", "Native App")
-Rel(admin, log_system, "Monitors", "CLI/File Access")
+Rel(user, client_app, "Uses", "Desktop App")
+Rel(admin, client_app, "Monitors", "Desktop App")
 Rel(client_app, server, "Communicates", "HTTPS/WebSocket")
 Rel(server, database, "Reads/Writes", "SQL over network")
 Rel(server, auth_service, "Validates", "API")
-Rel(server, log_system, "Writes logs", "File I/O")
 
 @enduml
 ```
@@ -1003,11 +1001,10 @@ Rel(server, log_system, "Writes logs", "File I/O")
 
 The system components interact as follows:
 
-1. **Client Application**: Native mobile or desktop application that handles user interactions
+1. **Client Application**: Desktop application that handles user interactions
 2. **Chat Server**: Core business logic written in Rust, deployed in Docker containers for messaging, groups, and user management
 3. **Database**: Persistent storage for all application data, hosted in Docker containers on a separate database server
 4. **Authentication Service**: Handles user registration and login security using JWT tokens
-5. **Logging System**: Monitors CPU usage and system performance
 
 ---
 
@@ -1019,8 +1016,8 @@ The deployment diagram shows how the Ruggine Chat System components are distribu
 @startuml
 !include <C4/C4_Deployment>
 
-Deployment_Node(user_device, "User Device", "Windows/Linux/macOS/Android/iOS") {
-    Container(client, "Ruggine Client App", "Native Mobile/Desktop App", "Chat functionality with native UI")
+Deployment_Node(user_device, "User Device", "Windows/Linux/macOS") {
+    Container(client, "Ruggine Client App", "Desktop App", "Chat functionality with native UI")
 }
 
 Deployment_Node(server_infrastructure, "Application Server Infrastructure", "Linux Server with Docker") {
@@ -1029,18 +1026,13 @@ Deployment_Node(server_infrastructure, "Application Server Infrastructure", "Lin
             Container(chat_server, "Chat Server", "Rust Binary", "Main server application written in Rust")
             Container(auth_service, "Auth Service", "JWT Service", "Authentication handling")
         }
-        Container(log_monitor, "Log Monitor", "System Service", "CPU monitoring daemon")
-    }
-    
-    Deployment_Node(file_system, "File System", "Docker Volume") {
-        Container(log_files, "Log Files", "Text Files", "CPU usage logs")
     }
 }
 
 Deployment_Node(database_infrastructure, "Database Server Infrastructure", "Separate Linux Server with Docker") {
     Deployment_Node(db_docker_host, "Database Docker Host", "Ubuntu 20.04 LTS + Docker Engine") {
         Deployment_Node(db_container, "Database Container", "Docker Container") {
-            ContainerDb(database, "Database", "MySQL/PostgreSQL 13", "User and message data")
+            ContainerDb(database, "Database", "PostgreSQL 17", "User and message data")
         }
         Deployment_Node(db_volume, "Database Volume", "Docker Volume") {
             Container(db_storage, "Database Storage", "Persistent Data", "Database files and backups")
@@ -1048,19 +1040,12 @@ Deployment_Node(database_infrastructure, "Database Server Infrastructure", "Sepa
     }
 }
 
-Deployment_Node(admin_workstation, "Admin Workstation", "Windows/Linux") {
-    Container(cli_tools, "CLI Tools", "Terminal/SSH/Docker CLI", "System and container monitoring")
-}
-
-Rel(client, chat_server, "HTTPS/WebSocket", "TCP 443/8080")
-Rel(chat_server, database, "SQL Connection", "TCP 3306/5432")
+Rel(client, chat_server, "HTTPS/WebSocket", "TCP 8002")
+Rel(chat_server, database, "SQL Connection", "TCP 5432")
 Rel(chat_server, auth_service, "Local API", "HTTP")
-Rel(log_monitor, log_files, "File I/O", "Write logs")
-Rel(cli_tools, log_files, "SSH/Docker", "Read logs")
-Rel(cli_tools, chat_server, "Docker API/SSH", "Container monitoring")
 Rel(database, db_storage, "Data Persistence", "File I/O")
 
-note right of user_device : Native applications for:\n- Windows Desktop\n- Linux Desktop\n- macOS Desktop\n- Android Mobile\n- iOS Mobile
+note right of user_device : Native applications for:\n- Windows Desktop\n- Linux Desktop\n- macOS Desktop\n
 
 note right of server_infrastructure : Docker containers for\nRust application deployment
 
@@ -1072,21 +1057,19 @@ note right of database_infrastructure : Dockerized database with\npersistent vol
 ## Deployment Specifications
 
 ### Client Deployment
-- **Platforms**: Windows, Linux, macOS (Desktop), Android, iOS (Mobile)
-- **Application Type**: Native mobile and desktop applications
+- **Platforms**: Windows, Linux, macOS (Desktop)
+- **Application Type**: desktop applications
 - **Requirements**: 
   - Desktop: Minimum 2GB RAM, 100MB storage space
-  - Mobile: Minimum 1GB RAM, 50MB storage space
   - Internet connection
-  - Platform-specific frameworks (e.g., .NET for Windows, Cocoa for macOS, Android SDK, iOS SDK)
 
 ### Server Deployment (Docker-based)
 - **Infrastructure**: Docker containers on Linux servers
 - **Operating System**: Ubuntu 20.04 LTS with Docker Engine
 - **Hardware Requirements**:
-  - Minimum 4GB RAM
-  - 2 CPU cores
-  - 50GB storage (application server)
+  - Minimum 8GB RAM
+  - 8 CPU cores
+  - 10GB storage (application server)
   - Network interface with stable internet connection
 - **Software Stack**:
   - Docker Engine 20.10+
@@ -1100,18 +1083,17 @@ note right of database_infrastructure : Dockerized database with\npersistent vol
 - **Hardware Requirements**:
   - Minimum 8GB RAM
   - 4 CPU cores
-  - 200GB+ storage (database + Docker volumes)
+  - 20GB+ storage (database + Docker volumes)
   - High-speed network interface
 - **Software Stack**:
   - Docker Engine 20.10+
-  - MySQL 8.0+ or PostgreSQL 13+ Docker images
+  - PostgreSQL 17 Docker images
   - Docker volumes for persistent data storage
   - Database backup and recovery containers
 
 ### Network Requirements
-- **Client-Server**: HTTPS (port 443) or WebSocket (port 8080)
+- **Client-Server**: HTTPS (port 8002) or WebSocket (port 8002)
 - **Server-Database**: MySQL (port 3306) or PostgreSQL (port 5432, secure network between containers)
-- **Admin Access**: SSH (port 22) for remote administration, Docker API for container management
 - **Container Communication**: Docker network bridges for inter-container communication
 
 ### Scalability Considerations
