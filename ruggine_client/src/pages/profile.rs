@@ -7,12 +7,12 @@ use crate::utils::StorageService;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::components::{AppNavbar, LucideIcon};
-use crate::components::ui::icons::IconSize;
+use crate::components::ui::icons::icon_size;
 use web_sys;
 
 #[component]
 pub fn ProfilePage() -> impl IntoView {
-    let navigate = use_navigate();
+    let _navigate = use_navigate();
 
     // Signals per i dati utente
     let (first_name, set_first_name) = create_signal(String::new());
@@ -26,12 +26,12 @@ pub fn ProfilePage() -> impl IntoView {
     let (original_address, set_original_address) = create_signal(String::new());
     let (original_birthday, set_original_birthday) = create_signal(String::new());
     let (original_gender, set_original_gender) = create_signal(String::new());
-    let (loading_username, set_loading_username) = create_signal(false);
+    let (_loading_username, _set_loading_username) = create_signal(false);
     let (loading_profile, set_loading_profile) = create_signal(false);
-    let (error_username, set_error_username) = create_signal(Option::<String>::None);
+    let (_error_username, _set_error_username) = create_signal(Option::<String>::None);
     let (error_profile, set_error_profile) = create_signal(Option::<String>::None);
-    let (success_username, set_success_username) = create_signal(Option::<String>::None);
-    let (success_profile, set_success_profile) = create_signal(Option::<String>::None);
+    let (_success_username, _set_success_username) = create_signal(Option::<String>::None);
+    let (_success_profile, set_success_profile) = create_signal(Option::<String>::None);
 
     // Carica dati utente all'apertura
     create_effect(move |_| {
@@ -50,7 +50,7 @@ pub fn ProfilePage() -> impl IntoView {
         }
     });
 
-    let auth_service = AuthService::new(
+    let _auth_service = AuthService::new(
         ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
         StorageService::new(),
     );
@@ -128,7 +128,7 @@ pub fn ProfilePage() -> impl IntoView {
                                     let _ = win.history().and_then(|h| h.back());
                                 }
                             }}>
-                                <LucideIcon name="arrow-left" size=IconSize::SMALL class="text-gray-900 dark:text-white" />
+                                <LucideIcon name="arrow-left" size=icon_size::SMALL class="text-gray-900 dark:text-white" />
                             </button>
                             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">"Il Tuo Profilo"</h1>
                         </div>

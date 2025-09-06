@@ -11,7 +11,6 @@ use crate::types::membership::{
 use serde::Serialize;
 use once_cell::sync::Lazy;
 use std::sync::RwLock;
-use std::time::Duration;
 use crate::utils::timers::now_ms;
 
 // Simple in-memory cache: map group_id -> (timestamp_ms, data)
@@ -22,7 +21,6 @@ const CACHE_TTL_SECS: u64 = 5; // small TTL to avoid stale data but prevent rapi
 #[derive(Clone)]
 pub struct GroupMembershipService {
     http_client: ApiClient,
-    storage_service: StorageService,
 }
 
 impl GroupMembershipService {
@@ -79,10 +77,9 @@ impl GroupMembershipService {
         Ok(GroupMembership::from(response))
     }
     /// Create new group membership service
-    pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
+    pub fn new(http_client: ApiClient, _storage_service: StorageService) -> Self {
         Self {
             http_client,
-            storage_service,
         }
     }
 

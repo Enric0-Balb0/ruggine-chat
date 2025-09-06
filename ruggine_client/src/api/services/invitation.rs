@@ -12,15 +12,13 @@ use crate::types::{
 #[derive(Clone)]
 pub struct InvitationService {
 	http_client: ApiClient,
-	storage_service: StorageService,
 }
 
 impl InvitationService {
 	/// Create new invitation service
-	pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
+	pub fn new(http_client: ApiClient, _storage_service: StorageService) -> Self {
 		Self {
 			http_client,
-			storage_service,
 		}
 	}
 

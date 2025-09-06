@@ -87,9 +87,14 @@ pub fn ShowInvitesModal(
                     .get_user_profile()
                     .map(|u| u.id);
                 let filtered = match (tab, current_user_id) {
-                    (1, Some(uid)) => all_invites.into_iter().filter(|inv| inv.from_user_id == uid).collect::<Vec<_>>(),
-                    // default: received
-                    _ => all_invites.into_iter().filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1)).collect::<Vec<_>>()
+                    // sent invites: only those where current user is the sender and not self-invites
+                    (1, Some(uid)) => all_invites.into_iter()
+                        .filter(|inv| inv.from_user_id == uid && inv.from_user_id != inv.to_user_id)
+                        .collect::<Vec<_>>(),
+                    // default: received invites (exclude self-invites)
+                    _ => all_invites.into_iter()
+                        .filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1) && inv.from_user_id != inv.to_user_id)
+                        .collect::<Vec<_>>()
                 };
                 set_local_invites.set(filtered);
             }
@@ -164,7 +169,7 @@ pub fn ShowInvitesModal(
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
                     // refresh local tab view
-                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1)).collect());
+                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
                 }
                 // Toast di successo
                 toast.success("Invito accettato! Ora fai parte del gruppo.");
@@ -202,7 +207,7 @@ pub fn ShowInvitesModal(
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
                     // refresh local tab view
-                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1)).collect());
+                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
                 }
                 toast.success("Invito rifiutato.");
                 // Call external callback if present (for side-effects like refresh)
@@ -274,8 +279,8 @@ pub fn ShowInvitesModal(
                         </div>
                         // Tab switcher: placed under description, buttons attached with sliding indicator
                         <div class="mt-3">
-                                <div class="relative inline-block rounded overflow-hidden w-full max-w-xs">
-                                <div class="flex w-full divide-x divide-border dark:divide-border-dark">
+                            <div class="relative w-full rounded overflow-hidden">
+                            <div class="flex w-full divide-x divide-border dark:divide-border-dark">
                                     <button
                                         class=move || if active_tab.get() == 0 { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200 transition-colors" } else { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-transparent text-text-secondary dark:text-text-secondary-dark transition-colors" }
                                         on:click=move |_| { set_active_tab.set(0); }
@@ -310,7 +315,7 @@ pub fn ShowInvitesModal(
                                 if list.is_empty() {
                                     view! {
                                         <div class="py-8 text-center text-text-secondary dark:text-text-secondary-dark">
-                                            "Nessun invito ricevuto."
+                                            {if active_tab.get() == 0 { "Nessun invito ricevuto." } else { "Nessun invito inviato." }}
                                         </div>
                                     }.into_view()
                                 } else {
@@ -366,7 +371,7 @@ pub fn ShowInvitesModal(
                                                                 // not pending: show status label
                                                                 view! {
                                                                     <span class="px-3 py-1 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-default">
-                                                                        {status.to_string().to_uppercase()}
+                                                                        {status.display_name()}
                                                                     </span>
                                                                 }.into_view()
                                                             }}

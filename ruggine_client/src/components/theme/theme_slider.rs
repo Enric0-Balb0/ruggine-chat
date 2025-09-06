@@ -1,6 +1,7 @@
 use leptos::*;
 use crate::utils::{use_theme, Theme};
-use crate::components::{LucideIcon, IconSize};
+use crate::components::LucideIcon;
+use crate::components::ui::icons::icon_size;
 
 /// Theme slider toggle component for dropdown menus
 #[component]
@@ -23,9 +24,9 @@ pub fn ThemeSlider() -> impl IntoView {
         <div class="flex items-center justify-between w-full">
             <div class="flex items-center gap-2">
                 {move || if is_dark() { 
-                    view! { <LucideIcon name="moon" size=IconSize::MEDIUM /> }
+                    view! { <LucideIcon name="moon" size=icon_size::MEDIUM /> }
                 } else { 
-                    view! { <LucideIcon name="sun" size=IconSize::MEDIUM /> }
+                    view! { <LucideIcon name="sun" size=icon_size::MEDIUM /> }
                 }}
                 <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
                     "Tema Scuro"

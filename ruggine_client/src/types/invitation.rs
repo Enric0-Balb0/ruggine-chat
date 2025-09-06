@@ -54,6 +54,17 @@ impl fmt::Display for InvitationStatus {
     }
 }
 
+impl InvitationStatus {
+    /// User-friendly display name in Italian
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            InvitationStatus::Pending => "In attesa",
+            InvitationStatus::Accepted => "Accettato",
+            InvitationStatus::Rejected => "Rifiutato",
+        }
+    }
+}
+
 // =============================================================================
 // DTOs - Server synchronized
 // =============================================================================

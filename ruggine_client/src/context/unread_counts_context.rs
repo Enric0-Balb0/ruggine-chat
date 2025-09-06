@@ -1,5 +1,5 @@
 use leptos::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Context for managing unread message counts per group
 #[derive(Clone)]
@@ -9,16 +9,22 @@ pub struct UnreadCountsContext {
     // selectively call update_message_read_at only for those messages (or for
     // new socket messages that are not part of the initial set).
     pub unread_message_ids: RwSignal<HashMap<i32, Vec<i32>>>, // group_id -> vec![message_id]
+    // Track message ids that have been locally marked as read so we avoid
+    // re-sending update_message_read_at for the same ids when the user scrolls
+    // up and down.
+    pub unread_marked_read: RwSignal<HashMap<i32, HashSet<i32>>>, // group_id -> set![message_id]
 }
 
 /// Provide the unread counts context to the app
 pub fn provide_unread_counts_context() -> RwSignal<HashMap<i32, u32>> {
     let unread_counts = create_rw_signal::<HashMap<i32, u32>>(HashMap::new());
     let unread_message_ids = create_rw_signal::<HashMap<i32, Vec<i32>>>(HashMap::new());
+    let unread_marked_read = create_rw_signal::<HashMap<i32, HashSet<i32>>>(HashMap::new());
     // Noisy debug effect removed; keep the signal provisioning lightweight.
     provide_context(UnreadCountsContext {
         unread_counts: unread_counts.clone(),
         unread_message_ids: unread_message_ids.clone(),
+        unread_marked_read: unread_marked_read.clone(),
     });
     unread_counts
 }
@@ -35,6 +41,13 @@ pub fn use_unread_message_ids_context() -> RwSignal<HashMap<i32, Vec<i32>>> {
     use_context::<UnreadCountsContext>()
         .expect("UnreadCountsContext not found!")
         .unread_message_ids
+}
+
+/// Access the local marked-as-read registry (group_id -> set of message ids)
+pub fn use_unread_marked_read_context() -> RwSignal<HashMap<i32, HashSet<i32>>> {
+    use_context::<UnreadCountsContext>()
+        .expect("UnreadCountsContext not found!")
+        .unread_marked_read
 }
 
 /// Refresh unread count and ids for a specific group from the server and overwrite local signals.
@@ -68,8 +81,17 @@ pub async fn refresh_unread_for_group(group_id: i32) -> Option<u32> {
             ctx.unread_counts.update(|map| {
                 map.insert(group_id, count);
             });
+            let ids_vec: Vec<i32> = msgs.iter().map(|m| m.id).collect();
+            let ids_set: HashSet<i32> = ids_vec.iter().copied().collect();
             ctx.unread_message_ids.update(|map| {
-                map.insert(group_id, msgs.iter().map(|m| m.id).collect());
+                map.insert(group_id, ids_vec.clone());
+            });
+            // If the server still reports some ids as unread, remove them from the
+            // local marked-as-read set because our local flag would be stale.
+            ctx.unread_marked_read.update(|map| {
+                if let Some(set) = map.get_mut(&group_id) {
+                    set.retain(|id| !ids_set.contains(id));
+                }
             });
             Some(count)
         }

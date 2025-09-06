@@ -8,12 +8,11 @@ use crate::types::cpu_usage_log::{PaginatedCpuUsageLogResponse, CpuUsagePage};
 #[derive(Clone)]
 pub struct CpuUsageLogService {
     http_client: ApiClient,
-    storage_service: StorageService,
 }
 
 impl CpuUsageLogService {
-    pub fn new(http_client: ApiClient, storage_service: StorageService) -> Self {
-        Self { http_client, storage_service }
+    pub fn new(http_client: ApiClient, _storage_service: StorageService) -> Self {
+        Self { http_client }
     }
 
     /// Retrieve paginated CPU usage logs. Cursor is an optional RFC3339 timestamp.

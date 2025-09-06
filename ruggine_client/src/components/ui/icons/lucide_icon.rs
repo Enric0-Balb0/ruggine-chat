@@ -42,7 +42,7 @@ pub fn LucideIcon(
 }
 
 /// Common icon sizes as constants
-pub mod IconSize {
+pub mod icon_size {
     pub const SMALL: u32 = 16;
     pub const MEDIUM: u32 = 22;
     pub const LARGE: u32 = 26;

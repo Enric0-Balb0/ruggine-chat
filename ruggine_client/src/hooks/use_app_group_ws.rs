@@ -60,7 +60,7 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
     // Observe status changes and log them to help debugging connectivity
     create_effect(move |_| {
         if let Some(ws_ctx) = ws.get() {
-            let status = ws_ctx.status.get();
+            let _status = ws_ctx.status.get();
                 
         }
     });

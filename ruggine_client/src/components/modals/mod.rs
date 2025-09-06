@@ -1,12 +1,12 @@
 
 // Modal components
 
-pub mod create_group_modal;
-pub mod invite_member_modal;
-pub mod group_details_modal;
-pub mod show_invites_modal;
+pub mod group_creation_modal;
+pub mod member_invitation_modal;
+pub mod group_settings_modal;
+pub mod invitations_list_modal;
 
-pub use create_group_modal::CreateGroupModal;
-pub use invite_member_modal::{InviteMemberModal, InviteMemberRequest};
-pub use group_details_modal::GroupDetailsModal;
-pub use show_invites_modal::ShowInvitesModal;
+pub use group_creation_modal::CreateGroupModal;
+pub use member_invitation_modal::{InviteMemberModal, InviteMemberRequest};
+pub use group_settings_modal::GroupDetailsModal;
+pub use invitations_list_modal::ShowInvitesModal;

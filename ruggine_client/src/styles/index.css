@@ -1,10 +1,13 @@
 /* Main Tailwind CSS entry point */
 @tailwind base;
-@tailwind components;
-@tailwind utilities;
 
+/* Import project-specific base and component styles before Tailwind's components layer
+  so any @layer components blocks in those files are processed and emitted. */
 @import './base.css';
 @import './components.css';
+
+@tailwind components;
+@tailwind utilities;
 
 /* Form Controls - Select and Date inputs */
 html.dark select {
@@ -114,6 +117,21 @@ textarea::placeholder {
 
 .dark ::-webkit-scrollbar-thumb:active {
   background: #666666;
+}
+
+/* Explicit chat wrapper spacing rules: appended here to guarantee they
+   are included in the compiled output even if @import processing differs
+   across environments. */
+div[id^="msg-"] {
+  display: flow-root !important;
+}
+
+/* Group spacing: first uses top margin; all intra-group gaps uniform */
+.msg-wrapper.continued, div[id^="msg-"].continued { margin-bottom: 2px !important; }
+.msg-wrapper.first, div[id^="msg-"].first { margin-top: 1rem !important; margin-bottom: 2px !important; }
+
+.chat-msg {
+  margin-bottom: 0 !important;
 }
 html.dark select {
   color: #c8c6c4 !important;

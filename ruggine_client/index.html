@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <title>Ruggine Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- PWA / favicon -->
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/png" href="public/logos/logo-light.png">
+  <link rel="apple-touch-icon" href="public/logos/logo-light.png">
+  <!-- fallback favicon.ico (optional) -->
+  <link rel="shortcut icon" href="public/logos/logo-light.png">
     <link data-trunk rel="css" href="src/styles/tailwind.css" />
     <link data-trunk rel="copy-dir" href="public" />
     <link data-trunk rel="rust" data-wasm-opt="z" />
@@ -65,6 +71,14 @@
         scrollbar-width: thin !important;
         scrollbar-color: rgba(138, 136, 134, 0.6) rgba(243, 242, 241, 0.3) !important;
       }
+    </style>
+    <!-- Force chat spacing overrides (injected last so it takes precedence) -->
+    <style>
+      /* Uniform intra-group gap */
+      .msg-wrapper.continued, div[id^="msg-"].continued { margin-bottom: 2px !important; }
+      /* First message: top margin separates groups; bottom matches intra-group */
+      .msg-wrapper.first, div[id^="msg-"].first { margin-top: 1rem !important; margin-bottom: 2px !important; }
+      .chat-msg { margin-bottom: 0 !important; }
     </style>
   </head>
   <body></body>

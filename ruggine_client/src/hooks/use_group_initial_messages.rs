@@ -64,12 +64,12 @@ pub fn use_group_initial_messages(
         let set_next_cursor = set_next_cursor.clone();
         let set_has_more = set_has_more.clone();
         std::rc::Rc::new(move || {
-            // if no more pages or already loading, skip
-            if !has_more.get() || loading_more.get() {
+            // Non-reactive reads: we don't want to subscribe this closure to these signals
+            if !has_more.get_untracked() || loading_more.get_untracked() {
                 return;
             }
             set_loading_more.set(true);
-            let cursor_opt = next_cursor.get();
+            let cursor_opt = next_cursor.get_untracked();
             let cursor_clone = cursor_opt.clone();
             spawn_local(async move {
                 let storage_service = StorageService::new();
@@ -82,7 +82,7 @@ pub fn use_group_initial_messages(
                     Ok(page) => {
                         let mut new_msgs = page.data.clone();
                         // prepend older messages before existing ones
-                        let existing = messages.get();
+                        let existing = messages.get_untracked();
                         new_msgs.extend(existing.clone());
                         set_messages.set(new_msgs);
                         set_has_more.set(page.pagination.has_more);

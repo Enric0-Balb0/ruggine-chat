@@ -21,8 +21,7 @@ pub fn App() -> impl IntoView {
 
 #[component]
 pub fn AppContent() -> impl IntoView {
-    let theme_ctx = use_theme();
-    use crate::context::auth_context::use_auth_context;
+    let _theme_ctx = use_theme();
 
     // WebSocket context is created and provided by `AppLayout` for authenticated routes.
 

@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_router::*;
-use crate::components::{UserAvatar, ThemeSlider, LucideIcon, IconSize, use_toast};
+use crate::components::{UserAvatar, ThemeSlider, LucideIcon, use_toast};
+use crate::components::ui::icons::icon_size;
 use crate::api::services::AuthService;
 use crate::utils::StorageService;
 use crate::hooks::use_group_message_ws::UseGroupMessageWs;
@@ -149,7 +150,7 @@ pub fn AppNavbar() -> impl IntoView {
                         class="p-1 rounded-lg hover:bg-white/10 transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-white/20"
                         aria-label="Open menu"
                     >
-                        <LucideIcon name="menu" size=IconSize::MEDIUM class="text-white" />
+                        <LucideIcon name="menu" size=icon_size::MEDIUM class="text-white" />
                     </button>
                     
                     // Dropdown menu
@@ -159,7 +160,7 @@ pub fn AppNavbar() -> impl IntoView {
                         let handle_profile = handle_profile.clone();
                         let handle_notifications = handle_notifications.clone();
                         let handle_help = handle_help.clone();
-                        let handle_stats = handle_stats.clone();
+                        let _handle_stats = handle_stats.clone();
                         
                         move || {
                             if is_menu_open.get() {
@@ -179,7 +180,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                 on:click={let handler = handle_settings.clone(); move |e| handler.call(e)}
                                             >
-                                                <LucideIcon name="settings" size=IconSize::MEDIUM />
+                                                <LucideIcon name="settings" size=icon_size::MEDIUM />
                                                 <span>Impostazioni</span>
                                             </button>
                                             
@@ -187,7 +188,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                 on:click={let handler = handle_profile.clone(); move |e| handler.call(e)}
                                             >
-                                                <LucideIcon name="user" size=IconSize::MEDIUM />
+                                                <LucideIcon name="user" size=icon_size::MEDIUM />
                                                 <span>Profilo utente</span>
                                             </button>
                                             
@@ -195,7 +196,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                 on:click={let handler = handle_notifications.clone(); move |e| handler.call(e)}
                                             >
-                                                <LucideIcon name="bell" size=IconSize::MEDIUM />
+                                                <LucideIcon name="bell" size=icon_size::MEDIUM />
                                                 <div class="flex flex-col items-start">
                                                     <span>Notifiche</span>
                                                     <span class="text-xs text-gray-600 dark:text-gray-300">3 non lette</span>
@@ -208,7 +209,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                 on:click={let handler = handle_help.clone(); move |e| handler.call(e)}
                                             >
-                                                <LucideIcon name="help-circle" size=IconSize::MEDIUM />
+                                                <LucideIcon name="help-circle" size=icon_size::MEDIUM />
                                                 <span>Aiuto & Supporto</span>
                                             </button>
                                             
@@ -218,7 +219,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                         class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                         on:click={let navigate = navigate.clone(); let set_is_menu_open = set_is_menu_open; move |_| { set_is_menu_open.set(false); navigate("/admin/cpu-logs", Default::default()); }}
                                                     >
-                                                        <LucideIcon name="server" size=IconSize::MEDIUM />
+                                                        <LucideIcon name="server" size=icon_size::MEDIUM />
                                                         <span>"CPU Logs"</span>
                                                     </button>
                                                 }.into_view()
@@ -232,7 +233,7 @@ pub fn AppNavbar() -> impl IntoView {
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150"
                                                 on:click={let handler = handle_logout.clone(); move |e| handler.call(e)}
                                             >
-                                                <LucideIcon name="log-out" size=IconSize::MEDIUM class="text-red-600 dark:text-red-400" />
+                                                <LucideIcon name="log-out" size=icon_size::MEDIUM class="text-red-600 dark:text-red-400" />
                                                 <span>Logout</span>
                                             </button>
                                         </div>

@@ -41,17 +41,16 @@ pub enum DropdownState {
 pub fn ChatView(
     #[prop(into)] group_data: GroupMembershipWithDetails,
 ) -> impl IntoView {
-    // Signal for messages managed by the new hook
     use leptos::use_context;
     use crate::hooks::use_group_message_ws::UseGroupMessageWs;
     let ws_ctx = use_context::<Option<UseGroupMessageWs>>();
-    // Signal per messaggi locali inviati via input
     let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
     let set_local_messages_rc = Rc::new(set_local_messages);
     let unread_counts = use_unread_counts_context();
-    // Also access the unread message ids map so we can selectively call update_message_read_at
     use crate::context::unread_counts_context::use_unread_message_ids_context;
+    use crate::context::unread_counts_context::use_unread_marked_read_context;
     let unread_message_ids = use_unread_message_ids_context();
+    let unread_marked_read = use_unread_marked_read_context();
     let group_id_for_update = group_data.membership.group_chat_id;
     let add_message: Rc<dyn Fn(Message)> = {
         let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
@@ -59,7 +58,6 @@ pub fn ChatView(
         let group_id = group_id_for_update;
         Rc::new(move |msg: Message| {
             set_local_messages_rc.update(|msgs| msgs.push(msg.clone()));
-            // After sending, call update_message_read_at and decrement the counter using clone-set
             let unread_counts = unread_counts.clone();
             let msg_id = msg.id;
             leptos::spawn_local(async move {
@@ -74,31 +72,24 @@ pub fn ChatView(
                 }
                 let message_service = MessageService::new(http_client, storage_service);
                 let now = chrono::Utc::now().to_rfc3339();
-                // Log before attempting update
                 let res = message_service.update_message_read_at(msg_id, now).await;
                 match res {
                     Ok(()) => {
-                        // success: update local state
-                        // On success, decrement the unread counter for the group
                         decrement_unread_for_group(&unread_counts, group_id);
-                        // Also remove the message id from the initial unread ids map if present
                         unread_message_ids.update(|map| {
                             if let Some(vec_ids) = map.get_mut(&group_id) {
                                 vec_ids.retain(|id| *id != msg_id);
                             }
                         });
                     }
-                    Err(e) => {
-                        // ignore error silently; batching flow will retry for buffered ids
+                    Err(_e) => {
                     }
                 }
             });
         })
     };
-    let (initial_messages, initial_loading, initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
+    let (initial_messages, initial_loading, _initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
-
-    // (diagnostics removed)
 
     let ws_messages = use_group_socket_messages(
         group_data.membership.group_chat_id,
@@ -107,14 +98,10 @@ pub fn ChatView(
     );
     use std::collections::HashSet;
     use crate::types::message_ws::{WebSocketMessage, ServerEvent, GroupEvent};
-    // Presence tracking: we initialize from the API and keep WS-derived deltas.
-    // Keep two sets and compute their union for the UI count so that if other clients
-    // are already online (before WS events arrive) we still display them.
     let ws_ctx_for_presence = ws_ctx.clone();
     let (ws_online_user_ids, set_ws_online_user_ids) = create_signal(HashSet::<i32>::new());
     let (initial_online_user_ids, set_initial_online_user_ids) = create_signal(HashSet::<i32>::new());
 
-    // Rebuild WS-derived set from socket events (this represents realtime joins/lefts)
     {
         let ws_ctx_for_presence = ws_ctx_for_presence.clone();
         let set_ws_online_user_ids = set_ws_online_user_ids.clone();
@@ -139,14 +126,12 @@ pub fn ChatView(
         });
     }
 
-    // On mount, fetch the current connected/online users from the API so we don't miss
-    // users that were already connected before this client opened the app.
     {
         let set_initial = set_initial_online_user_ids.clone();
         leptos::spawn_local(async move {
             use crate::utils::storage::StorageService;
             let storage = StorageService::new();
-            let mut http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage.get_token() {
                 http.set_auth_token(Some(token_response.token));
             }
@@ -164,7 +149,6 @@ pub fn ChatView(
         });
     }
 
-    // Combined online count: union of API-initialized set and WS-derived set, +1 for self
     let online_count = create_memo(move |_| {
         let mut union_set = HashSet::<i32>::new();
         for id in initial_online_user_ids.get().iter() { union_set.insert(*id); }
@@ -179,10 +163,8 @@ pub fn ChatView(
         count
     });
 
-    // Use unread counts context for badge decrement
     let unread_counts = use_unread_counts_context();
 
-    // decrement_unread_for_group is provided by scroll_helpers
     let messages = create_memo(move |_| {
         let mut all_msgs = Vec::new();
         all_msgs.extend(initial_messages.get());
@@ -197,16 +179,13 @@ pub fn ChatView(
         deduped.sort_by_key(|m| m.sent_at);
         deduped
     });
-    // Local UI guards and signals used by scrolling / anchoring logic
     let (scrolled_initial, set_scrolled_initial) = create_signal(false);
     let (first_unread_anchor, set_first_unread_anchor) = create_signal(None::<i32>);
     let (is_loading_local, set_is_loading_local) = create_signal(false);
     let (suppress_scroll_events, set_suppress_scroll_events) = create_signal(false);
-    // Show a floating "scroll to bottom" button when the user scrolled up
     let (show_scroll_to_bottom, set_show_scroll_to_bottom) = create_signal(false);
-    // Buffer for pending mark-as-read updates
+    let (user_scrolled_once, set_user_scrolled_once) = create_signal(false);
     let pending_update_ids: std::rc::Rc<std::cell::RefCell<Vec<i32>>> = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
-    // Prev scroll metrics for restoring viewport when prepending older messages
     let (prev_scroll_top, set_prev_scroll_top) = create_signal(0i32);
     let (prev_scroll_height, set_prev_scroll_height) = create_signal(0i32);
     let (dropdown_state, set_dropdown_state) = create_signal(DropdownState::Closed);
@@ -218,7 +197,6 @@ pub fn ChatView(
 
     let dropdown_ref = create_node_ref::<Div>();
     let messages_container_ref = create_node_ref::<Div>();
-    // Strong guard to lock other programmatic scrolls while we anchor to the first-unread position
     let anchor_scroll_locked: std::rc::Rc<std::cell::Cell<bool>> = std::rc::Rc::new(std::cell::Cell::new(false));
     {
         let local_messages_for_scroll = local_messages.clone();
@@ -229,9 +207,7 @@ pub fn ChatView(
             if locals.is_empty() {
                 return;
             }
-            // Get the last local message id
             let last_id = locals.last().unwrap().id;
-            // Small timeout to allow the DOM to render the new message
             let anchor_scroll_locked_for_send_inner = anchor_scroll_locked_for_send.clone();
             set_timeout(move || {
                 let doc = match web_sys::window() {
@@ -239,32 +215,28 @@ pub fn ChatView(
                     None => return,
                 };
                 if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", last_id)) {
-                    if !anchor_scroll_locked_for_send_inner.get() {
+                    if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
                         let _ = elem.scroll_into_view_with_bool(true);
                     }
                 } else if let Some(container) = messages_container_ref_for_scroll.get() {
-                    // fallback: scroll container to bottom only if anchor lock not active
-                    if !anchor_scroll_locked_for_send_inner.get() {
+                    if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
                         container.set_scroll_top(container.scroll_height());
                     }
                 }
             }, std::time::Duration::from_millis(50));
         });
     }
-    // Flag indicating whether a flush is scheduled
     let flush_scheduled: std::rc::Rc<std::cell::Cell<bool>> = std::rc::Rc::new(std::cell::Cell::new(false));
     {
         let messages = messages.clone();
         let messages_container_ref = messages_container_ref.clone();
         let initial_loading = initial_loading.clone();
         let set_scrolled_initial = set_scrolled_initial.clone();
-        // clone load_more for this effect so we don't move the original `load_more`
         let load_more_init = load_more.clone();
-        // clone the anchor lock for this effect so the original `anchor_scroll_locked` isn't moved
         let anchor_scroll_locked_for_effect = anchor_scroll_locked.clone();
 
         create_effect(move |_| {
-            if initial_loading.get() || scrolled_initial.get() {
+            if initial_loading.get() || scrolled_initial.get() || user_scrolled_once.get() {
                 return;
             }
             let msgs = messages.get_untracked();
@@ -272,11 +244,9 @@ pub fn ChatView(
                 return;
             }
 
-            // Determine first unread id per the initial unread ids (server-provided)
             let unread_map = unread_message_ids.get_untracked();
             let maybe_initial_unread = unread_map.get(&group_id_for_update).cloned();
 
-            // Helper to perform a DOM scroll to an element inside the container
             let anchor_lock_for_closure = anchor_scroll_locked_for_effect.clone();
             let anchor_for_scroll = anchor_scroll_locked_for_effect.clone();
             let scroll_elem_into_view = move |container: Option<leptos::HtmlElement<Div>>, elem_id: String| {
@@ -284,9 +254,21 @@ pub fn ChatView(
                     Some(w) => match w.document() { Some(d) => d, None => return false },
                     None => return false,
                 };
-                if let Some(elem) = doc.get_element_by_id(&elem_id) {
-                    let _ = elem.scroll_into_view_with_bool(true);
-                    true
+                
+                // Try to find the unread separator first, fallback to message element
+                let separator_id = format!("unread-separator-{}", elem_id.trim_start_matches("msg-"));
+                let target_element = doc.get_element_by_id(&separator_id)
+                    .or_else(|| doc.get_element_by_id(&elem_id));
+                
+                if let Some(elem) = target_element {
+                    if let Some(c) = container {
+                        let desired = compute_bottom_aligned_scroll(&c, &elem);
+                        c.set_scroll_top(desired);
+                        true
+                    } else {
+                        let _ = elem.scroll_into_view_with_bool(true);
+                        true
+                    }
                 } else if let Some(c) = container {
                     if !anchor_for_scroll.get() {
                         c.set_scroll_top(c.scroll_height());
@@ -299,7 +281,6 @@ pub fn ChatView(
                 }
             };
 
-            // If there are initial unread ids, try to scroll to the earliest one that is loaded.
             if let Some(initial_ids) = maybe_initial_unread {
                 if !initial_ids.is_empty() {
                     anchor_scroll_locked_for_effect.set(true);
@@ -321,7 +302,6 @@ pub fn ChatView(
                             }
                         }
 
-                        // If element not present, attempt retries (load_more) up to a limit
                         let attempts = std::rc::Rc::new(std::cell::Cell::new(0));
                         let max_attempts = 8;
                         let messages_clone = messages.clone();
@@ -371,7 +351,7 @@ pub fn ChatView(
                                             }
                                         }, std::time::Duration::from_millis(300));
                                     } else {
-                                        if !anchor_lock_for_closure.get() {
+                                        if !anchor_lock_for_closure.get() && !user_scrolled_once.get() {
                                             container.set_scroll_top(container.scroll_height());
                                         }
                                     }
@@ -433,7 +413,7 @@ pub fn ChatView(
                                                     }
                                                 }, std::time::Duration::from_millis(300));
                                             } else {
-                                                if !anchor_scroll_locked_for_retry.get() {
+                                                if !anchor_scroll_locked_for_retry.get() && !user_scrolled_once.get() {
                                                     container.set_scroll_top(container.scroll_height());
                                                 }
                                             }
@@ -446,7 +426,7 @@ pub fn ChatView(
                                         let msgs_now = messages_clone2.get_untracked();
                                         if !msgs_now.is_empty() {
                                             if let Some(container) = messages_container_ref2.get() {
-                                                if !anchor_scroll_locked_for_retry2.get() {
+                                                if !anchor_scroll_locked_for_retry2.get() && !user_scrolled_once.get() {
                                                     if let Some(last_elem) = web_sys::window().unwrap().document().unwrap().get_element_by_id(&format!("msg-{}", msgs_now.last().unwrap().id)) {
                                                         let _ = last_elem.scroll_into_view_with_bool(true);
                                                     } else {
@@ -462,7 +442,7 @@ pub fn ChatView(
                                 let msgs_now = messages_clone.get_untracked();
                                 if !msgs_now.is_empty() {
                                     if let Some(container) = messages_container_ref_clone.get() {
-                                        if !anchor_lock_for_closure.get() {
+                                        if !anchor_lock_for_closure.get() && !user_scrolled_once.get() {
                                             if let Some(last_elem) = web_sys::window().unwrap().document().unwrap().get_element_by_id(&format!("msg-{}", msgs_now.last().unwrap().id)) {
                                                 let _ = last_elem.scroll_into_view_with_bool(true);
                                             } else {
@@ -479,11 +459,10 @@ pub fn ChatView(
                 }
             }
 
-            // Default fallback: scroll to the last message
             let last_msg = msgs.last().unwrap();
             if let Some(_container) = messages_container_ref.get() {
                 let doc = web_sys::window().unwrap().document().unwrap();
-                if !anchor_lock_for_closure.get() {
+                if !anchor_lock_for_closure.get() && !user_scrolled_once.get() {
                     if let Some(last_elem) = doc.get_element_by_id(&format!("msg-{}", last_msg.id)) {
                         let _ = last_elem.scroll_into_view_with_bool(true);
                         set_scrolled_initial.set(true);
@@ -493,43 +472,41 @@ pub fn ChatView(
         });
     }
     {
-        use crate::api::services::message::MessageService;
-        use crate::config::constants::AppConstants;
-        use crate::utils::storage::StorageService;
-        use crate::api::client::ApiClient;
         let messages = messages.clone();
         let messages_container_ref = messages_container_ref.clone();
         
-    // clone guards for this scroll-effect so we don't move the originals
-    // Prepare both read and write clones for local guards used by the scroll handler
     let is_loading_local_read = is_loading_local.clone();
     let is_loading_local_set = set_is_loading_local.clone();
     let suppress_scroll_events_read = suppress_scroll_events.clone();
     let suppress_scroll_events_set = set_suppress_scroll_events.clone();
-                // no overflow manipulation; only use suppress guard
         create_effect(move |_| {
             if let Some(container) = messages_container_ref.get() {
                 let container_clone = container.clone();
                 let messages = messages.clone();
-                // clone load_more Rc to use inside the closure without moving original
                 let load_more = load_more.clone();
+                let has_more_cl = has_more.clone();
                 let set_prev_scroll_top = set_prev_scroll_top.clone();
                 let set_prev_scroll_height = set_prev_scroll_height.clone();
 
-                // Threshold (pixels) from top to trigger loading more messages
                 const LOAD_MORE_THRESHOLD: i32 = 150;
 
                 let loading_more = loading_more.clone();
                 let is_loading_local_cl = is_loading_local_read.clone();
                 let suppress_scroll_events_cl = suppress_scroll_events_read.clone();
 
-                // clone Rc handles for use inside the scroll-event closure
                 let pending_for_closure = pending_update_ids.clone();
                 let flush_for_closure = flush_scheduled.clone();
                 let unread_counts_for_closure = unread_counts.clone();
                 let unread_message_ids_for_closure = unread_message_ids.clone();
 
+                let user_scrolled_once_read = user_scrolled_once.clone();
+                let set_user_scrolled_once_cl = set_user_scrolled_once.clone();
+                let set_scrolled_initial_cl2 = set_scrolled_initial.clone();
                 let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+                    if !suppress_scroll_events_cl.get_untracked() && !user_scrolled_once_read.get_untracked() {
+                        set_user_scrolled_once_cl.set(true);
+                        set_scrolled_initial_cl2.set(true);
+                    }
                     let doc = web_sys::window().unwrap().document().unwrap();
                     let msg_ids: Vec<i32> = messages.get_untracked().iter().map(|m| m.id).collect();
 
@@ -537,7 +514,6 @@ pub fn ChatView(
                         if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg_id)) {
                             if is_element_in_viewport(&container_clone, &elem) {
                                 let mut should_update = false;
-                                // check initial unread ids for the group
                                 let initial_ids_map = unread_message_ids.get_untracked();
                                 if let Some(initial_ids) = initial_ids_map.get(&group_id_for_update) {
                                     if initial_ids.contains(&msg_id) {
@@ -545,11 +521,9 @@ pub fn ChatView(
                                     }
                                 }
 
-                                // if not in initial set, check if it is a ws message (new) and not in initial set
                                 if !should_update {
                                     let ws_ids: Vec<i32> = ws_messages.get_untracked().iter().map(|m| m.id).collect();
                                     if ws_ids.contains(&msg_id) {
-                                        // only update if id is not part of the initial unread ids
                                         let in_initial = initial_ids_map.get(&group_id_for_update)
                                             .map(|v| v.contains(&msg_id)).unwrap_or(false);
                                         if !in_initial {
@@ -559,7 +533,6 @@ pub fn ChatView(
                                 }
 
                                 if should_update {
-                                    // Buffer the id for batched updates instead of calling immediately
                                     {
                                         let mut buf = pending_for_closure.borrow_mut();
                                         if !buf.contains(&msg_id) {
@@ -567,7 +540,6 @@ pub fn ChatView(
                                         }
                                     }
 
-                                    // schedule a flush if not already scheduled
                                     if !flush_for_closure.get() {
                                         let pending_clone = pending_for_closure.clone();
                                         let flush_flag = flush_for_closure.clone();
@@ -575,12 +547,9 @@ pub fn ChatView(
                                         let unread_message_ids_clone = unread_message_ids_for_closure.clone();
                                         flush_flag.set(true);
 
-                                        // schedule the debounce timer
                                         set_timeout(move || {
-                                            // spawn a local async task that drains the pending buffer in batches
                                             leptos::spawn_local(async move {
                                                 loop {
-                                                    // assemble a batch from the buffer
                                                     let mut batch: Vec<i32> = Vec::new();
                                                     {
                                                         let mut guard = pending_clone.borrow_mut();
@@ -596,40 +565,62 @@ pub fn ChatView(
                                                     if batch.is_empty() {
                                                         break;
                                                     }
-                                                    // delegate processing of the batch to the centralized helper
-                                                    process_update_batch(batch, unread_counts_clone.clone(), unread_message_ids_clone.clone(), group_id_for_update).await;
-                                                    // brief pause between batches
+                                                    process_update_batch(batch, unread_counts_clone.clone(), unread_message_ids_clone.clone(), unread_marked_read.clone(), group_id_for_update).await;
                                                     crate::utils::timers::sleep_ms(10).await;
                                                 }
-                                                // clear the scheduled flag
+                                                
+                                                // Sincronizza il counter con il server dopo tutti gli aggiornamenti
+                                                leptos::spawn_local({
+                                                    let unread_counts_sync = unread_counts_clone.clone();
+                                                    async move {
+                                                        use crate::api::client::ApiClient;
+                                                        use crate::config::constants::AppConstants;
+                                                        use crate::utils::storage::StorageService;
+                                                        use crate::api::services::message::MessageService;
+                                                        
+                                                        let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                                                        let storage_service = StorageService::new();
+                                                        if let Some(token) = storage_service.get_token() {
+                                                            http_client.set_auth_token(Some(token.token));
+                                                        }
+                                                        let message_service = MessageService::new(http_client, storage_service);
+                                                        
+                                                        match message_service.get_messages_not_read_yet(group_id_for_update).await {
+                                                            Ok(message_page) => {
+                                                                let actual_unread_count = message_page.data.len() as u32;
+                                                                // Aggiorna il counter locale con il valore reale del server
+                                                                unread_counts_sync.update(|counts| {
+                                                                    counts.insert(group_id_for_update, actual_unread_count);
+                                                                });
+                                                            },
+                                                            Err(e) => {
+                                                                log::warn!("Failed to sync unread count for group {}: {:?}", group_id_for_update, e);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                                
                                                 flush_flag.set(false);
                                             });
                                         }, std::time::Duration::from_millis(UPDATE_DEBOUNCE_MS));
                                     }
                                 } else {
-                                    // skipped: not eligible for update
                                 }
                             }
                         }
                     }
 
-                    // If user scrolled near the top of the container, trigger load_more
-                    // Use scrollTop on HtmlDivElement
                     let scroll_top = container_clone.scroll_top();
-                    // Debug: log scroll metrics and loading state
                     let loading_now = loading_more.get_untracked();
 
-                    // If we're suppressing programmatic scroll events, ignore
                     if suppress_scroll_events_cl.get_untracked() {
                         return;
                     }
 
-                    // Trigger when near the top or at the top. Also avoid triggering while a load is in progress.
-                    if scroll_top <= LOAD_MORE_THRESHOLD && !loading_now && !is_loading_local_cl.get_untracked() {
+                    if scroll_top <= LOAD_MORE_THRESHOLD && !loading_now && !is_loading_local_cl.get_untracked() && has_more_cl.get_untracked() {
                         is_loading_local_set.set(true);
                         suppress_scroll_events_set.set(true);
 
-                        // Fallback: ensure suppression is cleared eventually even if restore doesn't run
                         {
                             let suppress_fallback = suppress_scroll_events_set.clone();
                             set_timeout(move || {
@@ -637,7 +628,6 @@ pub fn ChatView(
                             }, std::time::Duration::from_millis(1500));
                         }
 
-                        // Fallback: clear local loading guard after a longer timeout in case of failures
                         {
                             let is_loading_fallback = is_loading_local_set.clone();
                             set_timeout(move || {
@@ -645,12 +635,13 @@ pub fn ChatView(
                             }, std::time::Duration::from_millis(5000));
                         }
 
-                        // store current scroll metrics so we can restore after older messages are prepended
                         set_prev_scroll_top.set(scroll_top);
                         set_prev_scroll_height.set(container_clone.scroll_height());
 
-                        // call load_more (Rc closure)
                         load_more();
+                    } else if scroll_top <= LOAD_MORE_THRESHOLD && !has_more_cl.get_untracked() {
+                        set_prev_scroll_top.set(0);
+                        set_prev_scroll_height.set(0);
                     }
                 }) as Box<dyn FnMut(_)>);
 
@@ -660,8 +651,6 @@ pub fn ChatView(
         });
     }
 
-    // Track container scroll to toggle the floating "scroll to bottom" button and
-    // ensure we update the state both on scroll events and when messages change.
     {
         let messages_container_ref = messages_container_ref.clone();
         let set_show = set_show_scroll_to_bottom.clone();
@@ -671,39 +660,49 @@ pub fn ChatView(
                 let container_clone = container.clone();
                 let set_show_clone = set_show.clone();
                 let scroll_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-                    let scroll_top = container_clone.scroll_top();
-                    let remain = container_clone.scroll_height() - scroll_top;
-                    // show the button when we're more than 200px away from bottom
-                    set_show_clone.set(remain > 200);
+                        let scroll_top = container_clone.scroll_top();
+                        let remain = container_clone.scroll_height() - (scroll_top + container_clone.client_height());
+                        set_show_clone.set(remain > 200);
                 }) as Box<dyn FnMut(_)>);
                 let _ = container.add_event_listener_with_callback("scroll", scroll_closure.as_ref().unchecked_ref());
-                // Set initial visibility
                 let scroll_top_init = container.scroll_top();
-                let remain_init = container.scroll_height() - scroll_top_init;
+                let remain_init = container.scroll_height() - (scroll_top_init + container.client_height());
                 set_show.set(remain_init > 200);
                 scroll_closure.forget();
             }
         });
 
-        // Also update visibility when messages change (e.g. new messages appended)
         let messages_for_visibility = messages.clone();
         let messages_container_ref_for_visibility = messages_container_ref.clone();
         create_effect(move |_| {
-            // small debounce: run a microtask after render
             if let Some(container) = messages_container_ref_for_visibility.get() {
                 let scroll_top = container.scroll_top();
-                let remain = container.scroll_height() - scroll_top;
+                let remain = container.scroll_height() - (scroll_top + container.client_height());
                 set_show.set(remain > 200);
             }
-            // depend on messages so effect runs when messages change
             messages_for_visibility.get();
+        });
+    }
+
+    {
+        let first_unread_anchor = first_unread_anchor.clone();
+        let messages_for_anchor = messages.clone();
+        let set_show_anchor = set_show_scroll_to_bottom.clone();
+        create_effect(move |_| {
+            if let Some(anchor_id) = first_unread_anchor.get() {
+                let msgs = messages_for_anchor.get();
+                if let Some(pos) = msgs.iter().position(|m| m.id == anchor_id) {
+                    if pos + 1 < msgs.len() {
+                        set_show_anchor.set(true);
+                    }
+                }
+            }
         });
     }
 
     {
         let anchor_scroll_locked_local = anchor_scroll_locked.clone();
         let suppress_scroll_events = suppress_scroll_events.clone();
-        // One-time scroll listener that clears the lock when a user scroll happens while not suppressed
         create_effect(move |_| {
             if !anchor_scroll_locked_local.get() {
                 return;
@@ -712,17 +711,14 @@ pub fn ChatView(
                 let anchor_locked_clone = anchor_scroll_locked_local.clone();
                 let suppress_clone = suppress_scroll_events.clone();
                 let user_scroll_closure = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-                    // Only consider this a user scroll if we are not suppressing programmatic scroll events
                     if !suppress_clone.get() {
                         anchor_locked_clone.set(false);
                     }
                 }) as Box<dyn FnMut(_)>);
                 let _ = container.add_event_listener_with_callback("scroll", user_scroll_closure.as_ref().unchecked_ref());
-                // We forget the closure intentionally; it will be cleared when the element is removed
                 user_scroll_closure.forget();
             }
         });
-        // Unlock when anchor is removed (all unread cleared)
         let anchor_locked_clone2 = anchor_scroll_locked.clone();
         let first_unread_anchor_clone = first_unread_anchor.clone();
         create_effect(move |_| {
@@ -740,14 +736,11 @@ pub fn ChatView(
         let prev_scroll_height = prev_scroll_height.clone();
         let set_prev_scroll_top = set_prev_scroll_top.clone();
         let set_prev_scroll_height = set_prev_scroll_height.clone();
-    // clone local guard to clear it when loading finishes (use setter to call .set())
     let is_loading_local_set_cl = set_is_loading_local.clone();
         create_effect(move |_| {
-            // When loading_more becomes false, restore scrollTop relative to the change in scrollHeight
             if loading_more.get() {
                 return;
             }
-            // Only act if we had previously stored values
             let prev_top = prev_scroll_top.get();
             let prev_height = prev_scroll_height.get();
             if prev_top == 0 && prev_height == 0 {
@@ -755,27 +748,22 @@ pub fn ChatView(
             }
             if let Some(container) = messages_container_ref.get() {
                 let new_height = container.scroll_height();
-                // compute delta and set scrollTop to keep viewport stable
                 let delta = new_height - prev_height;
                 let new_top = prev_top + delta;
                 let clamped_new_top = if new_top < 0 { 0 } else if new_top > new_height { new_height } else { new_top };
-                // Suppress scroll events triggered by this programmatic change
                 set_suppress_scroll_events.set(true);
                 container.set_scroll_top(clamped_new_top);
                 let suppress_for_timeout = set_suppress_scroll_events.clone();
                 set_timeout(move || {
                     suppress_for_timeout.set(false);
                 }, std::time::Duration::from_millis(400));
-                // reset stored values
                 set_prev_scroll_top.set(0);
                 set_prev_scroll_height.set(0);
-                // Clear the local guard now that loading is complete
                 is_loading_local_set_cl.set(false);
             }
         });
     }
 
-    // Clear the anchored first-unread id when the unread set for this group becomes empty
     {
         let set_first_unread_anchor = set_first_unread_anchor.clone();
         let unread_message_ids = unread_message_ids.clone();
@@ -788,7 +776,6 @@ pub fn ChatView(
         });
     }
 
-    // Effect to close the dropdown when clicking outside
     create_effect(move |_| {
         let current_state = dropdown_state.get();
         if matches!(current_state, DropdownState::Open | DropdownState::Opening) {
@@ -798,7 +785,6 @@ pub fn ChatView(
                         if let Ok(element) = target.dyn_into::<web_sys::Element>() {
                             if !dropdown_element.contains(Some(&element)) {
                                 set_dropdown_state.set(DropdownState::Closing);
-                                // After the closing animation, set the state to Closed
                                 set_timeout(
                                     move || set_dropdown_state.set(DropdownState::Closed),
                                     std::time::Duration::from_millis(150)
@@ -819,11 +805,9 @@ pub fn ChatView(
         }
     });
     
-    // Clone values needed for closures
     let group_name = group_data.group_name();
     let group_data_clone = group_data.clone();
     
-    // Handle header actions
     let handle_header_action = move |action: ChatHeaderAction| {
         set_dropdown_state.set(DropdownState::Closing);
         set_timeout(
@@ -847,7 +831,6 @@ pub fn ChatView(
         }
     };
 
-    // Leave group logic
     use std::rc::Rc;
     let handle_leave_group = {
         let set_leave_modal_open = set_leave_modal_open.clone();
@@ -877,13 +860,9 @@ pub fn ChatView(
                     Ok(_left) => {
                         set_leave_loading.set(false);
                         set_leave_modal_open.set(false);
-                        // Refetch sidebar groups
                         refresh_groups.dispatch(());
-                        // Show toast
                         toast.success("Hai abbandonato il gruppo con successo!");
-                        // Redirect to home
                         navigate("/", Default::default());
-                        // left group
                     }
                     Err(e) => {
                         set_leave_loading.set(false);
@@ -894,7 +873,6 @@ pub fn ChatView(
         })
     };
 
-    // Handle dropdown toggle
     let handle_dropdown_toggle = move |_| {
         match dropdown_state.get_untracked() {
             DropdownState::Closed => {
@@ -912,19 +890,14 @@ pub fn ChatView(
                 );
             }
             DropdownState::Closing => {
-                // If already closing, do nothing
             }
         }
     };
 
-    // Handle invite member
-    let handle_invite_member = move |invite_request: InviteMemberRequest| {
-        
-    // TODO: Implement actual invitation logic
+    let _handle_invite_member = move |_invite_request: InviteMemberRequest| {
         set_invite_modal_open.set(false);
     };
 
-    // Handle modal close
     let handle_invite_modal_close = move |_| {
         set_invite_modal_open.set(false);
     };
@@ -933,9 +906,7 @@ pub fn ChatView(
         set_group_details_modal_open.set(false);
     };
     
-    // Reactive signal for the background based on the theme
     let (bg_url, set_bg_url) = create_signal(String::new());
-    // Function to update the background
     let update_bg = {
         let set_bg_url = set_bg_url.clone();
         move || {
@@ -947,33 +918,71 @@ pub fn ChatView(
             }
         }
     };
-    // Update immediately
     update_bg();
-    // Reactive polling to update the background when the theme changes
     {
         use gloo_timers::callback::Interval;
         let update_bg_cb = update_bg.clone();
         create_effect(move |_| {
-            // Update immediately
             update_bg_cb();
-            // Poll every 300ms
             let interval = Interval::new(300, move || {
                 update_bg_cb();
             });
-            // Cleanup: stop polling when the effect is dropped
             on_cleanup(move || {
                 drop(interval);
             });
         });
     
 
-    // Prepare a simple user service used to fetch missing profiles on-demand
     let storage_for_fetch = StorageService::new();
     let http_client_for_fetch = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
     if let Some(token_response) = storage_for_fetch.get_token() {
         http_client_for_fetch.set_auth_token(Some(token_response.token));
     }
     let user_service = UserService::new(http_client_for_fetch, storage_for_fetch);
+
+    let handle_scroll_to_bottom = {
+        let messages_container_ref = messages_container_ref.clone();
+        let set_show_scroll_to_bottom = set_show_scroll_to_bottom.clone();
+        move |_| {
+            if let Some(container) = messages_container_ref.get() {
+                let start = container.scroll_top();
+                let end = container.scroll_height();
+                let distance = end - start;
+                if distance <= 0 { return; }
+                use std::rc::Rc;
+                use std::cell::{Cell, RefCell};
+                let start_time = Rc::new(Cell::new(0f64));
+                let duration = 420f64;
+                let container_clone = container.clone();
+                let start_time_clone = start_time.clone();
+                let raf_closure: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
+                let raf_closure_clone = raf_closure.clone();
+                let set_show_scroll_to_bottom_clone = set_show_scroll_to_bottom.clone();
+                *raf_closure.borrow_mut() = Some(Closure::wrap(Box::new(move |timestamp: f64| {
+                    if start_time_clone.get() == 0f64 { start_time_clone.set(timestamp); }
+                    let elapsed = timestamp - start_time_clone.get();
+                    let progress = (elapsed / duration).min(1.0);
+                    let eased = 1.0 - (1.0 - progress).powf(3.0);
+                    let new_top = start as f64 + (distance as f64 * eased);
+                    container_clone.set_scroll_top(new_top as i32);
+                    if progress < 1.0 {
+                        if let Some(cb) = raf_closure_clone.borrow().as_ref() {
+                            let _ = web_sys::window().unwrap().request_animation_frame(cb.as_ref().unchecked_ref());
+                        }
+                    } else {
+                        container_clone.set_scroll_top(container_clone.scroll_height());
+                        set_show_scroll_to_bottom_clone.set(false);
+                        raf_closure_clone.borrow_mut().take();
+                    }
+                }) as Box<dyn FnMut(f64)>));
+                {
+                    if let Some(cb) = raf_closure.borrow().as_ref() {
+                        let _ = web_sys::window().unwrap().request_animation_frame(cb.as_ref().unchecked_ref());
+                    }
+                };
+            }
+        }
+    };
 
     view! {
     <div class="flex flex-col h-full bg-white dark:bg-surface-dark">
@@ -1041,11 +1050,10 @@ pub fn ChatView(
                 </div>
             </div>
         </div>
-    // Content area - base chat structure
     <div class="flex flex-col h-full min-h-0 relative">
             
             <div
-                class="messages-container custom-scrollbar flex-1 min-h-0 overflow-y-auto px-12 py-4 space-y-4 relative"
+                class="messages-container custom-scrollbar flex-1 min-h-0 overflow-y-auto px-12 py-4 relative"
                 node_ref=messages_container_ref
                 style=move || format!("{};padding-bottom:24px;", bg_url.get())
             >
@@ -1053,24 +1061,20 @@ pub fn ChatView(
                     use chrono::{Weekday, Datelike};
                     let msgs = messages.get();
                     let users = user_cache.get();
-                    // Collect any sender_ids missing in the local user cache so we can fetch them
                     let mut missing_sender_ids: Vec<i32> = Vec::new();
                     let storage_service = StorageService::new();
                     let user_profile = storage_service.get_user_profile();
 
-                    // Build views with day separators
                     let mut children = Vec::new();
                     let mut prev_date: Option<chrono::NaiveDate> = None;
                     let today = chrono::Utc::now().date_naive();
 
-                    // Determine the set of unread ids for this group (initially returned by server)
                     let unread_for_group: std::collections::HashSet<i32> = unread_message_ids.get().get(&group_id_for_update).cloned().map_or_else(|| std::collections::HashSet::new(), |v| v.into_iter().collect());
-                    // Use the anchored first_unread id (fixed at chat open) to render the separator in a stable position
                     let anchored = first_unread_anchor.get();
                     let mut inserted_unread_separator = false;
 
+                    let mut prev_sender: Option<i32> = None;
                     for msg in msgs.iter() {
-                        // Determine message date from the message's DateTime<Utc>
                         let msg_date = msg.sent_at.date_naive();
 
                         let need_separator = match prev_date {
@@ -1079,14 +1083,12 @@ pub fn ChatView(
                         };
 
                         if need_separator {
-                            // Compute days difference relative to today
                             let days_diff = (today - msg_date).num_days();
                             let label = if days_diff == 0 {
                                 "Oggi".to_string()
                             } else if days_diff == 1 {
                                 "Ieri".to_string()
                             } else if days_diff >= 2 && days_diff <= 6 {
-                                // weekday name in Italian
                                 match msg_date.weekday() {
                                     Weekday::Mon => "Lunedì".to_string(),
                                     Weekday::Tue => "Martedì".to_string(),
@@ -1097,11 +1099,9 @@ pub fn ChatView(
                                     Weekday::Sun => "Domenica".to_string(),
                                 }
                             } else {
-                                // older than 6 days: full date (DD/MM/YYYY)
                                 msg_date.format("%d/%m/%Y").to_string()
                             };
 
-                            // Push separator view with larger horizontal padding for single-word labels
                             let is_single_word = label.split_whitespace().count() == 1;
                             let padding_class = if is_single_word { "px-6" } else { "px-3" };
                             children.push(view! {
@@ -1116,41 +1116,39 @@ pub fn ChatView(
                             });
 
                             prev_date = Some(msg_date);
+                            prev_sender = None;
                         }
 
-                        // Before rendering this message, check if it's the anchored boundary where unread messages start
                         if !inserted_unread_separator {
                             if let Some(anchor_id) = anchored {
                                 if msg.id == anchor_id {
-                                    // If the anchored id is present in the rendered list, insert the separator here
                                     inserted_unread_separator = true;
                                     children.push(view! {
-                                        <div class="w-full flex justify-center">
+                                        <div id={format!("unread-separator-{}", anchor_id)} class="w-full flex justify-center">
                                             <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md py-1 px-3 my-2">"Messaggi non letti"</div>
                                         </div>
                                     });
+                                    prev_sender = None; // break message grouping
                                 }
                             } else {
-                                // No anchor: fallback to dynamic detection as before
                                 if unread_for_group.contains(&msg.id) {
                                     inserted_unread_separator = true;
                                     children.push(view! {
-                                        <div class="w-full flex justify-center">
+                                        <div id={format!("unread-separator-{}", msg.id)} class="w-full flex justify-center">
                                             <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md py-1 px-3 my-2">"Messaggi non letti"</div>
                                         </div>
                                     });
+                                    prev_sender = None; // break message grouping
                                 }
                             }
                         }
 
-                        // Render the message itself
                         let (is_own, sender_username, sender_name, sender_surname) = if let Some(ref user) = user_profile {
                             if msg.sender_id == user.id {
                                 (true, user.username.clone(), user.first_name.clone(), user.last_name.clone())
                             } else if let Some(sender) = users.get(&msg.sender_id) {
                                 (false, sender.username.clone(), sender.first_name.clone(), sender.last_name.clone())
                             } else {
-                                // Mark sender id as missing so we can request its profile async
                                 missing_sender_ids.push(msg.sender_id);
                                 (false, "?".to_string(), "".to_string(), "".to_string())
                             }
@@ -1163,20 +1161,26 @@ pub fn ChatView(
                         let sender_name_clone = sender_name.clone();
                         let sender_surname_clone = sender_surname.clone();
 
+                        let continued = prev_sender.map(|s| s == msg.sender_id).unwrap_or(false);
+                        let show_sender = !continued;
+                        prev_sender = Some(msg.sender_id);
                         children.push(view! {
-                            <div id={format!("msg-{}", msg_clone.id)}>
+                            <div id={format!("msg-{}", msg_clone.id)} class=move || {
+                                if continued { "msg-wrapper continued".to_string() } else { "msg-wrapper first".to_string() }
+                            }>
                                 <ChatMessage
                                     message=msg_clone
                                     sender_username=sender_username_clone
                                     sender_name=sender_name_clone
                                     sender_surname=sender_surname_clone
-                                    status=MessageStatus::Delivered
+                                    _status=MessageStatus::Delivered
                                     is_own=is_own
+                                    continued=continued
+                                    show_sender=show_sender
                                 />
                             </div>
                         });
                     }
-                    // If we found any missing sender ids, trigger background fetch to populate the cache
                     if !missing_sender_ids.is_empty() {
                         fetch_missing_users(missing_sender_ids, user_cache.clone(), user_service.clone());
                     }
@@ -1190,6 +1194,16 @@ pub fn ChatView(
                 </Show>
 
             </div>
+
+            <Show when=move || show_scroll_to_bottom.get()>
+                <button
+                    on:click=handle_scroll_to_bottom
+                    aria-label="Scorri in basso"
+                    class="absolute bottom-24 right-6 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shadow-md flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-0 transition z-30 backdrop-blur-sm/40"
+                >
+                    <LucideIcon name="arrow-down" size=20 />
+                </button>
+            </Show>
             
             
 
@@ -1206,7 +1220,6 @@ pub fn ChatView(
                             />
                         </div>
 
-                        // Message input area (no duplicate scroll button here)
                     }
                 }}
             </div>

@@ -23,7 +23,8 @@ pub fn fetch_missing_users(
     }
 
     // Filter out ids already present in the cache
-    unique.retain(|id| !user_cache.get().contains_key(id));
+    // Non-reactive read: we just need a snapshot, no subscription
+    unique.retain(|id| !user_cache.get_untracked().contains_key(id));
     if unique.is_empty() {
         return;
     }

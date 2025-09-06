@@ -1,6 +1,13 @@
-// Unit tests module
+// Unit tests module - reorganized structure
+pub mod services;
+pub mod components;
+pub mod utils;
+
+// System and data tests
 pub mod types_test;
-pub mod auth_service_test;
-pub mod token_validation_test;
-pub mod group_service_test;
+pub mod message_system_test;
+pub mod websocket_system_test;
+
+// Hook tests  
+pub mod hooks_test;
 pub mod use_groups_hook_test;

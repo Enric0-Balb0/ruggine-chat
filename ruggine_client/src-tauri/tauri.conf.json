@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ruggine_client",
+  "productName": "Ruggine Chat",
   "version": "0.1.0",
-  "identifier": "com.ruggine.client",
+  "identifier": "com.ruggine.chat",
   "build": {
     "beforeDevCommand": "",
     "devUrl": "http://localhost:1420",
@@ -13,9 +13,12 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ruggine_client",
-        "width": 800,
-        "height": 600
+        "title": "Ruggine Chat",
+        "width": 1100,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": true
       }
     ],
     "security": {
@@ -25,12 +28,20 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Real-time chat application",
+    "longDescription": "Ruggine Chat - a modern, real-time, multi-platform chat client built in Rust with Leptos and Tauri.",
+    "publisher": "Ruggine Team",
+    "copyright": "Copyright © 2025 Ruggine",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/150x150.png",
+      "icons/284x284.png",
+      "icons/310x310.png",
+      "icons/512x512.png",
+      "icons/icon.ico",
+      "icons/icon.icns"
     ]
   }
 }
