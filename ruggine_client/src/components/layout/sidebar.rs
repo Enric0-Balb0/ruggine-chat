@@ -5,6 +5,7 @@ use crate::api::services::invitation::InvitationService;
 use crate::types::Invitation;
 use crate::hooks::{use_groups_context, use_groups_list, use_groups_loading, use_groups_error};
 use crate::context::unread_counts_context::use_unread_counts_context;
+use crate::utils::error_recovery::NetworkOperation;
 
 use crate::hooks::use_global_group_unread_ws;
 
@@ -96,13 +97,13 @@ pub fn Sidebar(
                 http_client.set_auth_token(Some(token_response.token));
             }
             let service = InvitationService::new(http_client, storage_service);
-            match service.get_user_invitations().await {
-                Ok(list) => set_invites.set(list),
-                Err(e) => {
-                    logging::error!("Errore caricamento inviti: {:?}", e);
-                    set_invites.set(Vec::new());
-                }
-            }
+            let invitations = service.get_user_invitations()
+                .with_auto_retry("load user invitations").await
+                .unwrap_or_else(|| {
+                    logging::error!("Failed to load invitations after retries");
+                    Vec::new()
+                });
+            set_invites.set(invitations);
             set_is_loading_invites.set(false);
         });
     };

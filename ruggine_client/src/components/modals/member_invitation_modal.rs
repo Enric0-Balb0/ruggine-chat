@@ -149,6 +149,8 @@ pub fn InviteMemberModal(
             let group_name = group_name.clone();
             let on_close = on_close.clone();
             spawn_local(async move {
+                use crate::utils::error_recovery::NetworkOperation;
+                
                 _set_internal_is_inviting.set(true);
                 let storage_service = crate::utils::storage::StorageService::new();
                 let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
@@ -158,58 +160,28 @@ pub fn InviteMemberModal(
                 let user_service = UserService::new(http_client.clone(), storage_service.clone());
                 let invitation_service = InvitationService::new(http_client, storage_service);
 
-                match user_service.get_user_by_username(&username_value).await {
-                    Ok(user) => {
-                        let req = InvitationCreateRequest {
-                            to_user_id: user.id.parse().unwrap_or(0),
-                            group_chat_id,
-                            role_at_join: match selected_role {
-                                MemberRole::Member => ApiMemberRole::Member,
-                                MemberRole::Admin => ApiMemberRole::Admin,
-                            },
-                        };
-                        match invitation_service.send_invitation(&req).await {
-                            Ok(_) => {
-                                set_error_message.set(None);
-                                // Toast di successo
-                                let group = group_name.clone().unwrap_or_else(|| "gruppo".to_string());
-                                toast.success(&format!("Invito inviato con successo per {}!", group));
-                                // Chiudi modal
-                                on_close.call(());
-                            },
-                            Err(e) => {
-                                let err_str = format!("{}", e);
-                                if err_str.contains("409") || err_str.contains("Already an invitation pending") {
-                                    set_error_message.set(Some("Utente già invitato o invito già in sospeso".to_string()));
-                                } else {
-                                    set_error_message.set(Some(format!("Errore invio invito: {}", e)));
-                                }
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        if let crate::error::AuthError::Http(http_err) = &e {
-                            match http_err {
-                                crate::api::http_error::HttpError::NotFound => {
-                                    set_error_message.set(Some("Utente non trovato".to_string()));
-                                    _set_internal_is_inviting.set(false);
-                                    return;
-                                },
-                                crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
-                                    set_error_message.set(Some("Utente non trovato".to_string()));
-                                    _set_internal_is_inviting.set(false);
-                                    return;
-                                },
-                                _ => {}
-                            }
-                        }
-                        let err_str = format!("{}", e);
-                        if err_str.contains("invalid type: null") || err_str.contains("expected struct UserReadDto") {
-                            set_error_message.set(Some("Utente non trovato".to_string()));
-                        } else {
-                            set_error_message.set(Some(format!("Errore ricerca utente: {}", e)));
-                        }
+                if let Some(user) = user_service.get_user_by_username(&username_value)
+                    .with_auto_retry("find user").await {
+                    let req = InvitationCreateRequest {
+                        to_user_id: user.id.parse().unwrap_or(0),
+                        group_chat_id,
+                        role_at_join: match selected_role {
+                            MemberRole::Member => ApiMemberRole::Member,
+                            MemberRole::Admin => ApiMemberRole::Admin,
+                        },
+                    };
+                    
+                    if let Some(_) = invitation_service.send_invitation(&req)
+                        .with_auto_retry("send invitation").await {
+                        set_error_message.set(None);
+                        let group = group_name.clone().unwrap_or_else(|| "gruppo".to_string());
+                        toast.success(&format!("Invito inviato con successo per {}!", group));
+                        on_close.call(());
+                    } else {
+                        set_error_message.set(Some("Errore nell'invio dell'invito".to_string()));
                     }
+                } else {
+                    set_error_message.set(Some("Utente non trovato".to_string()));
                 }
                 _set_internal_is_inviting.set(false);
             });

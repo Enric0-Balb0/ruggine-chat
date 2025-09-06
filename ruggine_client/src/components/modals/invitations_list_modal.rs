@@ -8,6 +8,7 @@ use crate::config::constants::AppConstants;
 use crate::components::LucideIcon;
 use crate::hooks::groups_provider::use_groups_context;
 use crate::components::ui::feedback::use_toast;
+use crate::utils::error_recovery::NetworkOperation;
 
 #[component]
 pub fn ShowInvitesModal(
@@ -57,7 +58,8 @@ pub fn ShowInvitesModal(
             spawn_local(async move {
                 for group_id in missing_group_ids {
                     let group_id_str = group_id.to_string();
-                    if let Ok(group) = group_service.get_group_by_id(&group_id_str).await {
+                    if let Some(group) = group_service.get_group_by_id(&group_id_str)
+                        .with_auto_retry("load group name").await {
                         names_map.insert(group_id, group.name);
                     }
                 }
@@ -81,7 +83,8 @@ pub fn ShowInvitesModal(
                 http_client.set_auth_token(Some(token_response.token));
             }
             let invitation_service = crate::api::services::invitation::InvitationService::new(http_client, storage_service);
-            if let Ok(all_invites) = invitation_service.get_user_invitations().await {
+            if let Some(all_invites) = invitation_service.get_user_invitations()
+                .with_auto_retry("load user invitations").await {
                 // determine current user id
                 let current_user_id = crate::utils::storage::StorageService::new()
                     .get_user_profile()
@@ -162,9 +165,11 @@ pub fn ShowInvitesModal(
                 status: crate::types::invitation::InvitationStatus::Accepted,
                 invitation_id,
             };
-            if let Ok(_res) = invitation_service.update_invitation_status(&req).await {
+            if let Some(_res) = invitation_service.update_invitation_status(&req)
+                .with_auto_retry("accept invitation").await {
                 // Aggiorna la lista inviti dopo l'accettazione
-                if let Ok(new_list) = invitation_service.get_user_invitations().await {
+                if let Some(new_list) = invitation_service.get_user_invitations()
+                    .with_auto_retry("reload invitations").await {
                     // clone before moving into set to allow creating filtered local list
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
@@ -202,8 +207,10 @@ pub fn ShowInvitesModal(
                 status: crate::types::invitation::InvitationStatus::Rejected,
                 invitation_id,
             };
-            if let Ok(_res) = invitation_service.update_invitation_status(&req).await {
-                if let Ok(new_list) = invitation_service.get_user_invitations().await {
+            if let Some(_res) = invitation_service.update_invitation_status(&req)
+                .with_auto_retry("reject invitation").await {
+                if let Some(new_list) = invitation_service.get_user_invitations()
+                    .with_auto_retry("reload invitations").await {
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
                     // refresh local tab view

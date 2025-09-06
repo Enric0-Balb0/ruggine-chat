@@ -46,18 +46,16 @@ pub fn MessageInputArea(
                 let on_message_sent_cb = on_message_sent.clone();
                 let set_message_text = set_message_text.clone();
                 leptos::spawn_local(async move {
-                    match message_service.create_message(&req).await {
-                        Ok(new_msg) => {
-                            if let Some(cb) = on_message_sent_cb {
-                                cb(new_msg.clone());
-                            }
+                    use crate::utils::error_recovery::NetworkOperation;
+                    
+                    if let Some(new_msg) = message_service.create_message(&req)
+                        .with_auto_retry("send message").await {
+                        if let Some(cb) = on_message_sent_cb {
+                            cb(new_msg.clone());
                         }
-                        Err(_e) => {
-                            // Optionally handle error
-                        }
+                        set_message_text.set(String::new());
                     }
                     sending.set(false);
-                    set_message_text.set(String::new());
                 });
             }
         })
