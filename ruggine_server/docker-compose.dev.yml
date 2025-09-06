@@ -1,0 +1,106 @@
+services:
+  # Development database - PostgreSQL 17
+  ruggine_dev_db:
+    image: postgres:17-alpine
+    container_name: ruggine_dev_database
+    environment:
+      POSTGRES_DB: ruggine_dev
+      POSTGRES_USER: ruggine_dev_user
+      POSTGRES_PASSWORD: ruggine_dev_password
+      POSTGRES_HOST_AUTH_METHOD: md5
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - ruggine_dev_db_data:/var/lib/postgresql/data
+      - ./seeds:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ruggine_dev_user -d ruggine_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ruggine_dev_network
+    restart: unless-stopped
+
+  # Development Rust application (hot reload capable)
+  ruggine_dev_server:
+    image: rust:1.81-alpine
+    container_name: ruggine_dev_server
+    working_dir: /app
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://ruggine_dev_user:ruggine_dev_password@ruggine_dev_db:5432/ruggine_dev
+      
+      # Server configuration
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8002
+      PORT: 8002
+      
+      # JWT configuration
+      JWT_SECRET: dev_jwt_secret_not_secure
+      JWT_TTL_IN_MINUTES: 60
+      
+      # Development environment
+      RUST_ENV: development
+      RUST_LOG: debug
+      
+      # Performance monitoring
+      ENABLE_CPU_LOGGING: true
+      LOG_IN_MILLISECONDS: 120000
+      CPU_LOG_INTERVAL_MINUTES: 2
+    ports:
+      - "8003:8002"  # Different external port for dev
+    volumes:
+      - .:/app
+      - dev_cargo_cache:/usr/local/cargo
+      - dev_target_cache:/app/target
+    depends_on:
+      ruggine_dev_db:
+        condition: service_healthy
+    networks:
+      - ruggine_dev_network
+    command: |
+      sh -c "
+        apk add --no-cache musl-dev openssl-dev pkgconfig &&
+        cargo install cargo-watch &&
+        cargo watch -x run
+      "
+
+  # Database administration tool (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ruggine_dev_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ruggine.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - ruggine_dev_db
+    networks:
+      - ruggine_dev_network
+    restart: unless-stopped
+
+# Named volumes for development
+volumes:
+  ruggine_dev_db_data:
+    driver: local
+    name: ruggine_dev_database_volume
+  pgadmin_data:
+    driver: local
+    name: ruggine_dev_pgadmin_volume
+  dev_cargo_cache:
+    driver: local
+    name: ruggine_dev_cargo_cache
+  dev_target_cache:
+    driver: local
+    name: ruggine_dev_target_cache
+
+# Development network
+networks:
+  ruggine_dev_network:
+    driver: bridge
+    name: ruggine_dev_network

@@ -15,21 +15,22 @@ impl UserRepository {
     }
 
     pub async fn delete_by_email(&self, email: String) -> Result<i32, SqlxError> {
-        let result = sqlx::query!(
-            "DELETE FROM \"user\" WHERE email = $1",
-            email
+        let result = sqlx::query(
+            r#"DELETE FROM "user" WHERE email = $1"#
         )
+            .bind(email)
             .execute(self.db_conn.get_pool())
             .await?;
 
         Ok(result.rows_affected() as i32)
     }
 
+
     pub async fn delete_by_id(&self, id: i32) -> Result<i32, SqlxError> {
-        let result = sqlx::query!(
-            "DELETE FROM \"user\" WHERE id = $1",
-            id
+        let result = sqlx::query(
+            r#"DELETE FROM "user" WHERE id = $1"#
         )
+            .bind(id)
             .execute(self.db_conn.get_pool())
             .await?;
 

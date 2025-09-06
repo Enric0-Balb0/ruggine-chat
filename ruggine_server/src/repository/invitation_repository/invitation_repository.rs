@@ -18,12 +18,15 @@ impl InvitationRepository {
     }
 
     pub async fn delete_by_id(&self, id: i32) -> Result<i32, SqlxError> {
-        let result = sqlx::query!(
-            "DELETE FROM \"invitation\" WHERE id = $1",
-            id
+        let result = sqlx::query(
+            r#"
+            DELETE FROM "invitation"
+            WHERE id = $1
+            "#
         )
-            .execute(self.db_conn.get_pool())
-            .await?;
+        .bind(id)
+        .execute(self.db_conn.get_pool())
+        .await?;
 
         Ok(result.rows_affected() as i32)
     }

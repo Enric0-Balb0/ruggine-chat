@@ -8,19 +8,24 @@ impl TextMessageRepository {
     pub async fn find_by_group_chat_id_paginated_inner(&self, group_chat_id: i32, cursor: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<TextMessage>, Error> {
         let rows = match cursor {
             Some(cursor_datetime) => {
-                let query = sqlx::query_as!(
-                    TextMessage,
+                let query = sqlx::query_as::<_, TextMessage>(
                     r#"
-                    SELECT id, content, sender_id, group_chat_id, sent_at
+                    SELECT 
+                        id, 
+                        content, 
+                        sender_id, 
+                        group_chat_id, 
+                        sent_at
                     FROM text_message
-                    WHERE group_chat_id = $1 AND sent_at < $2
+                    WHERE group_chat_id = $1 
+                    AND sent_at < $2
                     ORDER BY sent_at DESC
                     LIMIT $3
-                    "#,
-                    group_chat_id,
-                    cursor_datetime,
-                    limit as i64
-                );
+                    "#
+                )
+                .bind(group_chat_id)
+                .bind(cursor_datetime)
+                .bind(limit as i64);
 
                 // se c'è una transazione, usala; altrimenti usa la pool
                 if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {
@@ -31,18 +36,22 @@ impl TextMessageRepository {
             }
             None => {
                 // First page - get latest messages
-                let query = sqlx::query_as!(
-                    TextMessage,
+                let query = sqlx::query_as::<_, TextMessage>(
                     r#"
-                    SELECT id, content, sender_id, group_chat_id, sent_at
+                    SELECT 
+                        id, 
+                        content, 
+                        sender_id, 
+                        group_chat_id, 
+                        sent_at
                     FROM text_message
                     WHERE group_chat_id = $1
                     ORDER BY sent_at DESC
                     LIMIT $2
-                    "#,
-                    group_chat_id,
-                    limit as i64
-                );
+                    "#
+                )
+                .bind(group_chat_id)
+                .bind(limit as i64);
 
                 // se c'è una transazione, usala; altrimenti usa la pool
                 if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {

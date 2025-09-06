@@ -1,0 +1,85 @@
+services:
+  # Database service with PostgreSQL 17
+  ruggine_db:
+    image: postgres:17-alpine
+    container_name: ruggine_database
+    environment:
+      POSTGRES_DB: ruggine_prod
+      POSTGRES_USER: ruggine_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ruggine_secure_password}
+      POSTGRES_HOST_AUTH_METHOD: md5
+    ports:
+      - "5432:5432"
+    volumes:
+      - ruggine_db_data:/var/lib/postgresql/data
+      - ./seeds:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ruggine_user -d ruggine_prod"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ruggine_network
+    restart: unless-stopped
+
+  # Main Rust application server
+  ruggine_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ruggine_app_server
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://ruggine_user:${POSTGRES_PASSWORD:-ruggine_secure_password}@ruggine_db:5432/ruggine_prod
+      
+      # Server configuration
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8002
+      
+      # JWT configuration
+      JWT_SECRET: ${JWT_SECRET:-your_super_secure_jwt_secret_change_this_in_production}
+      JWT_EXPIRATION_HOURS: 24
+      
+      # Application environment
+      RUST_ENV: production
+      RUST_LOG: info
+      
+      # Performance monitoring
+      ENABLE_CPU_LOGGING: true
+      CPU_LOG_INTERVAL_MINUTES: 2
+    ports:
+      - "8002:8002"
+    depends_on:
+      ruggine_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ruggine_network
+    restart: unless-stopped
+    # Resource limits for performance optimization
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+# Named volumes for persistent data
+volumes:
+  ruggine_db_data:
+    driver: local
+    name: ruggine_database_volume
+
+# Custom network for inter-service communication
+networks:
+  ruggine_network:
+    driver: bridge
+    name: ruggine_network

@@ -5,8 +5,7 @@ use crate::repository::text_message_repository::TextMessageRepository;
 
 impl TextMessageRepository {
     pub async fn find_info_last_sent_inner(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessageInfo>, Error> {
-        let rec = sqlx::query_as!(
-            TextMessageInfo,
+        let rec = sqlx::query_as::<_, TextMessageInfo>(
             r#"
             SELECT tmi.id,
                    tmi.user_id,
@@ -20,12 +19,13 @@ impl TextMessageRepository {
               AND tm.group_chat_id = $2
               AND tmi.sent_at IS NOT NULL
             ORDER BY tmi.sent_at DESC
-            "#,
-            user_id,
-            group_chat_id
-        )
-        .fetch_optional(self.db_conn.get_pool())
-        .await?;
+            "#
+                )
+            .bind(user_id)
+            .bind(group_chat_id)
+            .fetch_optional(self.db_conn.get_pool())
+            .await?;
+
 
         Ok(rec)
     }

@@ -6,25 +6,24 @@ use crate::repository::text_message_repository::TextMessageRepository;
 
 impl TextMessageRepository {
     pub async fn find_info_last_read_inner(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessageInfo>, Error> {
-        let rec = sqlx::query_as!(
-            TextMessageInfo,
+        let rec = sqlx::query_as::<_, TextMessageInfo>(
             r#"
             SELECT tmi.id,
-                   tmi.user_id,
-                   tmi.text_message_id,
-                   tmi.sent_at,
-                   tmi.read_at
+                tmi.user_id,
+                tmi.text_message_id,
+                tmi.sent_at,
+                tmi.read_at
             FROM text_message_info tmi
             INNER JOIN text_message tm
-                   ON tmi.text_message_id = tm.id
+                ON tmi.text_message_id = tm.id
             WHERE tmi.user_id = $1
-              AND tm.group_chat_id = $2
-              AND tmi.read_at IS NOT NULL
+            AND tm.group_chat_id = $2
+            AND tmi.read_at IS NOT NULL
             ORDER BY tmi.read_at DESC
-            "#,
-            user_id,
-            group_chat_id
+            "#
         )
+        .bind(user_id)
+        .bind(group_chat_id)
         .fetch_optional(self.db_conn.get_pool())
         .await?;
 

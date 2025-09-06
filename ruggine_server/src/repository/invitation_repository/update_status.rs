@@ -15,8 +15,7 @@ impl InvitationRepository {
         let update_status = update_invitation_status.status;
         let responded_at = Utc::now();
         // costruiamo la query UNA SOLA VOLTA
-        let query = sqlx::query_as!(
-            Invitation,
+        let query = sqlx::query_as::<_, Invitation>(
             r#"
             UPDATE invitation SET
                 status = $1,
@@ -27,15 +26,15 @@ impl InvitationRepository {
                 from_user_id,
                 to_user_id,
                 group_chat_id,
-                status as "status: InvitationStatus",
+                status,
                 sent_at,
                 responded_at,
-                role_at_join as "role_at_join: MemberRole";
-            "#,
-            update_status as _,
-            responded_at,
-            invitation_id
-        );
+                role_at_join
+            "#
+        )
+        .bind(update_status)
+        .bind(responded_at)
+        .bind(invitation_id);
 
         // se c'è una transazione, usala; altrimenti usa la pool
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {

@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use utoipa::ToSchema;
 
 use crate::dto::text_message_dto::{TextMessageInfoReadAtDtoUpdate, TextMessageInfoSentAtDtoUpdate};
@@ -34,7 +35,7 @@ pub struct NewTextMessageInfo {
     pub user_id: i32,
     pub text_message_id: i32,
 }
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, FromRow)]
 pub struct TextMessageInfo {
     pub id: i32,
     pub user_id: i32,

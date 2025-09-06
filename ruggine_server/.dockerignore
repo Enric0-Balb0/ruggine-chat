@@ -1,0 +1,49 @@
+# Development files
+.env
+.env.local
+.env.example
+
+# Build artifacts
+target/
+# Note: Keep Cargo.lock for reproducible builds
+
+# Documentation
+README.md
+doc/
+docs/
+
+# Test files
+tests/
+test_websocket.ps1
+websocket_test.html
+docker-compose.test.yml
+
+# Coverage and reports
+coverage/
+report/
+
+# Git
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other development tools
+Makefile
+*.md

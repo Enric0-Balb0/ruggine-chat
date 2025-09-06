@@ -32,7 +32,8 @@ sqlx = { version = "0.6.3", default-features = false, features = [
   "migrate",
   "macros",
   "time",
-  "bigdecimal"
+  "bigdecimal",
+  "offline"
 ] }
 validator = { version = "0.16.0", features = ["derive"] }
 async-trait = "0.1.68"
@@ -52,7 +53,7 @@ form_urlencoded = "1.2.1"
 tokio-tungstenite = "0.24.0"
 url = "2.5.4"
 reqwest = { version = "0.12.23", features = ["json"] }
-sysinfo = { version = "0.37.0"}
+sysinfo = { version = "0.35.2"}
 
 [dev-dependencies]
 # Test-specific dependencies

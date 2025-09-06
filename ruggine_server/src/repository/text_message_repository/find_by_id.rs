@@ -5,15 +5,20 @@ use crate::repository::text_message_repository::TextMessageRepository;
 
 impl TextMessageRepository {
     pub async fn find_inner(&self, id: i32) -> Result<TextMessage, Error> {
-        let query = sqlx::query_as!(
-            TextMessage,
+        let query = sqlx::query_as::<_, TextMessage>(
             r#"
-            SELECT id, content, sender_id, group_chat_id, sent_at
+            SELECT 
+                id, 
+                content, 
+                sender_id, 
+                group_chat_id, 
+                sent_at
             FROM text_message
             WHERE id = $1
-            "#,
-            id
-        );
+            "#
+        )
+        .bind(id);
+
 
         // se c'è una transazione, usala; altrimenti usa la pool
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {

@@ -40,7 +40,7 @@ async fn main() {
         .await
         .unwrap_or_else(|e| panic!("Database error: {}", e.to_string()));
 
-    let host = format!("127.0.0.1:{}", parameter::get("PORT"));
+    let host = format!("0.0.0.0:{}", parameter::get("PORT"));
     tracing::info!("🚀 Server is running on {}", host);
     
     let listener = TcpListener::bind(&host).await

@@ -19,23 +19,30 @@ impl GroupMembershipRepository {
     }
 
     pub async fn delete_by_id(&self, id: i32) -> Result<i32, SqlxError> {
-        let result = sqlx::query!(
-            "DELETE FROM \"group_membership\" WHERE id = $1",
-            id
+        let result = sqlx::query(
+            r#"
+            DELETE FROM "group_membership"
+            WHERE id = $1
+            "#
         )
-            .execute(self.db_conn.get_pool())
-            .await?;
+        .bind(id)
+        .execute(self.db_conn.get_pool())
+        .await?;
 
         Ok(result.rows_affected() as i32)
     }
 
     pub async fn delete_by_invitation_id(&self, invitation_id: i32) -> Result<i32, SqlxError> {
-        let result = sqlx::query!(
-            "DELETE FROM \"group_membership\" WHERE invitation_id = $1",
-            invitation_id
+        let result = sqlx::query(
+            r#"
+            DELETE FROM "group_membership"
+            WHERE invitation_id = $1
+            "#
         )
-            .execute(self.db_conn.get_pool())
-            .await?;
+        .bind(invitation_id)
+        .execute(self.db_conn.get_pool())
+        .await?;
+
 
         Ok(result.rows_affected() as i32)
     }

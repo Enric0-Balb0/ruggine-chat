@@ -5,27 +5,27 @@ use sqlx::Error as SqlxError;
 
 impl GroupMembershipRepository {
     pub async fn find_by_group_chat_id_inner(&self, group_id: i32) -> Result<Vec<GroupMembershipWithInvitationRow>, SqlxError> {
-        let query = sqlx::query_as!(
-            GroupMembershipWithInvitationRow,
+        let query = sqlx::query_as::<_, GroupMembershipWithInvitationRow>(
             r#"
             SELECT 
                 gm.id,
-                gm.role as "role: _",
+                gm.role,
                 gm.joined_at,
                 gm.left_at,
-                gm.membership_status as "membership_status: _",
+                gm.membership_status,
                 gm.invitation_id,
                 i.to_user_id AS user_id,
                 i.group_chat_id,
-                gm.current_action as "current_action: _"
+                gm.current_action
             FROM "group_membership" gm
             INNER JOIN "invitation" i ON gm.invitation_id = i.id
             WHERE i.group_chat_id = $1 
               AND gm.membership_status = 'active'
             ORDER BY gm.joined_at ASC
-            "#,
-            group_id
-        );
+            "#
+        )
+        .bind(group_id);
+
 
         // se c'è una transazione, usala; altrimenti usa la pool
         if let Some(mut tx_ref) = self.db_conn.get_tx_mut() {

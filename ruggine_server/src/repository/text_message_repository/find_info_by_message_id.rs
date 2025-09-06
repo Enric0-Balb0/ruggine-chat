@@ -5,15 +5,18 @@ use crate::repository::text_message_repository::TextMessageRepository;
 
 impl TextMessageRepository {
     pub async fn find_info_by_message_id_inner(&self, message_id: i32) -> Result<Vec<TextMessageInfo>, Error> {
-        let rec = sqlx::query_as!(
-            TextMessageInfo,
+        let rec = sqlx::query_as::<_, TextMessageInfo>(
             r#"
-            SELECT id, user_id, text_message_id, sent_at, read_at
+            SELECT id, 
+                user_id, 
+                text_message_id, 
+                sent_at, 
+                read_at
             FROM text_message_info
             WHERE text_message_id = $1
-            "#,
-            message_id
+            "#
         )
+        .bind(message_id)
         .fetch_all(self.db_conn.get_pool())
         .await?;
 

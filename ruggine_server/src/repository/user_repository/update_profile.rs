@@ -1,4 +1,4 @@
-use crate::entity::user::{UpdateUser, User};
+use crate::entity::user::{Gender, UpdateUser, User};
 use crate::repository::user_repository::UserRepository;
 use crate::config::database::DatabaseTrait;
 use sqlx::Error as SqlxError;
@@ -7,15 +7,16 @@ impl UserRepository {
     pub async fn update_profile_internal(&self, user_id: i32, update_user: UpdateUser) -> Result<User, SqlxError> {
         let current_user = self.find_inner(user_id).await?;
 
-        let updated_first_name = update_user.first_name.unwrap_or(current_user.first_name);
-        let updated_last_name = update_user.last_name.unwrap_or(current_user.last_name);
-        let updated_birthday = update_user.birthday.unwrap_or(current_user.birthday);
-        let updated_address = update_user.address.unwrap_or(current_user.address);
+        let updated_first_name = update_user.first_name.clone().unwrap_or_else(|| current_user.first_name.clone());
+        let updated_last_name = update_user.last_name.clone().unwrap_or_else(|| current_user.last_name.clone());
+        let updated_address = update_user.address.clone().unwrap_or_else(|| current_user.address.clone());
         let updated_gender = update_user.gender.unwrap_or(current_user.gender);
+        let updated_birthday = update_user.birthday.unwrap_or(current_user.birthday);
+        let updated_at = update_user.updated_at;
 
-        let user = sqlx::query_as!(
-            User,
-            r#"UPDATE "user" SET
+        let user = sqlx::query_as::<_, User>(
+            r#"
+            UPDATE "user" SET
                 first_name = $1,
                 last_name = $2,
                 birthday = $3,
@@ -23,31 +24,18 @@ impl UserRepository {
                 gender = $5,
                 updated_at = $6
             WHERE id = $7
-            RETURNING
-                id,
-                first_name,
-                last_name,
-                username,
-                email,
-                password,
-                created_at,
-                updated_at,
-                user_status as "user_status: _",
-                user_type as "user_type: _",
-                birthday,
-                is_online,
-                address,
-                gender as "gender: _""#,
-            updated_first_name,
-            updated_last_name,
-            updated_birthday,
-            updated_address,
-            updated_gender as _,
-            update_user.updated_at, // sqlx expects NaiveDateTime
-            user_id
+            RETURNING *
+            "#
         )
-        .fetch_one(self.db_conn.get_pool())
-        .await?;
+            .bind(updated_first_name)
+            .bind(updated_last_name)
+            .bind(updated_birthday)
+            .bind(updated_address)
+            .bind(updated_gender)
+            .bind(updated_at)
+            .bind(user_id)
+            .fetch_one(self.db_conn.get_pool())
+            .await?;
 
         Ok(user)
     }
