@@ -53,47 +53,35 @@ pub fn use_groups() -> UseGroups {
 
     // Action to refresh groups
     let refresh_groups = create_action(move |_: &()| {
-    let group_service = group_service.clone();
-    let membership_service = membership_service.clone();
+        let group_service = group_service.clone();
+        let membership_service = membership_service.clone();
         async move {
+            use crate::utils::error_recovery::NetworkOperation;
             
-            
-            let memberships = match membership_service.get_user_groups().await {
-                Ok(memberships) => memberships,
-                Err(e) => {
-                    let error_msg = format!("Failed to fetch groups: {:?}", e);
+            let memberships = match membership_service.get_user_groups()
+                .with_auto_retry("load user groups").await {
+                Some(memberships) => memberships,
+                None => {
+                    let error_msg = "Failed to fetch groups after retries".to_string();
                     logging::error!("{}", error_msg);
                     set_groups.set(LoadingState::Error(error_msg.clone()));
                     return Err(error_msg);
                 }
             };
 
-            
-
             let mut groups_with_details = Vec::new();
             for membership in memberships {
                 let group_id = membership.group_chat_id.to_string();
-                // Fetch group details
-                let mut group_details = match group_service.get_group_by_id(&group_id).await {
-                    Ok(details) => {
-                        
-                        Some(details)
-                    },
-                    Err(e) => {
-                        logging::warn!("Failed to fetch details for group {}: {:?}", group_id, e);
-                        None // Continue without details
-                    }
-                };
+                
+                // Fetch group details with fallback
+                let mut group_details = group_service.get_group_by_id(&group_id)
+                    .with_auto_retry("load group details").await;
 
-                // Fetch group membership count and set member_count if possible
+                // Fetch membership count with fallback
                 if let Some(ref mut group) = group_details {
-                    match membership_service.get_by_group_chat_id(&group_id).await {
-                        Ok(members) => {
-                            group.member_count = Some(members.len() as i32);
-                        },
-                        Err(e) => {
-                            logging::warn!("Failed to fetch membership count for group {}: {:?}", group_id, e);
-                        }
+                    if let Some(members) = membership_service.get_by_group_chat_id(&group_id)
+                        .with_auto_retry("load group members").await {
+                        group.member_count = Some(members.len() as i32);
                     }
                 }
 
@@ -102,7 +90,6 @@ pub fn use_groups() -> UseGroups {
                     group_details,
                 });
             }
-
             
             set_groups.set(LoadingState::Success(groups_with_details.clone()));
             Ok(groups_with_details)

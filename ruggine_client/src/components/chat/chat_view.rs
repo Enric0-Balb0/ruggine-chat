@@ -65,6 +65,8 @@ pub fn ChatView(
                 use crate::config::constants::AppConstants;
                 use crate::utils::storage::StorageService;
                 use crate::api::client::ApiClient;
+                use crate::utils::error_recovery::NetworkOperation;
+                
                 let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
                 let storage_service = StorageService::new();
                 if let Some(token) = storage_service.get_token() {
@@ -72,18 +74,15 @@ pub fn ChatView(
                 }
                 let message_service = MessageService::new(http_client, storage_service);
                 let now = chrono::Utc::now().to_rfc3339();
-                let res = message_service.update_message_read_at(msg_id, now).await;
-                match res {
-                    Ok(()) => {
-                        decrement_unread_for_group(&unread_counts, group_id);
-                        unread_message_ids.update(|map| {
-                            if let Some(vec_ids) = map.get_mut(&group_id) {
-                                vec_ids.retain(|id| *id != msg_id);
-                            }
-                        });
-                    }
-                    Err(_e) => {
-                    }
+                
+                if let Some(()) = message_service.update_message_read_at(msg_id, now)
+                    .with_auto_retry("mark message as read").await {
+                    decrement_unread_for_group(&unread_counts, group_id);
+                    unread_message_ids.update(|map| {
+                        if let Some(vec_ids) = map.get_mut(&group_id) {
+                            vec_ids.retain(|id| *id != msg_id);
+                        }
+                    });
                 }
             });
         })
@@ -130,21 +129,20 @@ pub fn ChatView(
         let set_initial = set_initial_online_user_ids.clone();
         leptos::spawn_local(async move {
             use crate::utils::storage::StorageService;
+            use crate::utils::error_recovery::NetworkOperation;
+            
             let storage = StorageService::new();
             let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
             if let Some(token_response) = storage.get_token() {
                 http.set_auth_token(Some(token_response.token));
             }
             let membership_service = GroupMembershipService::new(http, storage);
-            match membership_service.find_connected_users_and_online().await {
-                Ok(ids) => {
-                    let set: HashSet<i32> = ids.into_iter().collect();
-                    leptos::logging::log!("[CHAT] initial online ids => {:?}", set);
-                    set_initial.set(set);
-                }
-                Err(e) => {
-                    leptos::logging::log!("[CHAT] failed to load initial online ids: {:?}", e);
-                }
+            
+            if let Some(ids) = membership_service.find_connected_users_and_online()
+                .with_auto_retry("load online users").await {
+                let set: HashSet<i32> = ids.into_iter().collect();
+                leptos::logging::log!("[CHAT] initial online ids => {:?}", set);
+                set_initial.set(set);
             }
         });
     }

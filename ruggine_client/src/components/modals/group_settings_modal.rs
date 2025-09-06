@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use crate::hooks::use_group_message_ws::UseGroupMessageWs;
 use crate::types::WebSocketMessage;
 use crate::types::message_ws::{ServerEvent, GroupEvent};
+use crate::utils::error_recovery::NetworkOperation;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupMember {
@@ -72,13 +73,14 @@ pub fn GroupDetailsModal(
             let storage_service = storage_service.clone();
             spawn_local(async move {
                 // Fetch group info
-                match group_service.get_group_by_id(&group_id.to_string()).await {
-                    Ok(group) => set_group_signal.set(Some(group)),
-                    Err(_) => set_group_signal.set(None),
-                }
+                group_service.get_group_by_id(&group_id.to_string())
+                    .with_auto_retry("load group details").await
+                    .map(|group| set_group_signal.set(Some(group)));
+                
                 // Fetch memberships
-                match membership_service.get_by_group_chat_id(&group_id.to_string()).await {
-                    Ok(memberships) => {
+                match membership_service.get_by_group_chat_id(&group_id.to_string())
+                    .with_auto_retry("load group members").await {
+                    Some(memberships) => {
                         // Build placeholder members and collect missing ids to batch-fetch profiles
                         let mut group_members = Vec::with_capacity(memberships.len());
                         let mut missing_ids = Vec::with_capacity(memberships.len());
@@ -142,26 +144,24 @@ pub fn GroupDetailsModal(
                         });
 
                         // Fetch connected online user ids and mark members accordingly
-                        match membership_service.find_connected_users_and_online().await {
-                            Ok(online_ids) => {
-                                // Debug: log the online ids and group member ids to detect mismatches
-                                leptos::logging::log!("[GROUP DETAILS] connected online ids => {:?}", online_ids);
-                                let member_ids: Vec<i32> = group_members.iter().map(|gm| gm.user_profile.id).collect();
-                                leptos::logging::log!("[GROUP DETAILS] group member ids => {:?}", member_ids);
-                                let current_user_id = storage_service.get_user_profile().map(|u| u.id);
-                                for gm in &mut group_members {
-                                    let is_online = online_ids.contains(&gm.user_profile.id)
-                                        || current_user_id.map_or(false, |id| id == gm.user_profile.id);
-                                    gm.user_profile.is_online = is_online;
-                                }
+                        if let Some(online_ids) = membership_service.find_connected_users_and_online()
+                            .with_auto_retry("load online users").await {
+                            // Debug: log the online ids and group member ids to detect mismatches
+                            leptos::logging::log!("[GROUP DETAILS] connected online ids => {:?}", online_ids);
+                            let member_ids: Vec<i32> = group_members.iter().map(|gm| gm.user_profile.id).collect();
+                            leptos::logging::log!("[GROUP DETAILS] group member ids => {:?}", member_ids);
+                            let current_user_id = storage_service.get_user_profile().map(|u| u.id);
+                            for gm in &mut group_members {
+                                let is_online = online_ids.contains(&gm.user_profile.id)
+                                    || current_user_id.map_or(false, |id| id == gm.user_profile.id);
+                                gm.user_profile.is_online = is_online;
                             }
-                            Err(_) => {
-                                // If API call fails, still mark current user as online if available
-                                if let Some(current_id) = storage_service.get_user_profile().map(|u| u.id) {
-                                    for gm in &mut group_members {
-                                        if gm.user_profile.id == current_id {
-                                            gm.user_profile.is_online = true;
-                                        }
+                        } else {
+                            // If API call fails, still mark current user as online if available
+                            if let Some(current_id) = storage_service.get_user_profile().map(|u| u.id) {
+                                for gm in &mut group_members {
+                                    if gm.user_profile.id == current_id {
+                                        gm.user_profile.is_online = true;
                                     }
                                 }
                             }
@@ -169,7 +169,7 @@ pub fn GroupDetailsModal(
 
                         set_members_signal.set(group_members);
                     }
-                    Err(_e) => {
+                    None => {
                         set_members_signal.set(Vec::new());
                     }
                 }

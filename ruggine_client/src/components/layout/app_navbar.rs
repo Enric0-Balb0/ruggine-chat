@@ -9,6 +9,7 @@ use crate::types::WebSocketMessage;
 use crate::types::{ClientAction, GroupAction};
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
+use crate::utils::error_recovery::NetworkOperation;
 
 /// Main app navbar for authenticated users (based on UI mock)
 #[component]
@@ -68,14 +69,16 @@ pub fn AppNavbar() -> impl IntoView {
                     }));
                 }
 
-                match auth_service.logout().await {
-                    Ok(_) => {
+                match auth_service.logout().with_auto_retry("logout").await {
+                    Some(_) => {
                         toast.success("Logout effettuato con successo!");
                         navigate("/login", Default::default());
                     },
-                    Err(error) => {
-                        leptos::logging::error!("Logout failed: {:?}", error);
-                        toast.error("Errore durante il logout. Riprova.");
+                    None => {
+                        leptos::logging::error!("Logout failed after retries");
+                        toast.error("Errore durante il logout. L'app verrà comunque disconnessa.");
+                        // Force navigation even on failure since we want to log out anyway
+                        navigate("/login", Default::default());
                     }
                 }
 
