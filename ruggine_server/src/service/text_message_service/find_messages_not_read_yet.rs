@@ -32,7 +32,6 @@ impl TextMessageService {
                     for message in &data {
                         let payload = TextMessageInfoSentAtDtoUpdate {
                             text_message_id: message.id,
-                            sent_at: Utc::now(),
                         };
 
                         // Update sent at if needed

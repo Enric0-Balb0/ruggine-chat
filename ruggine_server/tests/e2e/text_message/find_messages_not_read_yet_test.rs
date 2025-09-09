@@ -1,26 +1,25 @@
+use crate::common::{
+    add_test_user_to_a_group, cleanup_group_chat,
+    cleanup_test_user_from_a_group_chat, cleanup_user_by_email,
+    create_login_and_get_token
+
+    , create_test_group_chat_with_invitation_and_membership,
+    create_test_text_message, create_text_message_router, get_database, mark_message_as_sent,
+    mark_message_as_sent_and_read, test_user_leave_from_a_group
+};
+use axum::body::to_bytes;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use tower::ServiceExt;
-use axum::body::to_bytes;
-use crate::common::{
-    cleanup_user_by_email, cleanup_group_chat, cleanup_text_messages,
-    create_text_message_router, create_login_and_get_token,
-    create_test_group_chat_with_invitation_and_membership,
-    create_test_text_messages_for_group_without_message_info, create_test_users_for_a_group,
-    cleanup_test_users_from_a_group_chat, cleanup_test_users, cleanup_test_user_from_a_group_chat,
-    add_test_user_to_a_group, mark_message_as_sent_and_read, create_test_text_message, get_database,
-    mark_message_as_sent, test_user_leave_from_a_group
-};
-use chrono::{Duration, Utc};
-use ruggine_server::utils::service_initializer::ServiceInitializer;
 use ruggine_server::service::text_message_service::TextMessageServiceTrait;
+use ruggine_server::utils::service_initializer::ServiceInitializer;
+use tower::ServiceExt;
 
 #[cfg(test)]
 mod find_messages_not_read_yet_text_message_e2e_tests {
-    use crate::{cleanup_text_message, common};
     use super::*;
+    use crate::cleanup_text_message;
 
     #[tokio_shared_rt::test(shared)]
     async fn test_find_messages_not_read_yet_success() {
@@ -54,8 +53,7 @@ mod find_messages_not_read_yet_text_message_e2e_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Mark only message1 as sent and read (message2 and message3 should be unread)
-        let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-        mark_message_as_sent_and_read(reader.id, message1.id, sent_time).await;
+        mark_message_as_sent_and_read(reader.id, message1.id).await;
 
         // Act: Send GET request to /group/{group_id}/messages/not-read-yet with auth token
         let request = Request::builder()
@@ -137,9 +135,8 @@ mod find_messages_not_read_yet_text_message_e2e_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Mark all messages as sent and read
-        let time = Utc::now() - chrono::Duration::milliseconds(10);
-        mark_message_as_sent_and_read(reader.id, message1.id, time).await;
-        mark_message_as_sent_and_read(reader.id, message2.id, time).await;
+        mark_message_as_sent_and_read(reader.id, message1.id).await;
+        mark_message_as_sent_and_read(reader.id, message2.id).await;
 
         // Act: Send GET request to /group/{group_id}/messages/not-read-yet
         let request = Request::builder()
@@ -251,12 +248,10 @@ mod find_messages_not_read_yet_text_message_e2e_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Mark message1 as sent and read
-        let sent_read_time = Utc::now() - chrono::Duration::milliseconds(15);
-        mark_message_as_sent_and_read(reader.id, message1.id, sent_read_time).await;
+        mark_message_as_sent_and_read(reader.id, message1.id).await;
 
         // Mark message2 as sent but not read
-        let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-        mark_message_as_sent(reader.id, message2.id, sent_time).await;
+        mark_message_as_sent(reader.id, message2.id).await;
 
         // Leave message3 without sent_at (not sent)
 
@@ -411,9 +406,8 @@ mod find_messages_not_read_yet_text_message_e2e_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Reader reads the initial messages
-        let read_time = Utc::now() - chrono::Duration::milliseconds(30);
-        mark_message_as_sent_and_read(reader.id, initial_message1.id, read_time).await;
-        mark_message_as_sent_and_read(reader.id, initial_message2.id, read_time).await;
+        mark_message_as_sent_and_read(reader.id, initial_message1.id).await;
+        mark_message_as_sent_and_read(reader.id, initial_message2.id).await;
 
         // Phase 2: Create some messages that reader doesn't read
         let unread_message1 = create_test_text_message(

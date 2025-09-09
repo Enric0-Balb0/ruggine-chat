@@ -1,7 +1,6 @@
-use ruggine_server::entity::text_message::TextMessageInfoUpdate;
-use crate::{common, mark_message_as_sent};
-use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
+use crate::common;
 use ruggine_server::factory::text_message_factory::TextMessageFactory;
+use ruggine_server::repository::text_message_repository::{TextMessageRepository, TextMessageRepositoryTrait};
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_info_last_sent_success() {
@@ -46,26 +45,13 @@ async fn test_find_info_last_sent_success() {
     );
     
     let info1_id = repository.insert_text_message_info(info1).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_id).await.unwrap();
 
     let info2_id = repository.insert_text_message_info(info2).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info2_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info2_id).await.unwrap();
 
     let info3_id = repository.insert_text_message_info(info3).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info3_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
-
+    repository.update_sent_at_info(info3_id).await.unwrap();
     // Act
     let result = repository.find_info_last_sent(recipient_user.id, group_chat.id).await;
 
@@ -118,11 +104,7 @@ async fn test_find_info_last_sent_single_message() {
     );
     
     let info_id = repository.insert_text_message_info(info).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info_id).await.unwrap();
 
     // Act
     let result = repository.find_info_last_sent(recipient_user.id, group_chat.id).await;
@@ -240,18 +222,10 @@ async fn test_find_info_last_sent_different_users_same_group() {
     let info2 = TextMessageFactory::fake_new_text_message_info_with_ids(recipient2.id, message2.id);
     
     let info1_id = repository.insert_text_message_info(info1).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_id).await.unwrap();
 
     let info2_id = repository.insert_text_message_info(info2).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info2_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info2_id).await.unwrap();
 
     // Act - Get last sent for each user
     let result1 = repository.find_info_last_sent(recipient1.id, group_chat.id).await;
@@ -335,27 +309,16 @@ async fn test_find_info_last_sent_with_chronological_order() {
 
     
     let info1_id = repository.insert_text_message_info(info1).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_id).await.unwrap();
+
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
     let info2_id = repository.insert_text_message_info(info2).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info2_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info2_id).await.unwrap();
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
     let info3_id = repository.insert_text_message_info(info3).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info3_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: None,
-    }).await.unwrap();
+    repository.update_sent_at_info(info3_id).await.unwrap();
 
     // Act
     let result = repository.find_info_last_sent(recipient_user.id, group_chat.id).await;

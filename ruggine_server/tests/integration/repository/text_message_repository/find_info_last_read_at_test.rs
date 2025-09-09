@@ -52,21 +52,12 @@ async fn test_find_info_last_read_success() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark messages as read with different timestamps
-    let base_time = chrono::Utc::now();
-    let read_time1 = base_time - chrono::Duration::milliseconds(10);
-    let read_time2 = base_time - chrono::Duration::milliseconds(5);
 
     // Leave message3 unread
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_id,
-        sent_at: Some(read_time1),
-        read_at: Some(read_time1),
-    }).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info2_id,
-        sent_at: Some(read_time2),
-        read_at: Some(read_time2),
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_id).await.unwrap();
+    repository.update_read_at_info(info1_id).await.unwrap();
+    repository.update_sent_at_info(info2_id).await.unwrap();
+    repository.update_read_at_info(info2_id).await.unwrap();
 
     // Act
     let result = repository.find_info_last_read(recipient_user.id, group_chat.id).await;
@@ -117,12 +108,8 @@ async fn test_find_info_last_read_single_message() {
     
     let info_id = repository.insert_text_message_info(info).await.unwrap();
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    let read_time = chrono::Utc::now();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info_id,
-        sent_at: Some(read_time),
-        read_at: Some(read_time),
-    }).await.unwrap();
+    repository.update_sent_at_info(info_id).await.unwrap();
+    repository.update_read_at_info(info_id).await.unwrap();
 
     // Act
     let result = repository.find_info_last_read(recipient_user.id, group_chat.id).await;
@@ -266,16 +253,10 @@ async fn test_find_info_last_read_different_users_same_group() {
 
     // Mark different messages as read for each user
     let base_time = chrono::Utc::now();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_1_id,
-        sent_at: Some(base_time - chrono::Duration::milliseconds(10)),
-        read_at: Some(base_time - chrono::Duration::milliseconds(10)),
-    }).await.unwrap();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info2_2_id,
-        sent_at: Some(base_time - chrono::Duration::milliseconds(5)),
-        read_at: Some(base_time - chrono::Duration::milliseconds(5)),
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_1_id).await.unwrap();
+    repository.update_read_at_info(info1_1_id).await.unwrap();
+    repository.update_sent_at_info(info2_2_id).await.unwrap();
+    repository.update_read_at_info(info2_2_id).await.unwrap();
 
     // Act - Get last read for each user
     let result1 = repository.find_info_last_read(recipient1.id, group_chat.id).await;

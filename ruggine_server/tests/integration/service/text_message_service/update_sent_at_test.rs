@@ -2,7 +2,6 @@ use ruggine_server::service::text_message_service::TextMessageServiceTrait;
 use ruggine_server::factory::text_message_factory::TextMessageFactory;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::text_message_error::TextMessageError;
-use chrono::{DateTime, Utc};
 use crate::common;
 use ruggine_server::utils::service_initializer::ServiceInitializer;
 
@@ -39,10 +38,8 @@ async fn test_update_sent_at_success() {
     assert!(created_info.sent_at.is_none(), "Initial sent_at should be None");
 
     // Prepare update payload
-    let new_sent_at = Utc::now();
     let update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        new_sent_at
     );
 
     // Act
@@ -78,7 +75,6 @@ async fn test_update_sent_at_message_not_found() {
     let non_existing_message_id = 999999;
     let update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         non_existing_message_id,
-        Utc::now()
     );
 
     // Act
@@ -131,7 +127,6 @@ async fn test_update_sent_at_unauthorized_user() {
     // Prepare update payload
     let update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        Utc::now()
     );
 
     // Act - try to update with unauthorized user
@@ -186,19 +181,15 @@ async fn test_update_sent_at_already_set() {
     let created_info = service.create_info(create_payload, sender_user.id).await.unwrap();
 
     // First update
-    let first_sent_at = Utc::now();
     let first_update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        first_sent_at
     );
     let first_result = service.update_sent_at(sender_user.id, first_update_payload).await;
     assert!(first_result.is_ok(), "First update should succeed");
 
     // Second update with different timestamp
-    let second_sent_at = Utc::now();
     let second_update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        second_sent_at
     );
 
     // Act
@@ -245,10 +236,8 @@ async fn test_update_sent_at_preserves_read_at() {
     let created_info = service.create_info(create_payload, sender_user.id).await.unwrap();
 
     // Now update sent_at
-    let sent_at = Utc::now();
     let sent_update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        sent_at
     );
 
     // Act
@@ -272,6 +261,7 @@ async fn test_update_sent_at_preserves_read_at() {
     common::cleanup_user(sender_user.id).await;
 }
 
+/*
 #[tokio_shared_rt::test(shared)]
 async fn test_update_sent_at_must_be_less_or_equal_to_now() {
     // Arrange
@@ -302,10 +292,8 @@ async fn test_update_sent_at_must_be_less_or_equal_to_now() {
     let created_info = service.create_info(create_payload, sender_user.id).await.unwrap();
 
     // Attempt to set sent_at to a future time
-    let future_sent_at = Utc::now() + chrono::Duration::hours(1);
     let update_payload = TextMessageFactory::fake_text_message_sent_at_dto_update_with_ids(
         text_message.id,
-        future_sent_at
     );
 
     // Act
@@ -328,3 +316,4 @@ async fn test_update_sent_at_must_be_less_or_equal_to_now() {
     common::cleanup_group_chat(group_chat.id).await;
     common::cleanup_user(sender_user.id).await;
 }
+ */

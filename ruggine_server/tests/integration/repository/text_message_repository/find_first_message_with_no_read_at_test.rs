@@ -92,12 +92,8 @@ async fn test_find_first_message_with_no_read_at_all_messages_read() {
     let info_id = repository.insert_text_message_info(message_info).await.unwrap();
 
     // Update the info to have a read_at timestamp
-    let update_info = TextMessageInfoUpdate {
-        id: info_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: Some(chrono::Utc::now()),
-    };
-    repository.update_info(update_info).await.unwrap();
+    repository.update_sent_at_info(info_id).await.unwrap();
+    repository.update_read_at_info(info_id).await.unwrap();
 
     // Act
     let result = repository.find_first_message_with_no_read_at(recipient_user.id, group_chat.id).await;
@@ -280,12 +276,8 @@ async fn test_find_first_message_with_no_read_at_mixed_states() {
     let third_info_id = repository.insert_text_message_info(third_info).await.unwrap();
 
     // Mark the second message as read
-    let update_info = TextMessageInfoUpdate {
-        id: second_info_id,
-        sent_at: Some(chrono::Utc::now()),
-        read_at: Some(chrono::Utc::now()),
-    };
-    repository.update_info(update_info).await.unwrap();
+    repository.update_sent_at_info(second_info_id).await.unwrap();
+    repository.update_read_at_info(second_info_id).await.unwrap();
 
     // Act
     let result = repository.find_first_message_with_no_read_at(recipient_user.id, group_chat.id).await;

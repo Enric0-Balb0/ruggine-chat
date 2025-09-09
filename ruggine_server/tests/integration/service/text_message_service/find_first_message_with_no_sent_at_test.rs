@@ -1,5 +1,4 @@
 use crate::common;
-use chrono::Utc;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::text_message_error::TextMessageError;
 use ruggine_server::service::text_message_service::TextMessageServiceTrait;
@@ -46,9 +45,8 @@ async fn test_find_first_message_with_no_sent_at_success() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark only message1 and message3 as sent (leave message2 without sent_at)
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message3.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message3.id).await;
 
     // Act - Should find message2 as it's the first message without sent_at
     let result = service.find_first_message_with_no_sent_at(reader_user.id, group_chat.id).await;
@@ -109,9 +107,8 @@ async fn test_find_first_message_with_no_sent_at_all_messages_sent() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark all messages as sent
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
 
     // Act
     let result = service.find_first_message_with_no_sent_at(reader_user.id, group_chat.id).await;

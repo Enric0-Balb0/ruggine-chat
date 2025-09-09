@@ -26,7 +26,7 @@ mod user_repository_integration_tests {
         assert!(user_id > 0);
 
         // Test find_by_email
-        let found_user = repository.find_by_email(new_user.email.clone()).await;
+        let found_user = repository.find_by_email(new_user.email.clone()).await.unwrap();
         assert!(found_user.is_some(), "User not found by email");
 
         let user = found_user.unwrap();
@@ -38,7 +38,7 @@ mod user_repository_integration_tests {
         if let Err(e) = repository.delete_by_email(new_user.email.clone()).await {
             eprintln!("Cleanup failed for {}: {:?}", new_user.email, e);
         }
-        assert!(repository.find_by_email(new_user.email.clone()).await.is_none(), "User should be deleted");
+        assert!(repository.find_by_email(new_user.email.clone()).await.unwrap().is_none(), "User should be deleted");
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -50,7 +50,7 @@ mod user_repository_integration_tests {
         let (nonexistent_email, _, _) = UserFactory::get_unique_user_information("nonexistent");
 
         // Act
-        let result = repository.find_by_email(nonexistent_email).await;
+        let result = repository.find_by_email(nonexistent_email).await.unwrap();
 
         // Assert
         assert!(result.is_none(), "Expected no user to be found");

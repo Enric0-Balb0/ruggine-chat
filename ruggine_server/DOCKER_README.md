@@ -13,8 +13,8 @@ The Ruggine application follows a containerized architecture with:
 
 ## Prerequisites
 
-- Docker Engine 20.10+
-- Docker Compose 2.0+
+- Docker Engine 28.0+
+- Docker Compose 2.34+
 - 8GB RAM minimum
 - 10GB available disk space
 
@@ -29,40 +29,21 @@ The Ruggine application follows a containerized architecture with:
 
 2. **Set up environment variables**:
    ```bash
-   cp .env.example .env
-   # Edit .env with your production values
+   # Edit .env.docker with your production values
    ```
 
 3. **Access the application**:
    - Server: http://localhost:8002
    - Database: postgresql://localhost:5432
 
-### Development Deployment
-
-For development with hot-reload and database administration tools:
-
-**Linux/macOS**:
-```bash
-./deploy.sh -e development -l
-```
-
-**Windows PowerShell**:
-```powershell
-.\deploy.ps1 -Environment development -Logs
-```
-
-Development services:
-- Server: http://localhost:8003
-- Database: postgresql://localhost:5433  
-- pgAdmin: http://localhost:8080 (admin@ruggine.dev / admin)
-
 ## Manual Docker Commands
 
 ### Production
 
 ```bash
-# Build and start services
-docker-compose up -d --build
+# Build and start production services
+docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.prod.yml up -d
 
 # View logs
 docker-compose logs -f
@@ -105,8 +86,7 @@ SERVER_HOST=0.0.0.0
 SERVER_PORT=8002
 
 # Performance Monitoring
-ENABLE_CPU_LOGGING=true
-CPU_LOG_INTERVAL_MINUTES=2
+LOG_IN_MILLISECONDS=120000
 ```
 
 ### Performance Optimization
@@ -259,39 +239,6 @@ docker system prune -a -f
 3. **Firewall configuration** for production deployments
 4. **Regular security updates** of base images
 5. **Non-root user** execution in containers
-
-## Deployment Script Options
-
-### Linux/macOS (deploy.sh)
-
-```bash
-./deploy.sh                     # Production deployment
-./deploy.sh -e development      # Development deployment  
-./deploy.sh -e production -b    # Production with fresh build
-./deploy.sh -l                  # Show logs after start
-./deploy.sh -d                  # Stop all services
-```
-
-### Windows PowerShell (deploy.ps1)
-
-```powershell
-.\deploy.ps1                              # Production deployment
-.\deploy.ps1 -Environment development     # Development deployment
-.\deploy.ps1 -Environment production -Build # Production with fresh build
-.\deploy.ps1 -Logs                        # Show logs after start
-.\deploy.ps1 -Down                        # Stop all services
-```
-
-## Production Considerations
-
-For production deployment:
-
-1. **Use external database** for better performance and scalability
-2. **Set up load balancer** for multiple server instances
-3. **Configure backup strategy** for database
-4. **Set up monitoring** (Prometheus, Grafana)
-5. **Use secrets management** for sensitive configuration
-6. **Set up logging aggregation** (ELK stack)
 
 ## Development Features
 

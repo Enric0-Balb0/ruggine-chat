@@ -28,15 +28,13 @@ async fn test_update_read_at_success() {
     let message = create_test_text_message(sender.id, group.id, Some("e2e update_read_at message".to_string())).await;
 
     // Prepare sent_at and read_at
-    let sent_at = Utc::now();
-    let read_at = sent_at + Duration::milliseconds(10);
-    mark_message_as_sent(recipient.id, message.id, sent_at).await;
+    mark_message_as_sent(recipient.id, message.id).await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Call API to update read_at
     let client = reqwest::Client::new();
-    let payload = json!({"text_message_id": message.id, "read_at": read_at});
+    let payload = json!({"text_message_id": message.id});
     let res = client.patch(&format!("http://{}/api/text_message/update_read_at", addr))
         .bearer_auth(&recipient_token)
         .json(&payload)
@@ -87,10 +85,9 @@ async fn test_update_read_at_unauthorized_user() {
     let group = create_test_group_chat_with_invitation_and_membership("e2e_update_read_at_unauth", sender.id).await;
     let _ = add_test_user_to_a_group(recipient.id, &group).await;
     let message = create_test_text_message(sender.id, group.id, Some("e2e unauthorized update_read_at".to_string())).await;
-    let sent_at = Utc::now();
-    mark_message_as_sent(recipient.id, message.id, sent_at).await;
+    mark_message_as_sent(recipient.id, message.id).await;
     let client = reqwest::Client::new();
-    let payload = json!({"text_message_id": message.id, "read_at": sent_at + Duration::milliseconds(10)});
+    let payload = json!({"text_message_id": message.id});
     let res = client.patch(&format!("http://{}/api/text_message/update_read_at", addr))
         .bearer_auth(&unauth_token)
         .json(&payload)
@@ -116,13 +113,12 @@ async fn test_update_read_at_already_set() {
     let group = create_test_group_chat_with_invitation_and_membership("e2e_update_read_at_already_set", sender.id).await;
     let _ = add_test_user_to_a_group(recipient.id, &group).await;
     let message = create_test_text_message(sender.id, group.id, Some("e2e already set read_at".to_string())).await;
-    let sent_at = Utc::now();
-    mark_message_as_sent(recipient.id, message.id, sent_at).await;
+    mark_message_as_sent(recipient.id, message.id).await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client = reqwest::Client::new();
-    let payload = json!({"text_message_id": message.id, "read_at": sent_at + Duration::milliseconds(10)});
+    let payload = json!({"text_message_id": message.id});
     // First update
     let res1 = client.patch(&format!("http://{}/api/text_message/update_read_at", addr))
         .bearer_auth(&recipient_token)
@@ -154,13 +150,12 @@ async fn test_update_read_at_preserves_sent_at() {
     let group = create_test_group_chat_with_invitation_and_membership("e2e_update_read_at_preserve", sender.id).await;
     let _ = add_test_user_to_a_group(recipient.id, &group).await;
     let message = create_test_text_message(sender.id, group.id, Some("e2e preserve sent_at".to_string())).await;
-    let sent_at = Utc::now();
-    mark_message_as_sent(recipient.id, message.id, sent_at).await;
+    mark_message_as_sent(recipient.id, message.id,).await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client = reqwest::Client::new();
-    let payload = json!({"text_message_id": message.id, "read_at": sent_at + Duration::milliseconds(10)});
+    let payload = json!({"text_message_id": message.id});
     let res = client.patch(&format!("http://{}/api/text_message/update_read_at", addr))
         .bearer_auth(&recipient_token)
         .json(&payload)
@@ -190,15 +185,14 @@ async fn test_update_read_at_multiple_users_same_message() {
     let _ = add_test_user_to_a_group(recipient1.id, &group).await;
     let _ = add_test_user_to_a_group(recipient2.id, &group).await;
     let message = create_test_text_message(sender.id, group.id, Some("e2e multi user read_at".to_string())).await;
-    let sent_at = Utc::now();
-    mark_message_as_sent(recipient1.id, message.id, sent_at).await;
-    mark_message_as_sent(recipient2.id, message.id, sent_at).await;
+    mark_message_as_sent(recipient1.id, message.id,).await;
+    mark_message_as_sent(recipient2.id, message.id,).await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client = reqwest::Client::new();
-    let payload1 = json!({"text_message_id": message.id, "read_at": sent_at + Duration::milliseconds(10)});
-    let payload2 = json!({"text_message_id": message.id, "read_at": sent_at + Duration::milliseconds(20)});
+    let payload1 = json!({"text_message_id": message.id});
+    let payload2 = json!({"text_message_id": message.id});
     let res1 = client.patch(&format!("http://{}/api/text_message/update_read_at", addr))
         .bearer_auth(&recipient1_token)
         .json(&payload1)
@@ -220,7 +214,7 @@ async fn test_update_read_at_multiple_users_same_message() {
     cleanup_user(recipient2.id).await;
     shutdown.send(()).unwrap();
 }
-
+/*
 #[tokio_shared_rt::test(shared)]
 async fn test_update_read_at_cannot_set_before_sent_at() {
     let (addr, shutdown) = start_test_server().await;
@@ -314,3 +308,4 @@ async fn test_update_read_at_must_be_less_or_equal_to_now() {
     cleanup_user(recipient.id).await;
     shutdown.send(()).unwrap();
 }
+*/

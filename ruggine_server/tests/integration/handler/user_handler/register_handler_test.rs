@@ -113,7 +113,7 @@ mod register_handler_integration_tests {
         // Assert: Verify user exists in database
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await.unwrap();
         
         assert!(stored_user.is_some(), "User should exist in database");
         let stored_user = stored_user.unwrap();
@@ -155,7 +155,7 @@ mod register_handler_integration_tests {
         // Assert: Verify password is hashed in database
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await.unwrap();
         
         assert!(stored_user.is_some(), "User should exist in database");
         let stored_user = stored_user.unwrap();
@@ -305,7 +305,7 @@ mod register_handler_integration_tests {
         // Verify in database as well
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await.unwrap();
         
         assert!(stored_user.is_some(), "User should exist in database");
         assert_eq!(stored_user.unwrap().user_status, UserStatus::Active, "User should be active in database");
@@ -348,7 +348,7 @@ mod register_handler_integration_tests {
         // Verify new fields are stored in database
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await.unwrap();
         
         assert!(stored_user.is_some(), "User should exist in database");
         let stored_user = stored_user.unwrap();

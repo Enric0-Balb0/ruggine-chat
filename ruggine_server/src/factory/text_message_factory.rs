@@ -345,15 +345,13 @@ impl TextMessageFactory {
         use crate::dto::text_message_dto::TextMessageInfoReadAtDtoUpdate;
         TextMessageInfoReadAtDtoUpdate {
             text_message_id: 1,
-            read_at: Utc::now(),
         }
     }
 
-    pub fn fake_text_message_read_at_dto_update_with_ids(text_message_id: i32, read_at: DateTime<Utc>) -> crate::dto::text_message_dto::TextMessageInfoReadAtDtoUpdate {
+    pub fn fake_text_message_read_at_dto_update_with_ids(text_message_id: i32) -> crate::dto::text_message_dto::TextMessageInfoReadAtDtoUpdate {
         use crate::dto::text_message_dto::TextMessageInfoReadAtDtoUpdate;
         TextMessageInfoReadAtDtoUpdate {
             text_message_id,
-            read_at,
         }
     }
 
@@ -361,15 +359,13 @@ impl TextMessageFactory {
         use crate::dto::text_message_dto::TextMessageInfoSentAtDtoUpdate;
         TextMessageInfoSentAtDtoUpdate {
             text_message_id: 1,
-            sent_at: Utc::now(),
         }
     }
 
-    pub fn fake_text_message_sent_at_dto_update_with_ids(text_message_id: i32, sent_at: DateTime<Utc>) -> crate::dto::text_message_dto::TextMessageInfoSentAtDtoUpdate {
+    pub fn fake_text_message_sent_at_dto_update_with_ids(text_message_id: i32,) -> crate::dto::text_message_dto::TextMessageInfoSentAtDtoUpdate {
         use crate::dto::text_message_dto::TextMessageInfoSentAtDtoUpdate;
         TextMessageInfoSentAtDtoUpdate {
             text_message_id,
-            sent_at,
         }
     }
 }

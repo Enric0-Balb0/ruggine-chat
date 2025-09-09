@@ -1,9 +1,10 @@
+use sqlx::Error;
 use crate::config::database::DatabaseTrait;
 use crate::entity::user::User;
 use crate::repository::user_repository::UserRepository;
 
 impl UserRepository {
-    pub async fn find_by_email_inner(&self, email: String) -> Option<User> {
+    pub async fn find_by_email_inner(&self, email: String) -> Result<Option<User>, Error> {
         let query = sqlx::query_as::<_, User>("SELECT * FROM \"user\" WHERE email = $1")
             .bind(email);
 
@@ -13,7 +14,7 @@ impl UserRepository {
             query.fetch_optional(self.db_conn.get_pool()).await.unwrap_or(None)
         };
 
-        user
+        Ok(user)
     }
 }
 
@@ -55,15 +56,15 @@ mod user_repository_find_by_email_tests {
             .times(1)
             .returning(move |_| {
                 let user = expected_user_clone.clone();
-                Box::pin(async move { Some(user) })
+                Box::pin(async move { Ok(Some(user)) })
             });
 
         // Act
         let result = mock_user_repo.find_by_email(test_email).await;
 
         // Assert
-        assert!(result.is_some());
-        let user = result.unwrap();
+        assert!(result.is_ok());
+        let user = result.unwrap().unwrap();
         assert_eq!(user.email, "find_test@test.com");
         assert_eq!(user.first_name, "John");
         assert_eq!(user.last_name, "Doe");
@@ -79,13 +80,13 @@ mod user_repository_find_by_email_tests {
             .expect_find_by_email()
             .with(eq(test_email.clone()))
             .times(1)
-            .returning(|_| Box::pin(async move { None }));
+            .returning(|_| Box::pin(async move { Ok(None) }));
 
         // Act
         let result = mock_user_repo.find_by_email(test_email).await;
 
         // Assert
-        assert!(result.is_none());
+        assert!(result.unwrap().is_none());
     }
 
 }

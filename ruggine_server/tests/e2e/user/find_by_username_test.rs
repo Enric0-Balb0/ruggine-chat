@@ -41,7 +41,7 @@ mod find_by_username_e2e_tests {
         let (_, _, token) = {
             let db = get_database().await;
             let repository = UserRepository::new(&db);
-            let user_option = repository.find_by_email(user_dto.email.clone()).await;
+            let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
             assert!(user_option.is_some(), "User should exist in database");
             let user = user_option.unwrap();
             let token = login_and_get_token_for_user(&user, &original_password).await;
@@ -136,7 +136,7 @@ mod find_by_username_e2e_tests {
         let (_, _, token) = {
             let db = get_database().await;
             let repository = UserRepository::new(&db);
-            let user_option = repository.find_by_email(user_dto.email.clone()).await;
+            let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
             assert!(user_option.is_some(), "User should exist in database");
             let user = user_option.unwrap();
             let token = login_and_get_token_for_user(&user, &original_password).await;
@@ -271,7 +271,7 @@ mod find_by_username_e2e_tests {
         let (_, _, token) = {
             let db = get_database().await;
             let repository = UserRepository::new(&db);
-            let user_option = repository.find_by_email(user_dto.email.clone()).await;
+            let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
             assert!(user_option.is_some(), "User should exist in database");
             let user = user_option.unwrap();
             let token = login_and_get_token_for_user(&user, &original_password).await;
@@ -351,7 +351,7 @@ mod find_by_username_e2e_tests {
         let (_, _, token) = {
             let db = get_database().await;
             let repository = UserRepository::new(&db);
-            let user_option = repository.find_by_email(user1_dto.email.clone()).await;
+            let user_option = repository.find_by_email(user1_dto.email.clone()).await.unwrap();
             assert!(user_option.is_some(), "User should exist in database");
             let user = user_option.unwrap();
             let token = login_and_get_token_for_user(&user, &user1_password).await;

@@ -105,18 +105,24 @@ mod invitation_repository_find_pending_for_user_integration_tests {
 
         // Manually update status to simulate accepted/rejected invitations
         // (In a real scenario, these would be updated through a different method)
-        sqlx::query!(
-            "UPDATE \"invitation\" SET status = 'accepted', responded_at = NOW() WHERE id = $1",
-            accepted_id
+        sqlx::query(
+            "UPDATE invitation
+            SET status = $1::invitation_status, responded_at = NOW()
+            WHERE id = $2"
         )
+        .bind("accepted")
+        .bind(accepted_id)
         .execute(db.get_pool())
         .await
         .unwrap();
 
-        sqlx::query!(
-            "UPDATE \"invitation\" SET status = 'rejected', responded_at = NOW() WHERE id = $1",
-            rejected_id
+        sqlx::query(
+            "UPDATE invitation
+            SET status = $1::invitation_status, responded_at = NOW()
+            WHERE id = $2"
         )
+        .bind("rejected")
+        .bind(rejected_id)
         .execute(db.get_pool())
         .await
         .unwrap();

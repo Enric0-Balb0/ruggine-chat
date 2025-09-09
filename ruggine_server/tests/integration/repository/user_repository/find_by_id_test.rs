@@ -35,7 +35,7 @@ mod user_repository_integration_tests {
         if let Err(e) = repository.delete_by_email(new_user.email.clone()).await {
             eprintln!("Cleanup failed for {}: {:?}", new_user.email.clone(), e);
         }
-        assert!(repository.find_by_email(new_user.email.clone()).await.is_none(), "User should be deleted");
+        assert!(repository.find_by_email(new_user.email.clone()).await.unwrap().is_none(), "User should be deleted");
     }
 
     #[tokio_shared_rt::test(shared)]

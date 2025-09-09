@@ -42,7 +42,7 @@ mod user_service_integration_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
-    async fn test_create_user_already_exists() {
+    async fn test_create_user_email_already_exists() {
         // Arrange: Create a user first, then try to create another with same email
         let db = get_database().await;
         let service = UserService::new(&db);
@@ -59,6 +59,44 @@ mod user_service_integration_tests {
             last_name: "Test".into(),
             username: "different_username".into(),
             email: first_user.email.clone(), // Same email as first user
+            password: "password123".into(),
+            birthday: chrono::NaiveDate::from_ymd_opt(1985, 3, 20).unwrap(),
+            address: "789 Different St".to_string(),
+            gender: ruggine_server::entity::user::Gender::Female,
+        };
+
+        // Act: Attempt to create a user with the same email
+        let result = service.create_user(dto).await;
+
+        // Assert: Should return UserAlreadyExists error
+        assert!(result.is_err(), "Expected error but got success");
+        let error = result.unwrap_err();
+        assert!(matches!(error, ApiError::UserError(UserError::UserAlreadyExists(_))), "Expected UserAlreadyExists error, got: {:?}", error);
+
+        // Cleanup: Delete the test user
+        if let Err(e) = repository.delete_by_email(first_user.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", first_user.email, e);
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_create_user_username_already_exists() {
+        // Arrange: Create a user first, then try to create another with same username
+        let db = get_database().await;
+        let service = UserService::new(&db);
+        let repository = UserRepository::new(&db);
+
+        // Create the first user using the factory
+        let first_user = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
+        let insert_result = repository.insert(first_user.clone()).await;
+        assert!(insert_result.is_ok(), "Failed to insert first user");
+
+        // Try to create another user with the same email using UserRegisterDto
+        let dto = UserRegisterDto {
+            first_name: "Duplicate".into(),
+            last_name: "Test".into(),
+            username: first_user.username.clone(), // Same username as first user
+            email: "different_email".into(),
             password: "password123".into(),
             birthday: chrono::NaiveDate::from_ymd_opt(1985, 3, 20).unwrap(),
             address: "789 Different St".to_string(),
@@ -105,7 +143,7 @@ mod user_service_integration_tests {
         assert!(user_dto.updated_at <= chrono::Utc::now());
 
         // Verify password is properly hashed by trying to verify it
-        let user_option = repository.find_by_email(dto.email.clone()).await;
+        let user_option = repository.find_by_email(dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 
@@ -176,7 +214,7 @@ mod user_service_integration_tests {
         assert_eq!(user_dto.is_online, false); // Should default to false
 
         // Also verify by fetching from database directly
-        let user_option = repository.find_by_email(dto.email.clone()).await;
+        let user_option = repository.find_by_email(dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 

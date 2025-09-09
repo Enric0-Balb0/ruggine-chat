@@ -1,7 +1,7 @@
 use axum::body::{to_bytes, Body};
 use axum::http::{Request, StatusCode};
 use axum::Router;
-use chrono::{DateTime, Utc};
+use bigdecimal::FromPrimitive;
 use dashmap::DashMap;
 use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
@@ -43,7 +43,6 @@ use std::net::SocketAddr;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::sync::Once;
-use bigdecimal::FromPrimitive;
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, OnceCell};
 use tokio_tungstenite::connect_async;
@@ -64,10 +63,12 @@ pub async fn get_database() -> Arc<Database> {
             let database_url = std::env::var("TEST_DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://testuser:testpass@localhost/ruggine_test".to_string());
 
+            println!("Using TEST_DATABASE_URL: {}", database_url);
+
             PgPoolOptions::new()
                 .max_connections(25)         // 👈 aumenta qui il numero massimo di connessioni
                 .min_connections(5)          // opzionale: connessioni tenute sempre pronte
-                .acquire_timeout(std::time::Duration::from_secs(10)) // timeout attesa connessione
+                .acquire_timeout(std::time::Duration::from_secs(30)) // timeout attesa connessione
                 .connect(&database_url)
                 .await
                 .expect("Failed to connect to test database")
@@ -180,9 +181,10 @@ async fn create_test_user_with_password(prefix: &str, password: String) -> User 
 
     // Get the created user from database
     let user_option = repository.find_by_email(user_dto.email.clone()).await;
-    assert!(user_option.is_some(), "User not found in database");
+    let user = user_option.unwrap();
+    assert!(user.is_some(), "User not found in database");
     
-    user_option.unwrap()
+    user.unwrap()
 }
 
 /// Helper function to create a test user with default password
@@ -209,7 +211,7 @@ pub async fn create_test_admin_user(prefix: &str) -> (User, String) {
     assert!(create_result.is_ok(), "Failed to create user for admin test");
 
     // Get the created user from database
-    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap();
+    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap().unwrap();
     
     // Update user type to Admin using direct SQL since there's no update service method for user_type
     let result = sqlx::query(
@@ -245,7 +247,7 @@ pub async fn create_test_developer_user(prefix: &str) -> (User, String) {
     assert!(create_result.is_ok(), "Failed to create user for developer test");
 
     // Get the created user from database
-    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap();
+    let mut user = repository.find_by_email(user_dto.email.clone()).await.unwrap().unwrap();
     
     // Update user type to Developer using direct SQL
     let result = sqlx::query(
@@ -758,7 +760,7 @@ pub async fn send_websocket_message_and_get_response(
     }
 }
 
-pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32, read_at: DateTime<Utc>) {
+pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let text_message_service = service_init.text_message_service();
@@ -766,7 +768,6 @@ pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32, read_
         auth_user_id,
         TextMessageInfoReadAtDtoUpdate {
             text_message_id,
-            read_at
         }
     ).await {
         Ok(_) => {}
@@ -774,12 +775,12 @@ pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32, read_
     }
 }
 
-pub async fn mark_message_as_sent_and_read(auth_user_id: i32, text_message_id: i32, time: DateTime<Utc>) {
-    mark_message_as_sent(auth_user_id, text_message_id, time).await;
-    mark_message_as_read(auth_user_id, text_message_id, time).await;
+pub async fn mark_message_as_sent_and_read(auth_user_id: i32, text_message_id: i32) {
+    mark_message_as_sent(auth_user_id, text_message_id).await;
+    mark_message_as_read(auth_user_id, text_message_id).await;
 }
 
-pub async fn mark_message_as_sent(auth_user_id: i32, text_message_id: i32, sent_at: DateTime<Utc>) {
+pub async fn mark_message_as_sent(auth_user_id: i32, text_message_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let text_message_service = service_init.text_message_service();
@@ -787,7 +788,6 @@ pub async fn mark_message_as_sent(auth_user_id: i32, text_message_id: i32, sent_
         auth_user_id,
         TextMessageInfoSentAtDtoUpdate {
             text_message_id,
-            sent_at
         }
     ).await {
         Ok(_) => {}

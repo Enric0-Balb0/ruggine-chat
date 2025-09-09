@@ -11,6 +11,7 @@ use crate::common::{cleanup_user_by_email, create_user_router};
 
 #[cfg(test)]
 mod register_e2e_tests {
+    use serde_json::Value;
     use ruggine_server::entity::user::UserStatus;
 
     use crate::get_database;
@@ -48,7 +49,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         let data = response_json.get("data").expect("Missing 'data' in response");
 
@@ -122,7 +123,7 @@ mod register_e2e_tests {
         // Assert: Verify user exists in database
         let db = get_database().await;
         let repository = UserRepository::new(&db);
-        let stored_user = repository.find_by_email(register_dto.email.clone()).await;
+        let stored_user = repository.find_by_email(register_dto.email.clone()).await.unwrap();
 
         assert!(stored_user.is_some(), "User should exist in database");
         let stored_user = stored_user.unwrap();
@@ -153,7 +154,7 @@ mod register_e2e_tests {
         // Arrange: Create router and register a user first
         let register_dto = UserFactory::unique_fake_user_register_dto("e2e_register_duplicate");
 
-        let register_payload = json!({
+        let mut register_payload = json!({
             "email": register_dto.email,
             "password": register_dto.password,
             "username": register_dto.username,
@@ -175,7 +176,11 @@ mod register_e2e_tests {
         let response1 = create_user_router().await.oneshot(request1).await.unwrap();
         assert_eq!(response1.status(), StatusCode::OK);
 
-        // Act: Try to register the same user again
+        if let Some(obj) = register_payload.as_object_mut() {
+            obj.insert("username".to_string(), Value::String("new_username".to_string()));
+        }
+
+        // Act: Try to register the same email again
         let request2 = Request::builder()
             .method("POST")
             .uri("/register")
@@ -190,7 +195,64 @@ mod register_e2e_tests {
 
         let body = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
+
+        // Verify error response structure
+        assert!(response_json.get("message").is_some(), "Error response should contain message");
+        assert!(response_json.get("code").is_some(), "Error response should contain code");
+        assert_eq!(response_json["code"], 409);
+
+        // Cleanup
+        cleanup_user_by_email(register_dto.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_register_failure_with_duplicate_username() {
+        // Arrange: Create router and register a user first
+        let register_dto = UserFactory::unique_fake_user_register_dto("e2e_register_duplicate");
+
+        let mut register_payload = json!({
+            "email": register_dto.email,
+            "password": register_dto.password,
+            "username": register_dto.username,
+            "first_name": register_dto.first_name,
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
+        });
+
+        // Register user first time
+        let request1 = Request::builder()
+            .method("POST")
+            .uri("/register")
+            .header("content-type", "application/json")
+            .body(Body::from(register_payload.to_string()))
+            .unwrap();
+
+        let response1 = create_user_router().await.oneshot(request1).await.unwrap();
+        assert_eq!(response1.status(), StatusCode::OK);
+
+        if let Some(obj) = register_payload.as_object_mut() {
+            obj.insert("email".to_string(), Value::String("new_email@example.com".to_string()));
+        }
+
+        // Act: Try to register the same username again
+        let request2 = Request::builder()
+            .method("POST")
+            .uri("/register")
+            .header("content-type", "application/json")
+            .body(Body::from(register_payload.to_string()))
+            .unwrap();
+
+        let response2 = create_user_router().await.oneshot(request2).await.unwrap();
+
+        // Assert: Should return 409 Conflict (user already exists)
+        assert_eq!(response2.status(), StatusCode::CONFLICT);
+
+        let body = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
+        let response_text = String::from_utf8(body.to_vec()).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         // Verify error response structure
         assert!(response_json.get("message").is_some(), "Error response should contain message");
@@ -248,7 +310,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         // Verify error response structure
         assert!(response_json.get("message").is_some(), "Error response should contain message");
@@ -284,7 +346,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         // Verify error response structure
         assert!(response_json.get("message").is_some(), "Error response should contain message");
@@ -320,7 +382,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         // Verify error response structure
         assert!(response_json.get("message").is_some(), "Error response should contain message");
@@ -389,7 +451,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         let data = response_json.get("data").expect("Missing 'data' in response");
 
@@ -507,8 +569,8 @@ mod register_e2e_tests {
         let body1 = to_bytes(response1.into_body(), usize::MAX).await.unwrap();
         let body2 = to_bytes(response2.into_body(), usize::MAX).await.unwrap();
 
-        let response1_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body1.to_vec()).unwrap()).unwrap();
-        let response2_json: serde_json::Value = serde_json::from_str(&String::from_utf8(body2.to_vec()).unwrap()).unwrap();
+        let response1_json: Value = serde_json::from_str(&String::from_utf8(body1.to_vec()).unwrap()).unwrap();
+        let response2_json: Value = serde_json::from_str(&String::from_utf8(body2.to_vec()).unwrap()).unwrap();
 
         let data1 = response1_json.get("data").expect("Missing 'data' in response");
         let data2 = response2_json.get("data").expect("Missing 'data' in response");
@@ -553,7 +615,7 @@ mod register_e2e_tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let response_text = String::from_utf8(body.to_vec()).unwrap();
-        let response_json: serde_json::Value = serde_json::from_str(&response_text).unwrap();
+        let response_json: Value = serde_json::from_str(&response_text).unwrap();
 
         let data = response_json.get("data").expect("Missing 'data' in response");
 

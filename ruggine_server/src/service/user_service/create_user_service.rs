@@ -1,37 +1,52 @@
 use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
 use crate::error::{api_error::ApiError, db_error::DbError, user_error::UserError};
-use crate::service::user_service::UserService;
+use crate::service::user_service::{UserService, UserServiceTrait};
 use sqlx::Error as SqlxError;
 use tracing::error;
 
 impl UserService {
     pub async fn create_user_internal(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
         match self.user_repo.find_by_email(payload.email.to_owned()).await {
-            Some(_) => Err(UserError::UserAlreadyExists("Username or email already taken".to_string()))?,
-            None => {
-                let user = self.add_user(payload).await;
+            Ok(Some(_user)) => Err(UserError::UserAlreadyExists("Email already taken".to_string()))?,
+            Ok(None) => { /* OK */ }
+            Err(err) => { return Err(
+                ApiError::DbError(
+                    DbError::SomethingWentWrong(
+                        format!("Something went wrong checking email {} if already taken, got: {:?}",
+                                payload.email.clone(),
+                                err)
+                    )
+                )
+            );}
+        };
 
-                match user {
-                    Ok(user) => Ok(UserReadDto::from(user)),
-                    Err(e) => match e {
-                        SqlxError::Database(e) => match e.code() {
-                            Some(code) => {
-                                error!("{}", e.to_string());
-                                if code == "23000" {
-                                    Err(DbError::UniqueConstraintViolation(e.to_string()))?
-                                } else {
-                                    Err(DbError::SomethingWentWrong(e.to_string()))?
-                                }
-                            }
-                            _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
-                        },
-                        _ => {
-                            error!("{}", e.to_string());
+        match self.find_by_username(payload.username.to_owned()).await {
+            Ok(Some(_user)) => Err(UserError::UserAlreadyExists("Username already taken".to_string()))?,
+            Ok(None) => { /* OK */ }
+            Err(err) => { return Err(err); }
+        };
+
+        let user = self.add_user(payload).await;
+
+        match user {
+            Ok(user) => Ok(UserReadDto::from(user)),
+            Err(e) => match e {
+                SqlxError::Database(e) => match e.code() {
+                    Some(code) => {
+                        error!("{}", e.to_string());
+                        if code == "23000" {
+                            Err(DbError::UniqueConstraintViolation(e.to_string()))?
+                        } else {
                             Err(DbError::SomethingWentWrong(e.to_string()))?
                         }
-                    },
+                    }
+                    _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
+                },
+                _ => {
+                    error!("{}", e.to_string());
+                    Err(DbError::SomethingWentWrong(e.to_string()))?
                 }
-            }
+            },
         }
     }
 }
@@ -76,7 +91,15 @@ mod tests {
             .expect_find_by_email()
             .with(eq("test@example.com".to_string()))
             .returning(|_| {
-                Box::pin(async { None }) as Pin<Box<dyn Future<Output = Option<User>> + Send>>
+                Box::pin(async { Ok(None) })
+            });
+
+        // Mock: find_by_username should return None (user not found)
+        mock_repo
+            .expect_find_by_username()
+            .with(eq("testuser".to_string()))
+            .returning(|_| {
+                Box::pin(async { Ok(None) })
             });
 
         // Mock: insert should return id = 1
@@ -143,13 +166,23 @@ mod tests {
             gender: crate::entity::user::Gender::Female,
         };
 
+        let mut existing_user_clone = existing_user.clone();
         // Mock: find_by_email should return Some(user) indicating user already exists
         mock_repo
             .expect_find_by_email()
             .with(eq("test@example.com".to_string()))
             .returning(move |_| {
-                let user = existing_user.clone();
-                Box::pin(async move { Some(user) }) as Pin<Box<dyn Future<Output = Option<User>> + Send>>
+                let user = existing_user_clone.clone();
+                Box::pin(async move { Ok(Some(user)) })
+            });
+
+        existing_user_clone = existing_user.clone();
+        mock_repo
+            .expect_find_by_email()
+            .with(eq("existinguser".to_string()))
+            .returning(move |_| {
+                let user = existing_user_clone.clone();
+                Box::pin(async move { Ok(Some(user)) })
             });
 
         let service = UserService::with_repo(Arc::new(mock_repo));
@@ -184,7 +217,14 @@ mod tests {
             .expect_find_by_email()
             .with(eq("test@example.com".to_string()))
             .returning(|_| {
-                Box::pin(async { None }) as Pin<Box<dyn Future<Output = Option<User>> + Send>>
+                Box::pin(async { Ok(None) })
+            });
+
+        mock_repo
+            .expect_find_by_username()
+            .with(eq("testuser".to_string()))
+            .returning(|_| {
+                Box::pin(async { Ok(None) })
             });
 
         // Mock: insert should return a unique constraint violation error
@@ -227,7 +267,14 @@ mod tests {
             .expect_find_by_email()
             .with(eq("test@example.com".to_string()))
             .returning(|_| {
-                Box::pin(async { None }) as Pin<Box<dyn Future<Output = Option<User>> + Send>>
+                Box::pin(async { Ok(None) })
+            });
+
+        mock_repo
+            .expect_find_by_username()
+            .with(eq("testuser".to_string()))
+            .returning(|_| {
+                Box::pin(async { Ok(None) })
             });
 
         // Mock: insert should return a general database error
@@ -270,7 +317,14 @@ mod tests {
             .expect_find_by_email()
             .with(eq("test@example.com".to_string()))
             .returning(|_| {
-                Box::pin(async { None }) as Pin<Box<dyn Future<Output = Option<User>> + Send>>
+                Box::pin(async { Ok(None) })
+            });
+
+        mock_repo
+            .expect_find_by_username()
+            .with(eq("testuser".to_string()))
+            .returning(|_| {
+                Box::pin(async { Ok(None) })
             });
 
         // Mock: insert should succeed and return id = 1

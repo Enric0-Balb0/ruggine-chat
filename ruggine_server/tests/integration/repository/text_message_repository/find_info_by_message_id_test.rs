@@ -190,12 +190,8 @@ async fn test_find_info_by_message_id_with_read_and_unread() {
     
     // Mark one as read
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    let now = chrono::Utc::now();
-    repository.update_info(TextMessageInfoUpdate {
-        id: info1_id,
-        sent_at: Some(now),
-        read_at: Some(now),
-    }).await.unwrap();
+    repository.update_sent_at_info(info1_id).await.unwrap();
+    repository.update_read_at_info(info1_id).await.unwrap();
 
     // Act
     let result = repository.find_info_by_message_id(text_message.id).await;

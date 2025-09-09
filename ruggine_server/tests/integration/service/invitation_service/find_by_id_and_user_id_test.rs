@@ -157,10 +157,13 @@ mod invitation_service_find_by_id_and_user_id_integration_tests {
         let invitation = create_test_invitation(from_user.id, to_user.id, group_chat.id).await;
         
         // Manually update invitation status to accepted
-        sqlx::query!(
-            "UPDATE \"invitation\" SET status = 'accepted', responded_at = NOW() WHERE id = $1",
-            invitation.id
+        sqlx::query(
+            "UPDATE invitation
+            SET status = $1::invitation_status, responded_at = NOW()
+            WHERE id = $2"
         )
+        .bind("accepted")
+        .bind(invitation.id)
         .execute(db.get_pool())
         .await
         .expect("Failed to update invitation status");

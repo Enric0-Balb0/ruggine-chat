@@ -1,13 +1,10 @@
-use std::ptr::read;
-use ruggine_server::service::text_message_service::TextMessageServiceTrait;
-use ruggine_server::factory::text_message_factory::TextMessageFactory;
+use crate::common;
 use ruggine_server::dto::text_message_dto::TextMessageLastSentAtDto;
 use ruggine_server::error::api_error::ApiError;
-use ruggine_server::error::group_membership_error::GroupMembershipError;
-use crate::common;
-use ruggine_server::utils::service_initializer::ServiceInitializer;
-use chrono::Utc;
 use ruggine_server::error::text_message_error::TextMessageError;
+use ruggine_server::factory::text_message_factory::TextMessageFactory;
+use ruggine_server::service::text_message_service::TextMessageServiceTrait;
+use ruggine_server::utils::service_initializer::ServiceInitializer;
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_info_last_sent_at_success() {
@@ -55,11 +52,8 @@ async fn test_find_info_last_sent_at_success() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark messages as sent at different times
-    let sent_time1 = Utc::now() - chrono::Duration::milliseconds(10);
-    let sent_time2 = Utc::now() - chrono::Duration::milliseconds(5);
-    
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time1).await;
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time2).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
 
     let payload = TextMessageLastSentAtDto {
         group_chat_id: group_chat.id,
@@ -297,11 +291,9 @@ async fn test_find_info_last_sent_at_mixed_sent_unsent() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark only message1 and message3 as sent, message2 remains unsent
-    let sent_time1 = Utc::now() - chrono::Duration::milliseconds(10);
-    let sent_time3 = Utc::now() - chrono::Duration::milliseconds(2);
     
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time1).await;
-    common::mark_message_as_sent(reader_user.id, message3.id, sent_time3).await;
+    common::mark_message_as_sent(reader_user.id, message1.id,).await;
+    common::mark_message_as_sent(reader_user.id, message3.id,).await;
     // info2 (message2) is not marked as sent
 
     let payload = TextMessageLastSentAtDto {
@@ -378,15 +370,11 @@ async fn test_find_info_last_sent_at_both_sent_and_read() {
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-    // Mark both messages as sent at different times
-    let time1 = Utc::now() - chrono::Duration::milliseconds(10);
-    let time2 = Utc::now() - chrono::Duration::milliseconds(5);
-    
     // Message1: mark as both sent and read
-    common::mark_message_as_sent_and_read(reader_user.id, message1.id, time1).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id,).await;
     
     // Message2: mark as sent only
-    common::mark_message_as_sent(reader_user.id, message2.id, time2).await;
+    common::mark_message_as_sent(reader_user.id, message2.id,).await;
 
     let payload = TextMessageLastSentAtDto {
         group_chat_id: group_chat.id,

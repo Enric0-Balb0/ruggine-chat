@@ -15,7 +15,7 @@ use crate::entity::user::{NewUser, User, UpdateUser};
 
 #[async_trait]
 impl UserRepositoryTrait for UserRepository {
-    async fn find_by_email(&self, email: String) -> Option<User> {
+    async fn find_by_email(&self, email: String) -> Result<Option<User>, Error> {
         self.find_by_email_inner(email).await
     }
 

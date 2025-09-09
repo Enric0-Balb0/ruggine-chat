@@ -131,13 +131,16 @@ mod invitation_service_update_status_integration_tests {
         let group_chat = create_test_group_chat("internal_responded_group", admin_user.id).await;
         let invitation = create_test_invitation(admin_user.id, target_user.id, group_chat.id).await;
 
-        sqlx::query!(
-            "UPDATE invitation SET status = 'accepted', responded_at = NOW() WHERE id = $1",
-            invitation.id
+        sqlx::query(
+            "UPDATE invitation
+            SET status = $1::invitation_status, responded_at = NOW()
+            WHERE id = $2"
         )
-            .execute(db.get_pool())
-            .await
-            .unwrap();
+        .bind("accepted")
+        .bind(invitation.id)
+        .execute(db.get_pool())
+        .await
+        .unwrap();
 
         let mut payload = InvitationFactory::fake_invitation_update_status_dto();
         payload.invitation_id = invitation.id;

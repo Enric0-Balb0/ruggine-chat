@@ -1,6 +1,4 @@
 use crate::common;
-use chrono::Utc;
-use ruggine_server::dto::group_membership_dto::LeaveGroupMembershipDto;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::text_message_error::TextMessageError;
 use ruggine_server::service::text_message_service::TextMessageServiceTrait;
@@ -47,8 +45,7 @@ async fn test_find_messages_not_read_yet_success() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark only message1 as sent and read (message2 and message3 should be unread)
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent_and_read(reader_user.id, message1.id, sent_time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id).await;
 
     // Act
     let result = service.find_messages_not_read_yet(group_chat.id, reader_user.id).await;
@@ -116,9 +113,8 @@ async fn test_find_messages_not_read_yet_all_messages_read() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark all messages as sent and read
-    let time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent_and_read(reader_user.id, message1.id, time).await;
-    common::mark_message_as_sent_and_read(reader_user.id, message2.id, time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message2.id).await;
 
     // Act
     let result = service.find_messages_not_read_yet(group_chat.id, reader_user.id).await;
@@ -220,12 +216,10 @@ async fn test_find_messages_not_read_yet_mixed_sent_and_unsent() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark message1 as sent and read
-    let sent_read_time = Utc::now() - chrono::Duration::milliseconds(15);
-    common::mark_message_as_sent_and_read(reader_user.id, message1.id, sent_read_time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id).await;
 
     // Mark message2 as sent but not read
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
 
     // Leave message3 without sent_at (not sent)
 
@@ -358,8 +352,7 @@ async fn test_find_messages_not_read_yet_respects_datetime_range() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark the old message as sent and read (this will be the baseline)
-    let old_time = Utc::now() - chrono::Duration::milliseconds(20);
-    common::mark_message_as_sent_and_read(reader_user.id, old_message.id, old_time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, old_message.id).await;
 
     // Act
     let result = service.find_messages_not_read_yet(group_chat.id, reader_user.id).await;
@@ -468,9 +461,8 @@ async fn test_find_messages_not_read_yet_user_left_and_rejoined_group() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Reader reads the initial messages
-    let read_time = Utc::now() - chrono::Duration::milliseconds(30);
-    common::mark_message_as_sent_and_read(reader_user.id, initial_message1.id, read_time).await;
-    common::mark_message_as_sent_and_read(reader_user.id, initial_message2.id, read_time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, initial_message1.id).await;
+    common::mark_message_as_sent_and_read(reader_user.id, initial_message2.id).await;
 
     // Phase 2: Create some messages that reader doesn't read
     let unread_message1 = common::create_test_text_message(

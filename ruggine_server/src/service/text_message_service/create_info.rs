@@ -47,8 +47,10 @@ impl TextMessageService {
                             // Trigger failure
                             if db_err.message().contains("NULL") {
                                 ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt)
+                            } else if db_err.message().contains("sent_at deve essere <=") {
+                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow("Error in creating message infos".to_string()))
                             } else {
-                                ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow)
+                                ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string()))
                             }
                         }
                         _ => ApiError::DbError(DbError::SomethingWentWrong(db_err.to_string())),

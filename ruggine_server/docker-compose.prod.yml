@@ -11,7 +11,7 @@ services:
       # PostgreSQL Performance Tuning
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ruggine_db_data:/var/lib/postgresql/data
       - ./seeds:/docker-entrypoint-initdb.d:ro
@@ -26,15 +26,15 @@ services:
     networks:
       - ruggine_network
     restart: unless-stopped
-    # Resource limits for production
+    # Resource limits for production - Optimized for 16 cores / 16GB RAM
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 2G
+          cpus: '6.0'        # Increased from 2.0 to 6.0 for high performance
+          memory: 6G         # Increased from 2G to 6G for PostgreSQL caching
         reservations:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '6.0'        # Increased from 0.5 to ensure dedicated cores
+          memory: 4G         # Increased from 512M for better performance
 
   # Main Rust application server
   ruggine_server:
@@ -59,6 +59,10 @@ services:
       RUST_ENV: production
       RUST_LOG: ${RUST_LOG:-info}
       
+      # Performance optimization - Tokio runtime configuration
+      TOKIO_WORKER_THREADS: ${TOKIO_WORKER_THREADS:-8}    # Match allocated CPU cores
+      RUST_BACKTRACE: 0                                   # Disable backtraces in production
+      
       # Performance monitoring
       ENABLE_CPU_LOGGING: ${ENABLE_CPU_LOGGING:-true}
       LOG_IN_MILLISECONDS: ${LOG_IN_MILLISECONDS:-120000}
@@ -77,15 +81,15 @@ services:
     networks:
       - ruggine_network
     restart: unless-stopped
-    # Resource limits for performance optimization
+    # Resource limits for performance optimization - Maximized for 16 cores / 16GB RAM
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 1G
+          cpus: '8.0'        # Increased from 2.0 to 8.0 for maximum performance
+          memory: 8G         # Increased from 1G to 8G for high-throughput processing
         reservations:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '4.0'        # Increased from 0.5 to ensure dedicated cores
+          memory: 4G         # Increased from 256M for consistent performance
 
   # Nginx reverse proxy for production (optional)
   ruggine_proxy:
@@ -104,63 +108,6 @@ services:
     restart: unless-stopped
     profiles:
       - proxy
-
-  # Redis for session storage and caching (optional)
-  ruggine_redis:
-    image: redis:7-alpine
-    container_name: ruggine_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - ruggine_redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - ruggine_network
-    restart: unless-stopped
-    profiles:
-      - cache
-
-  # Monitoring with Prometheus (optional)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: ruggine_prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    networks:
-      - ruggine_network
-    restart: unless-stopped
-    profiles:
-      - monitoring
-
-  # Grafana for metrics visualization (optional)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: ruggine_grafana
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - ruggine_network
-    restart: unless-stopped
-    profiles:
-      - monitoring
 
 # Named volumes for persistent data
 volumes:

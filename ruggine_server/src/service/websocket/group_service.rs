@@ -138,7 +138,6 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     async fn update_sent_at_for_a_user(&self, user_id: i32, message_id: i32) {
         let payload = TextMessageInfoSentAtDtoUpdate {
             text_message_id: message_id,
-            sent_at: Utc::now(),
         };
         match self.text_message_service.update_sent_at(user_id, payload).await {
             Ok(_) => (),

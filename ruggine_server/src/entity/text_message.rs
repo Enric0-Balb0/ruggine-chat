@@ -46,8 +46,6 @@ pub struct TextMessageInfo {
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 pub struct TextMessageInfoUpdate {
     pub id: i32,
-    pub sent_at: Option<DateTime<Utc>>,
-    pub read_at: Option<DateTime<Utc>>,
 }
 
 

@@ -21,17 +21,7 @@ impl TextMessageService {
             return Err(ApiError::TextMessageError(TextMessageError::CannotSetReadAtBeforeSentAt));
         }
 
-        if payload.read_at.clone().lt(&info.sent_at.unwrap()) || !payload.read_at.clone().le(&Utc::now()) {
-            return Err(ApiError::TextMessageError(TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow))
-        }
-
-        // Update read at
-        let text_message_dto_update = TextMessageInfoUpdate {
-            id: text_message_info.id,
-            sent_at: None,
-            read_at: Some(payload.read_at),
-        };
-        match self.text_message_repo.update_info(text_message_dto_update).await {
+        match self.text_message_repo.update_read_at_info(info.id).await {
             Ok(_) => {
                 self.find_info_by_id(text_message_info.id).await
             },

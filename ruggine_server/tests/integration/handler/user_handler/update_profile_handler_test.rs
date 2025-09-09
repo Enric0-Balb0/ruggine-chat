@@ -29,7 +29,7 @@ mod update_profile_handler_integration_tests {
         assert!(create_result.is_ok(), "Failed to create user for update test");
         
         // Get the created user from database
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         (user_option.unwrap(), user_dto.password.clone())
     }

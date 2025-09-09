@@ -312,10 +312,8 @@ mod benchmark_tests {
                     mark_read_futures.push(async move {
                         let permit = semaphore_mark.acquire().await.unwrap();
 
-                        let read_at = Utc::now();
                         let mark_read_payload = json!({
                             "text_message_id": message_id,
-                            "read_at": read_at
                         });
 
                         let fut = client

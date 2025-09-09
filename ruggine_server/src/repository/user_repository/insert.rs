@@ -150,7 +150,7 @@ mod user_repository_insert_tests {
                 let username1_clone = username1_for_find.clone();
                 let email1_clone = email1_for_find.clone();
                 Box::pin(async move {
-                    Some(User {
+                    Ok(Some(User {
                         id: 100,
                         first_name: "Multi1".to_string(),
                         last_name: "Test".to_string(),
@@ -165,7 +165,7 @@ mod user_repository_insert_tests {
                         is_online: false,
                         address: "789 Pine Rd".to_string(),
                         gender: crate::entity::user::Gender::Male,
-                    })
+                    }))
                 })
             });
 
@@ -178,7 +178,7 @@ mod user_repository_insert_tests {
         assert!(insert_result2.is_ok());
         assert_eq!(insert_result2.unwrap(), 200i32);
 
-        let find_result = mock_user_repo.find_by_email(email1).await;
+        let find_result = mock_user_repo.find_by_email(email1).await.unwrap();
         assert!(find_result.is_some());
         let found_user = find_result.unwrap();
         assert_eq!(found_user.id, 100);

@@ -14,6 +14,8 @@ mod find_by_group_chat_id_datetime_range;
 mod find_first_message_with_no_sent_at;
 mod find_first_message_with_no_read_at;
 mod insert_with_text_message_infos;
+mod update_read_at_info;
+mod update_sent_at_info;
 
 pub use text_message_repository::TextMessageRepository;
 pub use text_message_repository_trait::TextMessageRepositoryTrait;

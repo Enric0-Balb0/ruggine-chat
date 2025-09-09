@@ -4,6 +4,7 @@ use crate::error::{api_error::ApiError,request_error::ValidatedRequest, user_err
 use crate::response::api_response::ApiSuccessResponse;
 use crate::state::auth_state::AuthState;
 use axum::{extract::State, Json};
+use crate::error::db_error::DbError;
 
 #[utoipa::path(
     post,
@@ -24,8 +25,14 @@ pub async fn login(
 ) -> Result<Json<ApiSuccessResponse<TokenReadDto>>, ApiError> {
     let user = state
         .user_repo()
-        .find_by_email(payload.email)
+        .find_by_email(payload.email.clone())
         .await
+        .map_err(|e| {
+            DbError::SomethingWentWrong(format!(
+                "Something went wrong finding user with email {} in the auth middleware, got: {:?}",
+                payload.email.clone(), e
+            ))
+        })?
         .ok_or(UserError::UserNotFound)?;
     
     if user.user_status != UserStatus::Active {
@@ -144,7 +151,7 @@ mod login_tests {
             .times(1)                                  // Expect to be called exactly once
             .returning(move |_| {
                 let user = test_user.clone();
-                Box::pin(async move { Some(user) }) // Return Future for async function
+                Box::pin(async move { Ok(Some(user)) }) // Return Future for async function
             });
 
         // When verify_password is called with any user and "correct_password", return true
@@ -201,7 +208,7 @@ mod login_tests {
             .expect_find_by_email()
             .with(eq("nonexistent@example.com".to_string()))
             .times(1)
-            .returning(|_| Box::pin(async { None })); // User not found - return None wrapped in Future
+            .returning(|_| Box::pin(async { Ok(None) })); // User not found - return None wrapped in Future
 
         let auth_state = create_auth_state_with_mocks(mock_user_repo, mock_user_service, mock_token_service);
         
@@ -246,7 +253,7 @@ mod login_tests {
             .times(1)
             .returning(move |_| {
                 let user = inactive_user.clone();
-                Box::pin(async move { Some(user) }) // User found but inactive
+                Box::pin(async move { Ok(Some(user)) }) // User found but inactive
             });
 
         let auth_state = create_auth_state_with_mocks(mock_user_repo, mock_user_service, mock_token_service);
@@ -292,7 +299,7 @@ mod login_tests {
             .times(1)
             .returning(move |_| {
                 let user = test_user.clone();
-                Box::pin(async move { Some(user) })
+                Box::pin(async move { Ok(Some(user)) })
             });
 
         // Password verification fails
@@ -345,7 +352,7 @@ mod login_tests {
             .times(1)
             .returning(move |_| {
                 let user = test_user.clone();
-                Box::pin(async move { Some(user) })
+                Box::pin(async move { Ok(Some(user)) })
             });
 
         // Password verification succeeds

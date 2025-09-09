@@ -88,6 +88,14 @@ impl TextMessageRepositoryTrait for TextMessageRepository {
     async fn find_first_message_with_no_read_at(&self, user_id: i32, group_chat_id: i32) -> Result<Option<TextMessage>, Error> {
         self.find_first_message_with_no_read_at_inner(user_id, group_chat_id).await
     }
+
+    async fn update_read_at_info(&self, text_message_info_id: i32) -> Result<(), Error> {
+        self.update_read_at_info_inner(text_message_info_id).await
+    }
+
+    async fn update_sent_at_info(&self, text_message_info_id: i32) -> Result<(), Error> {
+        self.update_sent_at_info_inner(text_message_info_id).await
+    }
     fn db_conn(&self) -> Arc<Database> {
         self.db_conn.clone()
     }

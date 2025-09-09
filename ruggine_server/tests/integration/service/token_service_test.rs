@@ -37,7 +37,7 @@ mod token_service_integration_tests {
         assert!(create_result.is_ok(), "Failed to create user for token test");
         
         // Get the created user from database
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 
@@ -75,7 +75,7 @@ mod token_service_integration_tests {
         let create_result = user_service.create_user(user_dto.clone()).await;
         assert!(create_result.is_ok(), "Failed to create user for roundtrip test");
         
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 
@@ -141,7 +141,7 @@ mod token_service_integration_tests {
             create_result.unwrap_err()
         );
         
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 
@@ -182,7 +182,7 @@ mod token_service_integration_tests {
         let create_result = user_service.create_user(user_dto.clone()).await;
         assert!(create_result.is_ok(), "Failed to create user");
         
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         let user = user_option.unwrap();
 
@@ -231,7 +231,7 @@ mod token_service_integration_tests {
         let create_result_1 = user_service.create_user(user_dto_1.clone()).await;
         assert!(create_result_1.is_ok(), "Failed to create first user");
         
-        let user_option_1 = repository.find_by_email(user_dto_1.email.clone()).await;
+        let user_option_1 = repository.find_by_email(user_dto_1.email.clone()).await.unwrap();
         assert!(user_option_1.is_some(), "First user not found");
         let user_1 = user_option_1.unwrap();
 
@@ -240,7 +240,7 @@ mod token_service_integration_tests {
         let create_result_2 = user_service.create_user(user_dto_2.clone()).await;
         assert!(create_result_2.is_ok(), "Failed to create second user");
         
-        let user_option_2 = repository.find_by_email(user_dto_2.email.clone()).await;
+        let user_option_2 = repository.find_by_email(user_dto_2.email.clone()).await.unwrap();
         assert!(user_option_2.is_some(), "Second user not found");
         let user_2 = user_option_2.unwrap();
 

@@ -90,16 +90,12 @@ pub struct TextMessageLastSentAtDto {
 pub struct TextMessageInfoSentAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,
-    #[schema(example = "2025-08-12T10:30:00Z")]
-    pub sent_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema, PartialEq, Eq)]
 pub struct TextMessageInfoReadAtDtoUpdate {
     #[schema(example = 1)]
     pub text_message_id: i32,
-    #[schema(example = "2025-08-12T10:30:00Z")]
-    pub read_at: DateTime<Utc>,
 }
 
 

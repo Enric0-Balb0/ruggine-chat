@@ -1,8 +1,7 @@
 use crate::common::{
     add_test_user_to_a_group, cleanup_all_cpu_usage_log, cleanup_group_chat,
     cleanup_test_user_from_a_group_chat, cleanup_text_messages,
-    cleanup_user_by_email, create_login_and_get_token, create_test_group_chat_with_invitation_and_membership,
-    start_test_server
+    cleanup_user_by_email, create_login_and_get_token, create_test_group_chat_with_invitation_and_membership
 };
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
@@ -22,19 +21,21 @@ use uuid::Uuid;
 #[cfg(test)]
 mod mixed_workload_benchmark_tests {
     use super::*;
-    use crate::{common, create_admin_login_and_get_token, get_database};
+    use crate::{common, create_admin_login_and_get_token}; // get_database commented out for Docker mode
     use futures::stream::{self, StreamExt};
     use futures_util::stream::FuturesUnordered;
     use rand::{Rng, SeedableRng};
     use reqwest::Client;
     use ruggine_server::config::parameter;
-    use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
-    use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
-    use ruggine_server::utils::service_initializer::ServiceInitializer;
+    // NOTE: CPU monitoring imports disabled for Docker mode
+    // use ruggine_server::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
+    // use ruggine_server::service::cpu_usage_log_service::{CpuUsageLogService, CpuUsageLogServiceTrait};
+    // use ruggine_server::utils::service_initializer::ServiceInitializer;
     use serial_test::serial;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use chrono::DateTime;
     use rand::rngs::StdRng;
     use tokio::sync::{Mutex, Semaphore};
     use tokio::time::{timeout, Duration, Instant};
@@ -112,24 +113,37 @@ mod mixed_workload_benchmark_tests {
     }
 
     /// Test di benchmark con carico di lavoro misto: creazione messaggi, letture, websocket
-    #[tokio::test(flavor = "multi_thread", worker_threads = 32)]
+    #[tokio_shared_rt::test(shared)]
     #[serial]
     async fn test_mixed_workload_benchmark() {
+        // Configuration: Use environment variable or default to Docker production port
+        let server_url = std::env::var("BENCHMARK_SERVER_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:8002".to_string());
+        let server_host = std::env::var("BENCHMARK_SERVER_HOST")
+            .unwrap_or_else(|_| "127.0.0.1:8002".to_string());
+        
+        println!("🎯 Benchmark configurazione:");
+        println!("  Server URL (HTTP): {}", server_url);
+        println!("  Server Host (WebSocket): {}", server_host);
+        println!("  Per cambiare, imposta BENCHMARK_SERVER_URL e BENCHMARK_SERVER_HOST");
+        println!();
+
         // Cleanup iniziale
         // init_tracing();
         cleanup_all_cpu_usage_log().await;
 
-        let db = get_database().await;
-        let mut cpu_usage_log_service = CpuUsageLogService::new(
-            Arc::new(CpuUsageLogRepository::new(&db))
-        );
-        cpu_usage_log_service.set_monitoring_interval_ms(1000);
-        cpu_usage_log_service.start_monitoring().await.expect("Failed to start CPU monitoring");
+        // NOTE: CPU monitoring disabled when using Docker server
+        // let db = get_database().await;
+        // let mut cpu_usage_log_service = CpuUsageLogService::new(
+        //     Arc::new(CpuUsageLogRepository::new(&db))
+        // );
+        // cpu_usage_log_service.set_monitoring_interval_ms(1000);
+        // cpu_usage_log_service.start_monitoring().await.expect("Failed to start CPU monitoring");
         let mut rng = StdRng::from_entropy();
 
         // Parametri del benchmark
         // ---------------- Parametri generali ----------------
-        const NUM_GROUPS: usize = 450;
+        const NUM_GROUPS: usize = 600; // Numero di gruppi da creare
         const TEST_DURATION_SECS: u64 = 130;
 
         // ---------------- Utenti per gruppo ----------------
@@ -143,19 +157,19 @@ mod mixed_workload_benchmark_tests {
         // ---------------- Intervalli in ms (con jitter) ----------------
         // Messaggi: ogni 25–35s
         const INTERVAL_SENDERS_PER_GROUP: usize = 30000;
-        const DELTA_INTERVAL_SENDERS_PER_GROUP: usize = 5000;
+        const DELTA_INTERVAL_SENDERS_PER_GROUP: usize = 30000;
 
         // Not-read readers: ogni 20–40s
         const INTERVAL_NOT_READ_PER_GROUP: usize = 30000;
-        const DELTA_INTERVAL_NOT_READ_PER_GROUP: usize = 10000;
+        const DELTA_INTERVAL_NOT_READ_PER_GROUP: usize = 30000;
 
         // Paginated readers: ogni 40–70s
         const INTERVAL_PAGINATED_PER_GROUP: usize = 55000;
-        const DELTA_INTERVAL_PAGINATED_PER_GROUP: usize = 15000;
+        const DELTA_INTERVAL_PAGINATED_PER_GROUP: usize = 55000;
 
         // Websocket heartbeat / update online: ogni 1–3s
         const INTERVAL_WEBSOCKET_PER_GROUP: usize = 2000;
-        const DELTA_INTERVAL_WEBSOCKET_PER_GROUP: usize = 1000;
+        const DELTA_INTERVAL_WEBSOCKET_PER_GROUP: usize = 2000;
 
         // ---------------- Funzione helper per sleep con jitter ----------------
         fn jitter(base: usize, delta: usize, rng: &mut StdRng) -> Duration {
@@ -167,9 +181,10 @@ mod mixed_workload_benchmark_tests {
               NUM_GROUPS, MESSAGE_SENDERS_PER_GROUP, NOT_READ_READERS_PER_GROUP, PAGINATED_READERS_PER_GROUP, 
               WEBSOCKET_USERS_PER_GROUP, WEBSOCKET_PASSIVE_USERS, WEBSOCKET_ACTIVE_USERS, TEST_DURATION_SECS);
 
-        // Avvio server di test
-        let (addr, shutdown) = start_test_server().await;
-        let base_url = format!("http://{}", addr);
+        // Connect to Docker server instead of starting test server
+        let base_url = server_url;
+
+        println!("🐳 Connecting to Docker server at: {}", base_url);
 
         // --- Creazione utenti e gruppi tramite API ---
         let client = Client::new();
@@ -389,6 +404,7 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let mut rng = rng.clone();
+                let addr = server_host.clone();
 
                 let handle = tokio::spawn(async move {
                     // Tentativo di connessione al WebSocket
@@ -440,6 +456,7 @@ mod mixed_workload_benchmark_tests {
             }
 
             // WebSocket active users (ricevono E rispondono con update_read_at)
+            let addr = server_host.clone();
             for ws_user_idx in ws_start_idx + WEBSOCKET_PASSIVE_USERS..ws_start_idx + WEBSOCKET_USERS_PER_GROUP {
                 let token = all_tokens[ws_user_idx].clone();
                 let stop_flag = Arc::clone(&stop_flag);
@@ -447,7 +464,9 @@ mod mixed_workload_benchmark_tests {
                 let base_url = base_url.clone();
                 let mut rng = rng.clone();
 
-                let handle = tokio::spawn(async move {
+                let handle = tokio::spawn({
+                    let addr = addr.clone();
+                    async move {
                     // Tentativo di connessione al WebSocket
                     let ws_url = format!("ws://{}/api/ws/chat?token={}", addr, token);
                     let connect_result = connect_async(&ws_url).await;
@@ -489,7 +508,6 @@ mod mixed_workload_benchmark_tests {
                                     let client = Client::new();
                                     let payload = json!({
                                         "text_message_id": message_id,
-                                        "read_at": Utc::now()
                                     });
 
                                     let mark_read_result = client
@@ -524,6 +542,7 @@ mod mixed_workload_benchmark_tests {
                             }
                         }
                     }
+                }
                 });
 
                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
@@ -572,11 +591,11 @@ mod mixed_workload_benchmark_tests {
                                         Ok(json) => {
                                             if let Some(messages) = json.get("data").and_then(|d| d.as_array()) {
                                                 // Mark random messages as read
-                                                for message in messages.iter().take(3) { // Max 3 per iterazione
+                                                for message in messages.iter() {
                                                     if let Some(msg_id) = message.get("id").and_then(|id| id.as_i64()) {
+
                                                         let payload = json!({
                                                             "text_message_id": msg_id,
-                                                            "read_at": Utc::now()
                                                         });
 
                                                         let mark_result = client
@@ -753,7 +772,8 @@ mod mixed_workload_benchmark_tests {
 
         let total_duration = start_time.elapsed();
 
-        cpu_usage_log_service.stop_monitoring().await.expect("Failed to stop CPU monitoring");
+        // NOTE: CPU monitoring disabled when using Docker server
+        // cpu_usage_log_service.stop_monitoring().await.expect("Failed to stop CPU monitoring");
 
         println!("==============================");
         println!("🏁 Parametri del benchmark");
@@ -794,7 +814,8 @@ mod mixed_workload_benchmark_tests {
             cleanup_user_by_email(user.email.clone()).await;
         } */
 
-        let _ = shutdown.send(());
+        // NOTE: No need to shutdown Docker server
+        // let _ = shutdown.send(());
 
         // Verifiche finali
         let total_ops = stats.messages_created.load(Ordering::SeqCst) + 

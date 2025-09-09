@@ -34,7 +34,33 @@ mod user_repository_integration_tests {
         if let Err(e) = repository.delete_by_email(user1.email.clone()).await {
             eprintln!("Cleanup failed for {}: {:?}", user1.email.clone(), e);
         }
-        assert!(repository.find_by_email(user1.email.clone()).await.is_none(), "User should be deleted");
+        assert!(repository.find_by_email(user1.email.clone()).await.unwrap().is_none(), "User should be deleted");
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_insert_duplicate_username() {
+        // Arrange
+        let db = get_database().await;
+        let repository = UserRepository::new(&db);
+
+        let user1 = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
+        let mut user2 = UserFactory::unique_fake_new_user("duplicate", UserStatus::Active);
+
+        user2.username = user1.username.clone(); // Same username
+
+        // Act
+        let first_insert = repository.insert(user1.clone()).await;
+        let second_insert = repository.insert(user2.clone()).await;
+
+        // Assert
+        assert!(first_insert.is_ok(), "First insert should succeed");
+        assert!(second_insert.is_err(), "Second insert should fail due to unique constraint");
+
+        // Cleanup
+        if let Err(e) = repository.delete_by_email(user1.email.clone()).await {
+            eprintln!("Cleanup failed for {}: {:?}", user1.email.clone(), e);
+        }
+        assert!(repository.find_by_email(user1.email.clone()).await.unwrap().is_none(), "User should be deleted");
     }
 
     #[tokio_shared_rt::test(shared)]
@@ -67,8 +93,12 @@ mod user_repository_integration_tests {
         let results = futures::future::join_all(handles).await;
 
         for (i, result) in results.iter().enumerate() {
-            assert!(result.is_ok(), "Task {i} panicked");
-            assert!(result.as_ref().unwrap().is_ok(), "Insert {i} failed");
+            assert!(result.is_ok(), "Task {} panicked", i);
+            assert!(
+                result.as_ref().unwrap().is_ok(),
+                "Insert {} failed",
+                i
+            );
         }
 
         // ✅ CLEANUP PHASE: inline .await and make sure runtime is active
@@ -80,8 +110,9 @@ mod user_repository_integration_tests {
                     eprintln!("Cleanup failed for {}: {:?}", email, e);
                 }
                 match repository.find_by_email(email.clone()).await {
-                    Some(_) => panic!("User should be deleted but still exists: {}", email),
-                    None => {}
+                    Ok(Some(_)) => panic!("User should be deleted but still exists: {}", email),
+                    Ok(_) => {},
+                    Err(err) => panic!("Something went wrong, got: {:?}", err),
                 }
             }
         });

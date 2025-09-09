@@ -25,7 +25,7 @@ mod profile_handler_integration_tests {
         assert!(create_result.is_ok(), "Failed to create user for profile test");
         
         // Get the created user from database
-        let user_option = repository.find_by_email(user_dto.email.clone()).await;
+        let user_option = repository.find_by_email(user_dto.email.clone()).await.unwrap();
         assert!(user_option.is_some(), "User not found in database");
         (user_option.unwrap(), user_dto.password.clone())
     }
@@ -90,6 +90,7 @@ mod profile_handler_integration_tests {
         let updated_user = repo
             .find_by_email(user.email.clone())
             .await
+            .unwrap()
             .expect("User should still exist in database");
 
         // Act
@@ -177,6 +178,7 @@ mod profile_handler_integration_tests {
         // Get the updated user from database
         let repository = UserRepository::new(&db);
         let updated_user = repository.find_by_email(user.email.clone()).await
+            .unwrap()
             .expect("User should still exist in database");
         
         // Act: Call profile handler with updated user

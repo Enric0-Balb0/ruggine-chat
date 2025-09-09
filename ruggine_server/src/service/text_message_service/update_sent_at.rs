@@ -21,17 +21,8 @@ impl TextMessageService {
             return Err(ApiError::TextMessageError(TextMessageError::CannotUpdateSentAtAgain));
         }
 
-        if !payload.sent_at.clone().le(&Utc::now()) || !payload.sent_at.clone().ge(&message.sent_at) {
-            return Err(ApiError::TextMessageError(TextMessageError::SentAtMustBeLessOrEqualsToNowAndGreaterThanMessageCreation));
-        }
-
         // Update sent at
-        let text_message_dto_update = TextMessageInfoUpdate {
-            id: info.id,
-            sent_at: Some(payload.sent_at),
-            read_at: None,
-        };
-        match self.text_message_repo.update_info(text_message_dto_update).await {
+        match self.text_message_repo.update_sent_at_info(info.id).await {
             Ok(_) => {
                 self.find_info_by_id(info.id).await
             },

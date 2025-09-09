@@ -1,19 +1,19 @@
-use std::collections::HashMap;
 use crate::entity::user::{UserStatus, UserType};
+use crate::error::db_error::DbError;
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
 use crate::state::token_state::TokenState;
 use axum::extract::State;
-use axum::{http, http::Request, middleware::Next, body::Body};
-use futures::future::BoxFuture;
-use jsonwebtoken::errors::ErrorKind;
-use headers::authorization::{Authorization, Bearer};
-use headers::Header;
 use axum::response::Response;
+use axum::{body::Body, http, http::Request, middleware::Next};
+use futures::future::BoxFuture;
+use headers::Header;
+use jsonwebtoken::errors::ErrorKind;
+use std::collections::HashMap;
 
 pub fn auth(
     allowed_user_types: Vec<UserType>,
 ) -> impl Clone
-         + Fn(State<TokenState>, Request<axum::body::Body>, Next) -> BoxFuture<'static, Result<Response, ApiError>>
+         + Fn(State<TokenState>, Request<Body>, Next) -> BoxFuture<'static, Result<Response, ApiError>>
          + Send
          + Sync
          + 'static {
@@ -69,7 +69,15 @@ pub async fn auth_inner(
         })?;
 
     // Find the user associated with the email from the claims
-    let user = state.user_repo.find_by_email(token_data.claims.email).await
+    let user = state.user_repo
+        .find_by_email(token_data.claims.email.clone())
+        .await
+        .map_err(|e| {
+            DbError::SomethingWentWrong(format!(
+                "Something went wrong finding user with email {} in the auth middleware, got: {:?}",
+                token_data.claims.email, e
+            ))
+        })?
         .ok_or(UserError::UserNotFound)?;
 
     // Check if the user is active
@@ -91,12 +99,6 @@ pub async fn auth_inner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{
-        body::Body,
-        http::{Request, header},
-        response::{IntoResponse, Response},
-    };
-    use std::sync::Arc;
     use crate::{
         entity::user::{all_user_types, User},
         factory::{token_factory::TokenFactory, user_factory::UserFactory},
@@ -104,7 +106,13 @@ mod tests {
         service::token_service::MockTokenServiceTrait,
         state::token_state::TokenState,
     };
+    use axum::{
+        body::Body,
+        http::{header, Request},
+        response::{IntoResponse, Response},
+    };
     use jsonwebtoken::errors::ErrorKind;
+    use std::sync::Arc;
 
     /// FakeNext simula il comportamento di Next nel test
     struct FakeNext;
@@ -114,7 +122,7 @@ mod tests {
             Box::pin(async move {
                 assert!(req.extensions().get::<User>().is_some(), "User not injected");
                 // Risposta convertita con IntoResponse per ottenere il corretto tipo Body
-                ("passed").into_response()
+                "passed".into_response()
             })
         }
     }
@@ -131,7 +139,7 @@ mod tests {
             Box::pin(async {
                 let mut user = UserFactory::fake_user();
                 user.user_status = UserStatus::Active;
-                Some(user)
+                Ok(Some(user))
             })
         });
 
@@ -283,7 +291,7 @@ mod tests {
 
         let mut mock_user_repo = MockUserRepositoryTrait::new();
         mock_user_repo.expect_find_by_email().returning(|_| {
-            Box::pin(async { None })
+            Box::pin(async { Ok(None) })
         });
 
         let state = TokenState {
@@ -319,7 +327,7 @@ mod tests {
             Box::pin(async {
                 let mut user = UserFactory::fake_user();
                 user.user_status = UserStatus::Deleted; // User is not active
-                Some(user)
+                Ok(Some(user))
             })
         });
 
@@ -416,7 +424,7 @@ mod tests {
                 let mut user = UserFactory::fake_user();
                 user.user_status = UserStatus::Active;
                 user.user_type = UserType::Admin;
-                Some(user)
+                Ok(Some(user))
             })
         });
 
@@ -449,7 +457,7 @@ mod tests {
                 let mut user = UserFactory::fake_user();
                 user.user_status = UserStatus::Active;
                 user.user_type = UserType::EndUser;
-                Some(user)
+                Ok(Some(user))
             })
         });
 
@@ -486,7 +494,7 @@ mod tests {
             Box::pin(async {
                 let mut user = UserFactory::fake_user();
                 user.user_status = UserStatus::Active;
-                Some(user)
+                Ok(Some(user))
             })
         });
 
@@ -536,6 +544,43 @@ mod tests {
             // Expected error
         } else {
             panic!("Expected TokenError::InvalidToken");
+        }
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_auth_database_error_when_finding_user() {
+        let mut mock_token_service = MockTokenServiceTrait::new();
+        mock_token_service
+            .expect_retrieve_token_claims()
+            .returning(|_| Ok(TokenFactory::fake_token_data()));
+
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        mock_user_repo.expect_find_by_email().returning(|_| {
+            Box::pin(async {
+                // Simulate a database error
+                Err(sqlx::Error::PoolClosed)
+            })
+        });
+
+        let state = TokenState {
+            token_service: Arc::new(mock_token_service),
+            user_repo: Arc::new(mock_user_repo),
+        };
+
+        let req = Request::builder()
+            .uri("/")
+            .header(header::AUTHORIZATION, "Bearer validtoken")
+            .body(Body::empty())
+            .unwrap();
+
+        let result = auth_inner(&state, req, all_user_types()).await;
+        assert!(result.is_err());
+
+        if let Err(ApiError::DbError(DbError::SomethingWentWrong(msg))) = result {
+            assert!(msg.contains("Something went wrong finding user with email"));
+            assert!(msg.contains("in the auth middleware"));
+        } else {
+            panic!("Expected DbError::SomethingWentWrong, got: {:?}", result);
         }
     }
 

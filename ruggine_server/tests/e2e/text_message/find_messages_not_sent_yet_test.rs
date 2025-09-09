@@ -17,13 +17,13 @@ use ruggine_server::utils::service_initializer::ServiceInitializer;
 use ruggine_server::service::text_message_service::TextMessageServiceTrait;
 
 // Helper function to mark a message as sent for a specific user
-async fn mark_message_as_sent_for_user(message_id: i32, user_id: i32, sent_time: chrono::DateTime<chrono::Utc>) {
+async fn mark_message_as_sent_for_user(message_id: i32, user_id: i32) {
     let db = get_database().await;
     let service_init = ServiceInitializer::new(&db);
     let service = service_init.text_message_service();
 
     // Mark it as sent
-    mark_message_as_sent(user_id, message_id, sent_time).await;
+    mark_message_as_sent(user_id, message_id).await;
 }
 
 #[cfg(test)]
@@ -132,8 +132,7 @@ mod find_messages_not_sent_yet_text_message_e2e_tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         // Mark old message as sent
-        let sent_time = Utc::now() - Duration::milliseconds(10);
-        mark_message_as_sent_for_user(old_message.id, reader.id, sent_time).await;
+        mark_message_as_sent_for_user(old_message.id, reader.id).await;
 
         // Wait a bit and create new messages
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -203,8 +202,7 @@ mod find_messages_not_sent_yet_text_message_e2e_tests {
         ).await;
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        let sent_time = Utc::now() - Duration::milliseconds(5);
-        mark_message_as_sent_for_user(message.id, reader.id, sent_time).await;
+        mark_message_as_sent_for_user(message.id, reader.id,).await;
 
         // Act: Send GET request to get unsent messages
         let request = Request::builder()
@@ -402,8 +400,7 @@ mod find_messages_not_sent_yet_text_message_e2e_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Mark as sent for reader1 only
-        let sent_time = Utc::now() - Duration::milliseconds(5);
-        mark_message_as_sent_for_user(message.id, reader1.id, sent_time).await;
+        mark_message_as_sent_for_user(message.id, reader1.id,).await;
 
         // Act: Reader1 should get empty result (message already sent)
         let request1 = Request::builder()

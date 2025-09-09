@@ -7,7 +7,7 @@ use mockall::automock;
 #[async_trait]
 #[automock]
 pub trait UserRepositoryTrait: Send + Sync {
-    async fn find_by_email(&self, email: String) -> Option<User>;
+    async fn find_by_email(&self, email: String) -> Result<Option<User>, SqlxError>;
     async fn find_by_username(&self, username: String) -> Result<Option<User>, SqlxError>;
     async fn find(&self, id: i32) -> Result<User, Error>;
     async fn insert(&self, new_user: NewUser) -> Result<i32, SqlxError>;

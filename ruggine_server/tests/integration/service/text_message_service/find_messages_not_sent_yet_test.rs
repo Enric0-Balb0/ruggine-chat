@@ -104,9 +104,8 @@ async fn test_find_messages_not_sent_yet_user_left_and_rejoined_group() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Reader marks the initial messages as sent
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(30);
-    common::mark_message_as_sent(reader_user.id, initial_message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, initial_message2.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, initial_message1.id).await;
+    common::mark_message_as_sent(reader_user.id, initial_message2.id).await;
 
     // Phase 2: Create some messages that reader doesn't mark as sent
     let unsent_message1 = common::create_test_text_message(
@@ -236,8 +235,7 @@ async fn test_find_messages_not_sent_yet_success_with_previous_sent() {
 
     let old_info = service.find_info_by_user_id_and_message_id(reader_user.id, old_message.id).await.unwrap();
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    let sent_time = Utc::now() - Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, old_message.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, old_message.id).await;
 
     // Wait a bit and create new messages that haven't been sent yet
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -314,8 +312,7 @@ async fn test_find_messages_not_sent_yet_empty_result() {
     ).await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    let sent_time = Utc::now() - Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message.id).await;
 
     // Act - Should get empty result since all messages are already sent
     let result = service.find_messages_not_sent_yet(group_chat.id, reader_user.id).await;
@@ -516,8 +513,7 @@ async fn test_find_messages_not_sent_yet_multiple_users_scenario() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark as sent for reader1 only
-    let sent_time = Utc::now() - Duration::milliseconds(10);
-    common::mark_message_as_sent(reader1.id, message.id, sent_time).await;
+    common::mark_message_as_sent(reader1.id, message.id).await;
 
     // Act - Reader1 should get empty result (message already sent)
     let result1 = service.find_messages_not_sent_yet(group_chat.id, reader1.id).await;

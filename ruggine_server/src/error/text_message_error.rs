@@ -17,8 +17,8 @@ pub enum TextMessageError {
     UserIsNotCreator,
     #[error("Cannot set read at before sent at")]
     CannotSetReadAtBeforeSentAt,
-    #[error("Read at must be greater or equals to sent at or lower or equals to now")]
-    ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow,
+    #[error("Read at must be greater or equals to sent at or lower or equals to now: {0}")]
+    ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow(String),
     #[error("Sent at must be less or equals to now and greater than message creation")]
     SentAtMustBeLessOrEqualsToNowAndGreaterThanMessageCreation,
     #[error("Message info not found")]
@@ -37,7 +37,7 @@ impl IntoResponse for TextMessageError {
             TextMessageError::UserCannotAccessMessages => StatusCode::FORBIDDEN,
             TextMessageError::UserIsNotCreator => StatusCode::FORBIDDEN,
             TextMessageError::CannotSetReadAtBeforeSentAt => StatusCode::BAD_REQUEST,
-            TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow => StatusCode::BAD_REQUEST,
+            TextMessageError::ReadAtMustBeGreaterOrEqualsToSentAtAndLowerOrEqualsNow(_) => StatusCode::BAD_REQUEST,
             TextMessageError::SentAtMustBeLessOrEqualsToNowAndGreaterThanMessageCreation => StatusCode::BAD_REQUEST,
             TextMessageError::MessageInfoNotFound => StatusCode::NOT_FOUND,
             TextMessageError::CannotUpdateReadAtAgain => StatusCode::BAD_REQUEST,

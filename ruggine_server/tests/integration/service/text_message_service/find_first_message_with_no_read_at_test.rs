@@ -1,11 +1,9 @@
-use ruggine_server::service::text_message_service::TextMessageServiceTrait;
-use ruggine_server::factory::text_message_factory::TextMessageFactory;
+use crate::common;
+use chrono::Utc;
 use ruggine_server::error::api_error::ApiError;
 use ruggine_server::error::text_message_error::TextMessageError;
-use ruggine_server::error::group_membership_error::GroupMembershipError;
-use crate::common;
+use ruggine_server::service::text_message_service::TextMessageServiceTrait;
 use ruggine_server::utils::service_initializer::ServiceInitializer;
-use chrono::Utc;
 
 #[tokio_shared_rt::test(shared)]
 async fn test_find_first_message_with_no_read_at_success() {
@@ -48,15 +46,13 @@ async fn test_find_first_message_with_no_read_at_success() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark all messages as sent first (required before setting read_at)
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(20);
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message3.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
+    common::mark_message_as_sent(reader_user.id, message3.id).await;
 
     // Mark only message1 and message3 as read (leave message2 without read_at)
-    let read_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_read(reader_user.id, message1.id, read_time).await;
-    common::mark_message_as_read(reader_user.id, message3.id, read_time).await;
+    common::mark_message_as_read(reader_user.id, message1.id).await;
+    common::mark_message_as_read(reader_user.id, message3.id).await;
 
     // Act - Should find message2 as it's the first message without read_at
     let result = service.find_first_message_with_no_read_at(reader_user.id, group_chat.id).await;
@@ -117,8 +113,8 @@ async fn test_find_first_message_with_no_read_at_all_messages_read() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     // Mark all messages as sent and read
     let time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent_and_read(reader_user.id, message1.id, time).await;
-    common::mark_message_as_sent_and_read(reader_user.id, message2.id, time).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message1.id).await;
+    common::mark_message_as_sent_and_read(reader_user.id, message2.id).await;
 
     // Act
     let result = service.find_first_message_with_no_read_at(reader_user.id, group_chat.id).await;
@@ -173,9 +169,8 @@ async fn test_find_first_message_with_no_read_at_messages_sent_but_not_read() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark all messages as sent but not read
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
 
     // Act - Should find the first message as none have been read
     let result = service.find_first_message_with_no_read_at(reader_user.id, group_chat.id).await;
@@ -341,10 +336,9 @@ async fn test_find_first_message_with_no_read_at_returns_oldest_unread() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Mark all messages as sent but not read
-    let sent_time = Utc::now() - chrono::Duration::milliseconds(10);
-    common::mark_message_as_sent(reader_user.id, message1.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message2.id, sent_time).await;
-    common::mark_message_as_sent(reader_user.id, message3.id, sent_time).await;
+    common::mark_message_as_sent(reader_user.id, message1.id).await;
+    common::mark_message_as_sent(reader_user.id, message2.id).await;
+    common::mark_message_as_sent(reader_user.id, message3.id).await;
 
     // Act - Should find the oldest message (message1)
     let result = service.find_first_message_with_no_read_at(reader_user.id, group_chat.id).await;

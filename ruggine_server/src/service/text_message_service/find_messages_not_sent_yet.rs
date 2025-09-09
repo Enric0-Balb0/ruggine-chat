@@ -27,7 +27,6 @@ impl TextMessageService {
                     for message in &data {
                         let payload = TextMessageInfoSentAtDtoUpdate {
                             text_message_id: message.id,
-                            sent_at: Utc::now(),
                         };
 
                         match self.update_sent_at(auth_user_id, payload).await {
