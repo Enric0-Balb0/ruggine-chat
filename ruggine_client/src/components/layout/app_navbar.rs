@@ -26,6 +26,33 @@ pub fn AppNavbar() -> impl IntoView {
 
     // Recupera i dati dell'utente corrente
     let user_profile = auth_service.get_current_user();
+    
+    // Debug logging per verificare il profilo utente e stato Remember Me
+    let storage_debug = StorageService::new();
+    let remember_me_active = storage_debug.is_remember_me_active();
+    let has_token = storage_debug.get_token().is_some();
+    
+    log::info!("AppNavbar: Remember Me attivo = {}, Token presente = {}", remember_me_active, has_token);
+    
+    if let Some(ref profile) = user_profile {
+        log::info!("AppNavbar: Profilo utente caricato - nome: '{}', cognome: '{}', email: '{}'", 
+            profile.first_name, profile.last_name, profile.email);
+    } else {
+        log::warn!("AppNavbar: Nessun profilo utente trovato in storage");
+        
+        // Verifica cosa abbiamo in localStorage
+        if remember_me_active {
+            log::info!("AppNavbar: Remember Me è attivo ma profilo mancante - possibile problema di auto-login");
+            if let Some((email, _)) = storage_debug.get_remember_me_credentials() {
+                log::info!("AppNavbar: Credenziali Remember Me trovate per email: {}", email);
+            } else {
+                log::warn!("AppNavbar: Credenziali Remember Me mancanti");
+            }
+        } else {
+            log::info!("AppNavbar: Remember Me non attivo, utente deve fare login manuale");
+        }
+    }
+    
     let is_admin = user_profile.as_ref().map(|u| u.is_admin()).unwrap_or(false);
     
     // State for hamburger menu dropdown
@@ -265,13 +292,18 @@ pub fn AppNavbar() -> impl IntoView {
                 
                 {match user_profile {
                     Some(user) => {
-                        // Dividi il full_name in first_name e last_name
-                        let full_name = user.full_name();
-                        let name_parts: Vec<&str> = full_name.split_whitespace().collect();
-                        let first_name = name_parts.first().unwrap_or(&"User").to_string();
-                        let last_name = name_parts.get(1).unwrap_or(&"Default").to_string();
-                        // Usa l'email come username temporaneo (manca username nel DTO)
-                        let username = user.email.split('@').next().unwrap_or("user").to_string();
+                        // Usa direttamente first_name e last_name dal profilo invece di dividere full_name
+                        let first_name = user.first_name.clone();
+                        let last_name = user.last_name.clone();
+                        // Usa l'username dal profilo o fallback all'email
+                        let username = if !user.username.is_empty() {
+                            user.username.clone()
+                        } else {
+                            user.email.split('@').next().unwrap_or("user").to_string()
+                        };
+                        
+                        log::info!("AppNavbar: Creo avatar con nome='{}', cognome='{}', username='{}'", 
+                            first_name, last_name, username);
                         
                         view! {
                             <UserAvatar 
@@ -282,14 +314,17 @@ pub fn AppNavbar() -> impl IntoView {
                             />
                         }.into_view()
                     },
-                    None => view! {
-                        <UserAvatar 
-                            name="User".to_string() 
-                            surname="Default".to_string() 
-                            username="user".to_string() 
-                            size="md" 
-                        />
-                    }.into_view(),
+                    None => {
+                        log::warn!("AppNavbar: Usando avatar di default");
+                        view! {
+                            <UserAvatar 
+                                name="User".to_string() 
+                                surname="Default".to_string() 
+                                username="user".to_string() 
+                                size="md" 
+                            />
+                        }.into_view()
+                    },
                 }}
             </div>
         </header>

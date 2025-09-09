@@ -33,20 +33,26 @@ impl AuthService {
             // Check if token exists and is not expired
             let is_valid = now < token.exp;
             
+            log::debug!("AuthService::is_authenticated: token trovato, now={}, exp={}, iat={}, is_valid={}", 
+                now, token.exp, token.iat, is_valid);
+            
             // If token is expired, clean up storage
             if !is_valid {
+                log::warn!("AuthService::is_authenticated: Token scaduto, pulizia storage");
                 let _ = self.storage_service.clear_session();
                 return false;
             }
             
             // Additional check: ensure token is not issued in the future
             if now < token.iat {
+                log::warn!("AuthService::is_authenticated: Token emesso nel futuro, pulizia storage");
                 let _ = self.storage_service.clear_session();
                 return false;
             }
             
             is_valid
         } else {
+            log::debug!("AuthService::is_authenticated: Nessun token trovato");
             false
         }
     }
@@ -94,13 +100,14 @@ impl AuthService {
             .await
             .map_err(AuthError::from)?;
 
-        // Convert and store token
+        // Convert token but don't store it yet - let the caller decide how to store it
         let dto_token = TokenResponse {
             token: token_response.data.token.clone(),
             iat: token_response.data.iat,
             exp: token_response.data.exp,
         };
         
+        // Store the token in a temporary location for the caller to retrieve
         self.storage_service.store_token(&dto_token)
             .map_err(|e| AuthError::Storage(e))?;
 
@@ -116,8 +123,12 @@ impl AuthService {
         // Convert using the automatic conversion from ApiSuccessResponseUserReadDto
         let user_profile = UserProfile::from(profile_response);
 
-        self.storage_service.store_user_profile(&user_profile)
-            .map_err(AuthError::from)?;
+        log::info!("AuthService::login: Profilo ricevuto dal server - nome: '{}', cognome: '{}', email: '{}'",
+            user_profile.first_name, user_profile.last_name, user_profile.email);
+
+        // Non salvare il profilo qui - lascia che la landing page decida dove salvarlo
+        // basandosi sulla modalità Remember Me
+        log::info!("AuthService::login: Profilo non salvato - sarà gestito dalla landing page");
 
         Ok(user_profile)
     }
