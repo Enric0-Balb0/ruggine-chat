@@ -6,6 +6,7 @@ use crate::api::services::AuthService;
 use crate::utils::StorageService;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
+use crate::config::endpoints::ApiEndpoints;
 use crate::components::{AppNavbar, LucideIcon};
 use crate::components::ui::icons::icon_size;
 use web_sys;
@@ -33,10 +34,13 @@ pub fn ProfilePage() -> impl IntoView {
     let (_success_username, _set_success_username) = create_signal(Option::<String>::None);
     let (_success_profile, set_success_profile) = create_signal(Option::<String>::None);
 
-    // Carica dati utente all'apertura
+    // Carica dati utente all'apertura; se non presenti nella cache, prova a recuperarli dal server
     create_effect(move |_| {
         let storage = StorageService::new();
         if let Some(profile) = storage.get_user_profile() {
+            log::info!("ProfilePage: Profilo caricato da storage - nome: '{}', cognome: '{}', email: '{}'",
+                profile.first_name, profile.last_name, profile.email);
+            
             set_first_name.set(profile.first_name.clone());
             set_last_name.set(profile.last_name.clone());
             set_address.set(profile.address.clone());
@@ -47,6 +51,58 @@ pub fn ProfilePage() -> impl IntoView {
             set_original_address.set(profile.address);
             set_original_birthday.set(profile.birthday.to_string());
             set_original_gender.set(profile.gender.to_string());
+        } else {
+            // Nessun profilo in storage: se abbiamo un token, chiediamo il profilo al server
+            let storage_for_fetch = StorageService::new();
+            let set_first_name = set_first_name.clone();
+            let set_last_name = set_last_name.clone();
+            let set_address = set_address.clone();
+            let set_birthday = set_birthday.clone();
+            let set_gender = set_gender.clone();
+            let set_original_first_name = set_original_first_name.clone();
+            let set_original_last_name = set_original_last_name.clone();
+            let set_original_address = set_original_address.clone();
+            let set_original_birthday = set_original_birthday.clone();
+            let set_original_gender = set_original_gender.clone();
+
+            spawn_local(async move {
+                if let Some(token_response) = storage_for_fetch.get_token() {
+                    let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                    http_client.set_auth_token(Some(token_response.token));
+                    // Richiesta al backend per ottenere il profilo corrente
+                    match http_client.get::<crate::types::user::ApiSuccessResponseUserReadDto>(ApiEndpoints::USER_PROFILE).await {
+                        Ok(profile_response) => {
+                            let user_profile = crate::types::UserProfile::from(profile_response);
+                            
+                            log::info!("ProfilePage: Profilo fetchato dal server - nome: '{}', cognome: '{}', email: '{}'",
+                                user_profile.first_name, user_profile.last_name, user_profile.email);
+                            
+                            // Persisti il profilo in storage
+                            if let Err(e) = storage_for_fetch.store_user_profile(&user_profile) {
+                                log::warn!("ProfilePage: failed to store fetched profile: {:?}", e);
+                            }
+
+                            // Aggiorna i segnali della pagina con i dati ricevuti
+                            set_first_name.set(user_profile.first_name.clone());
+                            set_last_name.set(user_profile.last_name.clone());
+                            set_address.set(user_profile.address.clone());
+                            set_birthday.set(user_profile.birthday.to_string());
+                            set_gender.set(user_profile.gender.to_string());
+                            set_original_first_name.set(user_profile.first_name);
+                            set_original_last_name.set(user_profile.last_name);
+                            set_original_address.set(user_profile.address);
+                            set_original_birthday.set(user_profile.birthday.to_string());
+                            set_original_gender.set(user_profile.gender.to_string());
+                        }
+                        Err(e) => {
+                            log::warn!("ProfilePage: failed to fetch profile from server: {:?}", e);
+                        }
+                    }
+                } else {
+                    // Nessun token disponibile: utente non autenticato
+                    log::debug!("ProfilePage: no auth token found in storage; skipping server fetch");
+                }
+            });
         }
     });
 
@@ -113,7 +169,7 @@ pub fn ProfilePage() -> impl IntoView {
     };
 
     view! {
-        <div class="min-h-screen w-screen overflow-auto bg-cover bg-center bg-no-repeat transition-colors" style="background-image: url('public/images/bg-landing-full.png');">
+        <div class="min-h-screen w-screen overflow-auto bg-cover bg-center bg-no-repeat transition-colors" style="background-image: url('/public/images/bg-landing-full.png');">
             <div class="absolute inset-0 bg-black bg-opacity-50 dark:bg-opacity-70"></div>
 
             <div class="relative z-10 flex flex-col min-h-screen bg-transparent">

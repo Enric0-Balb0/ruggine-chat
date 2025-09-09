@@ -85,10 +85,12 @@ pub fn ShowInvitesModal(
             let invitation_service = crate::api::services::invitation::InvitationService::new(http_client, storage_service);
             if let Some(all_invites) = invitation_service.get_user_invitations()
                 .with_auto_retry("load user invitations").await {
-                // determine current user id
+                // diagnostic logs: see how many invites returned and which user id we read from storage
+                log::info!("ShowInvitesModal: fetched invites count = {}", all_invites.len());
                 let current_user_id = crate::utils::storage::StorageService::new()
                     .get_user_profile()
                     .map(|u| u.id);
+                log::info!("ShowInvitesModal: current_user_id from storage = {:?}", current_user_id);
                 let filtered = match (tab, current_user_id) {
                     // sent invites: only those where current user is the sender and not self-invites
                     (1, Some(uid)) => all_invites.into_iter()
@@ -99,7 +101,9 @@ pub fn ShowInvitesModal(
                         .filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1) && inv.from_user_id != inv.to_user_id)
                         .collect::<Vec<_>>()
                 };
+                let local_len = filtered.len();
                 set_local_invites.set(filtered);
+                log::info!("ShowInvitesModal: local_invites set length = {}", local_len);
             }
         });
     });

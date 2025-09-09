@@ -32,7 +32,7 @@
     "shortDescription": "Real-time chat application",
     "longDescription": "Ruggine Chat - a modern, real-time, multi-platform chat client built in Rust with Leptos and Tauri.",
     "publisher": "Ruggine Team",
-    "copyright": "Copyright © 2025 Ruggine",
+    "copyright": "Copyright © 2025 Ruggine Team",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,6 +42,36 @@
       "icons/512x512.png",
       "icons/icon.ico",
       "icons/icon.icns"
-    ]
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "tsp": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "startMenuFolder": "Ruggine Chat"
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": "localhost",
+      "signingIdentity": null,
+      "hardenedRuntime": true,
+      "entitlements": null,
+      "providerShortName": null
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "rpm": {
+        "epoch": 0
+      }
+    }
   }
 }

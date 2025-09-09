@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Ruggine Chat
+Name[it]=Ruggine Chat
+Comment=Modern real-time chat application
+Comment[it]=Applicazione moderna di chat in tempo reale
+GenericName=Chat Client
+GenericName[it]=Client di Chat
+Exec=ruggine-chat
+Icon=ruggine-chat
+Terminal=false
+Categories=Network;InstantMessaging;
+Keywords=chat;messaging;real-time;
+Keywords[it]=chat;messaggi;tempo-reale;
+StartupNotify=true
+StartupWMClass=ruggine-chat
+MimeType=x-scheme-handler/ruggine;

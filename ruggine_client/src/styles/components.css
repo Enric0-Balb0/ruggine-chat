@@ -37,16 +37,33 @@
   /* Component Styles - Based on UI Mock Design */
   /* ===== BUTTON COMPONENTS ===== */
   .btn-primary {
-    @apply bg-brand-primary hover:bg-brand-primary-light text-white font-medium py-2 px-4 rounded transition-colors duration-200;
+  /* more compact button sizing */
+  font-weight: 600;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  padding: 6px 10px; /* reduced */
+  border-radius: 6px;
+  font-size: var(--font-size-sm);
+  transition: background-color 0.15s ease;
   }
   
   .btn-secondary {
-    @apply bg-white border border-border hover:bg-bg-main hover:border-border-light text-brand-secondary font-medium py-2 px-4 rounded transition-all duration-200;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-secondary);
+  padding: 6px 10px; /* reduced */
+  border-radius: 6px;
+  font-size: var(--font-size-sm);
+  transition: all 0.15s ease;
   }
   
   /* ===== LAYOUT COMPONENTS ===== */
   .card {
-    @apply bg-white rounded border border-border p-6 shadow-sm;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px; /* reduced */
+  box-shadow: var(--shadow-sm);
   }
   
   .sidebar-section {
@@ -55,7 +72,13 @@
   
   /* ===== FORM COMPONENTS ===== */
   .input-field {
-    @apply w-full px-3 py-2 border border-border rounded focus:ring-2 focus:ring-brand-primary-light focus:border-brand-primary-light outline-none transition-all duration-200;
+    width: 100%;
+    padding: 6px 8px; /* reduced */
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: var(--font-size-base);
+    outline: none;
+    transition: box-shadow 0.12s ease, border-color 0.12s ease;
   }
   
   /* ===== NAVIGATION COMPONENTS ===== */
