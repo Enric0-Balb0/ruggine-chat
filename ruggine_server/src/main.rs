@@ -6,6 +6,7 @@ use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tracing;
 use tracing::error;
+use tracing_subscriber::{fmt, EnvFilter};
 use crate::service::cpu_usage_log_service::CpuUsageLogServiceTrait;
 use crate::repository::cpu_usage_log_repository::cpu_usage_log_repository::CpuUsageLogRepository;
 use crate::service::cpu_usage_log_service::CpuUsageLogService;
@@ -30,8 +31,13 @@ mod websocket;
 
 #[tokio::main]
 async fn main() {
-    // Initialize logging first
-    tracing_subscriber::fmt::init();
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+
+    fmt::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stdout)
+        .init();
     
     parameter::init();
 

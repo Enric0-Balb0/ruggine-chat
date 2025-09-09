@@ -1067,8 +1067,8 @@ note right of database_infrastructure : Dockerized database with\npersistent vol
 - **Infrastructure**: Docker containers on Linux servers
 - **Operating System**: Ubuntu 20.04 LTS with Docker Engine
 - **Hardware Requirements**:
-  - Minimum 8GB RAM
-  - 8 CPU cores
+  - Minimum 4GB RAM
+  - Minimum 4 CPU cores
   - 10GB storage (application server)
   - Network interface with stable internet connection
 - **Software Stack**:
@@ -1081,8 +1081,8 @@ note right of database_infrastructure : Dockerized database with\npersistent vol
 - **Infrastructure**: Docker containers on separate Linux servers
 - **Operating System**: Ubuntu 20.04 LTS with Docker Engine
 - **Hardware Requirements**:
-  - Minimum 8GB RAM
-  - 4 CPU cores
+  - Minimum 4GB RAM
+  - Minimum 6 CPU cores
   - 20GB+ storage (database + Docker volumes)
   - High-speed network interface
 - **Software Stack**:
