@@ -5,3 +5,4 @@ mod app_router;
 
 // Re-export public components
 pub use app_router::AppRouter;
+pub use guards::AuthGuard;

@@ -103,6 +103,14 @@ impl UserFactory {
         }
     }
 
+    /// Create user profile with specific first and last names for avatar tests
+    pub fn user_profile_with_names(first_name: &str, last_name: &str) -> UserProfile {
+        let mut profile = Self::mock_user_profile();
+        profile.first_name = first_name.to_string();
+        profile.last_name = last_name.to_string();
+        profile
+    }
+
     /// Create unique user info (email, username, password) with prefix
     pub fn get_unique_user_info(prefix: &str) -> (String, String, String) {
         BaseFactory::get_unique_user_info(prefix)

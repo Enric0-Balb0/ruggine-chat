@@ -137,11 +137,11 @@ async fn test_remember_me_error_scenarios() {
     }
     
     // Test con stringhe vuote
-    let result = storage.set_remember_me("", "");
+    let result = storage.set_remember_me("", "", false);
     // A seconda dell'implementazione, potrebbe essere ok o errore
     // L'importante è che non crashhi
     
-    let result = storage.set_remember_me("valid@email.com", "");
+    let result = storage.set_remember_me("valid@email.com", "", false);
     // Stesso discorso per password vuota
 }
 

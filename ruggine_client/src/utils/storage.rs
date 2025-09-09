@@ -43,7 +43,9 @@ impl StorageService {
         // Poi prova localStorage (per token persistenti con Remember Me)
         if let Some(token_json) = self.get_item(StorageKeys::AUTH_TOKEN) {
             if let Ok(token) = serde_json::from_str(&token_json) {
-                log::debug!("StorageService::get_token: Token trovato in localStorage");
+                log::debug!("StorageService::get_token: Token trovato in localStorage, copio in sessionStorage");
+                // Copia il token in sessionStorage per accesso immediato
+                let _ = self.set_session_item(StorageKeys::AUTH_TOKEN, &token_json);
                 return Some(token);
             }
         }
@@ -168,9 +170,11 @@ impl StorageService {
         self.remove_user_profile();
     }
 
-    /// Clear user session (alias for clear_all)
+    /// Clear user session (sessionStorage only, preserves localStorage for Remember Me)
     pub fn clear_session(&self) -> Result<(), StorageError> {
-        self.clear_all();
+        // Rimuovi solo da sessionStorage, preserva localStorage per Remember Me
+        self.remove_session_item(StorageKeys::AUTH_TOKEN);
+        self.remove_session_item(StorageKeys::USER_PROFILE);
         Ok(())
     }
 
@@ -183,7 +187,10 @@ impl StorageService {
             let credentials = RememberMeCredentials {
                 email: email.to_string(),
                 password: self.simple_encrypt(password),
+                #[cfg(target_arch = "wasm32")]
                 timestamp: js_sys::Date::now() as u64,
+                #[cfg(not(target_arch = "wasm32"))]
+                timestamp: chrono::Utc::now().timestamp_millis() as u64,
             };
             
             let credentials_json = serde_json::to_string(&credentials)
@@ -192,7 +199,10 @@ impl StorageService {
             self.set_item(StorageKeys::REMEMBER_ME_CREDENTIALS, &credentials_json)?;
             
             // Set expiry date (30 giorni da ora)
+            #[cfg(target_arch = "wasm32")]
             let expiry = js_sys::Date::now() as u64 + (crate::config::storage::StorageConfig::REMEMBER_ME_DURATION_DAYS * 24 * 60 * 60 * 1000);
+            #[cfg(not(target_arch = "wasm32"))]
+            let expiry = chrono::Utc::now().timestamp_millis() as u64 + (crate::config::storage::StorageConfig::REMEMBER_ME_DURATION_DAYS * 24 * 60 * 60 * 1000);
             self.set_item(StorageKeys::REMEMBER_ME_EXPIRY, &expiry.to_string())?;
             
             self.set_item(StorageKeys::REMEMBER_ME_ENABLED, "true")
@@ -207,7 +217,11 @@ impl StorageService {
             if enabled == "true" {
                 if let Some(expiry_str) = self.get_item(StorageKeys::REMEMBER_ME_EXPIRY) {
                     if let Ok(expiry) = expiry_str.parse::<u64>() {
-                        return (js_sys::Date::now() as u64) < expiry;
+                        #[cfg(target_arch = "wasm32")]
+                        let now = js_sys::Date::now() as u64;
+                        #[cfg(not(target_arch = "wasm32"))]
+                        let now = chrono::Utc::now().timestamp_millis() as u64;
+                        return now < expiry;
                     }
                 }
             }
@@ -241,12 +255,34 @@ impl StorageService {
         log::info!("StorageService::store_token_with_remember_me: remember_me={}", remember_me);
         
         if remember_me {
-            // Se Remember Me è attivo, salva il token in localStorage (persistente)
-            log::info!("StorageService::store_token_with_remember_me: Salvando in localStorage (persistente)");
-            self.store_token(token)
+            // Se Remember Me è attivo, salva in localStorage per persistenza E in sessionStorage per accesso immediato
+            log::info!("StorageService::store_token_with_remember_me: Salvando in localStorage (persistente) E sessionStorage (accesso immediato)");
+            
+            let token_json = serde_json::to_string(token)
+                .map_err(|e| StorageError::Serialization(e.to_string()))?;
+            
+            // Salva in localStorage per persistenza
+            let local_result = self.set_item(StorageKeys::AUTH_TOKEN, &token_json);
+            
+            // Salva anche in sessionStorage per accesso immediato
+            let session_result = self.set_session_item(StorageKeys::AUTH_TOKEN, &token_json);
+            
+            // Ritorna errore se almeno uno dei due ha fallito
+            if local_result.is_err() {
+                log::error!("StorageService::store_token_with_remember_me: Errore nel salvataggio in localStorage: {:?}", local_result);
+                return local_result;
+            }
+            
+            if session_result.is_err() {
+                log::error!("StorageService::store_token_with_remember_me: Errore nel salvataggio in sessionStorage: {:?}", session_result);
+                return session_result;
+            }
+            
+            log::info!("StorageService::store_token_with_remember_me: Token salvato correttamente in entrambi i storage");
+            Ok(())
         } else {
-            // Altrimenti usa sessionStorage (non persistente)
-            log::info!("StorageService::store_token_with_remember_me: Salvando in sessionStorage (temporaneo)");
+            // Altrimenti usa solo sessionStorage (non persistente)
+            log::info!("StorageService::store_token_with_remember_me: Salvando solo in sessionStorage (temporaneo)");
             let token_json = serde_json::to_string(token)
                 .map_err(|e| StorageError::Serialization(e.to_string()))?;
             

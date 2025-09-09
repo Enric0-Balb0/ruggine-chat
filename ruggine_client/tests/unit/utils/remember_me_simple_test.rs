@@ -16,11 +16,12 @@ mod remember_me_simple_tests {
             exp: now + 14400, // 4 ore
         };
         
-        // Token vicino alla scadenza (scade tra 1 ora)
+        // Token vicino alla scadenza (scade tra 10 minuti - dovrebbe essere refreshato)
+        // Per un token di 1 ora, deve rimanere meno del 25% = 15 min per essere refreshato
         let expiring_token = TokenResponse {
             token: "expiring_token".to_string(),
-            iat: now,
-            exp: now + 3600, // 1 ora
+            iat: now - 3000, // Creato 50 min fa
+            exp: now + 600,  // Scade tra 10 minuti
         };
         
         // Token scaduto
@@ -36,7 +37,7 @@ mod remember_me_simple_tests {
         assert!(expired_token.is_expired(), "Expired token should be expired");
         
         assert!(valid_token.time_to_expiry() > 7200, "Valid token should have more than 2 hours");
-        assert!(expiring_token.time_to_expiry() < 7200, "Expiring token should have less than 2 hours");
+        assert!(expiring_token.time_to_expiry() < 900, "Expiring token should have less than 15 minutes");
         assert_eq!(expired_token.time_to_expiry(), 0, "Expired token should have 0 time left");
         
         // Test logica should_refresh_token
@@ -80,31 +81,40 @@ mod remember_me_simple_tests {
     fn test_refresh_threshold_edge_cases() {
         let now = chrono::Utc::now().timestamp();
         
-        // Token che scade esattamente in 2 ore
-        let edge_token = TokenResponse {
-            token: "edge_token".to_string(),
+        // Test con token di durata lunga (>2 ore)
+        // Per token > 2 ore: usa la logica originale (refresh quando rimangono < 2 ore)
+        let long_token = TokenResponse {
+            token: "long_token".to_string(),
+            iat: now,
+            exp: now + 10800, // 3 ore totali
+        };
+        
+        // Token lungo con 1 ora e 50 minuti rimanenti (< 2 ore)
+        let long_token_should_refresh = TokenResponse {
+            token: "long_should_refresh".to_string(),
+            iat: now - 4200, // Creato 70 minuti fa  
+            exp: now + 6600, // Scade in 110 minuti (1h 50m)
+        };
+        
+        assert!(!should_refresh_token(&long_token), "Fresh long token should not need refresh");
+        assert!(should_refresh_token(&long_token_should_refresh), "Long token with <2h remaining should need refresh");
+        
+        // Test con token di durata media (esattamente 2 ore)
+        // Per token <= 2 ore: refresh quando rimane meno del 33%
+        let medium_token = TokenResponse {
+            token: "medium_token".to_string(),
             iat: now,
             exp: now + 7200, // Esattamente 2 ore
         };
         
-        // Token che scade in 2 ore e 1 secondo
-        let just_over_token = TokenResponse {
-            token: "just_over_token".to_string(),
-            iat: now,
-            exp: now + 7201, // 2 ore e 1 secondo
+        // Token medio con 30 minuti rimanenti (< 33% di 2 ore = 40 minuti)
+        let medium_token_should_refresh = TokenResponse {
+            token: "medium_should_refresh".to_string(),
+            iat: now - 5400, // Creato 90 minuti fa
+            exp: now + 1800,  // Scade in 30 minuti
         };
         
-        // Il threshold è < 7200, quindi 7200 secondi esatti non dovrebbero triggare il refresh
-        assert!(!should_refresh_token(&edge_token), "Token with exactly 2 hours should not need refresh");
-        assert!(!should_refresh_token(&just_over_token), "Token with slightly more than 2 hours should not need refresh");
-        
-        // Token che scade in 1 ora e 59 minuti (7140 secondi)
-        let just_under_token = TokenResponse {
-            token: "just_under_token".to_string(),
-            iat: now,
-            exp: now + 7140,
-        };
-        
-        assert!(should_refresh_token(&just_under_token), "Token with less than 2 hours should need refresh");
+        assert!(!should_refresh_token(&medium_token), "Fresh medium token should not need refresh");
+        assert!(should_refresh_token(&medium_token_should_refresh), "Medium token with <33% time remaining should need refresh");
     }
 }

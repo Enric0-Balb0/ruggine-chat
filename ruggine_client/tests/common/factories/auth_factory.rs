@@ -35,6 +35,18 @@ impl AuthFactory {
         }
     }
     
+    /// Create mock token response with specific expiration time
+    pub fn mock_token_response_with_exp(exp: i64) -> TokenResponse {
+        let unique_token = BaseFactory::get_unique_token();
+        let now = chrono::Utc::now().timestamp();
+        
+        TokenResponse {
+            token: unique_token,
+            iat: now,
+            exp,
+        }
+    }
+    
     /// Create expired token response
     pub fn expired_token_response() -> TokenResponse {
         TokenResponse {

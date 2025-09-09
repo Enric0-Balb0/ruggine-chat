@@ -39,14 +39,14 @@ impl AuthService {
             // If token is expired, clean up storage
             if !is_valid {
                 log::warn!("AuthService::is_authenticated: Token scaduto, pulizia storage");
-                let _ = self.storage_service.clear_session();
+                let _ = self.storage_service.remove_token();  // Rimuove da entrambi i storage
                 return false;
             }
             
             // Additional check: ensure token is not issued in the future
             if now < token.iat {
                 log::warn!("AuthService::is_authenticated: Token emesso nel futuro, pulizia storage");
-                let _ = self.storage_service.clear_session();
+                let _ = self.storage_service.remove_token();  // Rimuove da entrambi i storage
                 return false;
             }
             
@@ -66,10 +66,8 @@ impl AuthService {
     /// Check if token needs refresh (within threshold before expiry)
     pub fn needs_token_refresh(&self) -> bool {
         if let Some(token) = self.storage_service.get_token() {
-            let now = chrono::Utc::now().timestamp();
-            let time_to_expiry = token.exp - now;
-            // Refresh if less than 5 minutes remaining
-            time_to_expiry < 300 && time_to_expiry > 0
+            // Use the same adaptive logic as should_refresh_token
+            crate::hooks::should_refresh_token(&token)
         } else {
             false
         }

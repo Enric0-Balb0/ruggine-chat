@@ -35,6 +35,10 @@ impl TestFactory {
         AuthFactory::mock_token_response()
     }
     
+    pub fn mock_token_response_with_exp(exp: i64) -> ruggine_client_ui::types::auth::TokenResponse {
+        AuthFactory::mock_token_response_with_exp(exp)
+    }
+    
     pub fn unique_login_request(prefix: &str) -> ruggine_client_ui::types::auth::LoginRequest {
         AuthFactory::unique_login_request(prefix)
     }
