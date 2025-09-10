@@ -139,11 +139,11 @@ mod mixed_workload_benchmark_tests {
         // );
         // cpu_usage_log_service.set_monitoring_interval_ms(1000);
         // cpu_usage_log_service.start_monitoring().await.expect("Failed to start CPU monitoring");
-        let mut rng = StdRng::from_entropy();
+    let rng = Arc::new(Mutex::new(StdRng::from_entropy()));
 
         // Parametri del benchmark
         // ---------------- Parametri generali ----------------
-        const NUM_GROUPS: usize = 600; // Numero di gruppi da creare
+        const NUM_GROUPS: usize = 1000; // Numero di gruppi da creare
         const TEST_DURATION_SECS: u64 = 130;
 
         // ---------------- Utenti per gruppo ----------------
@@ -157,19 +157,19 @@ mod mixed_workload_benchmark_tests {
         // ---------------- Intervalli in ms (con jitter) ----------------
         // Messaggi: ogni 25–35s
         const INTERVAL_SENDERS_PER_GROUP: usize = 30000;
-        const DELTA_INTERVAL_SENDERS_PER_GROUP: usize = 30000;
+        const DELTA_INTERVAL_SENDERS_PER_GROUP: usize = 5000;
 
         // Not-read readers: ogni 20–40s
         const INTERVAL_NOT_READ_PER_GROUP: usize = 30000;
-        const DELTA_INTERVAL_NOT_READ_PER_GROUP: usize = 30000;
+        const DELTA_INTERVAL_NOT_READ_PER_GROUP: usize = 10000;
 
         // Paginated readers: ogni 40–70s
         const INTERVAL_PAGINATED_PER_GROUP: usize = 55000;
-        const DELTA_INTERVAL_PAGINATED_PER_GROUP: usize = 55000;
+        const DELTA_INTERVAL_PAGINATED_PER_GROUP: usize = 15000;
 
         // Websocket heartbeat / update online: ogni 1–3s
         const INTERVAL_WEBSOCKET_PER_GROUP: usize = 2000;
-        const DELTA_INTERVAL_WEBSOCKET_PER_GROUP: usize = 2000;
+        const DELTA_INTERVAL_WEBSOCKET_PER_GROUP: usize = 1000;
 
         // ---------------- Funzione helper per sleep con jitter ----------------
         fn jitter(base: usize, delta: usize, rng: &mut StdRng) -> Duration {
@@ -187,7 +187,12 @@ mod mixed_workload_benchmark_tests {
         println!("🐳 Connecting to Docker server at: {}", base_url);
 
         // --- Creazione utenti e gruppi tramite API ---
-        let client = Client::new();
+        let client = Client::builder()
+            .pool_max_idle_per_host(25) // opzionale, aumenta connessioni mantenute
+            .build()
+            .expect("Failed to build reqwest client");
+
+        let client = Arc::new(client);
         let mut all_users = Vec::new();
         let mut all_tokens = Vec::new(); 
         let mut groups = Vec::new();
@@ -202,10 +207,11 @@ mod mixed_workload_benchmark_tests {
 
         // Task paralleli per la creazione di gruppi e utenti
         let mut group_creation_tasks = Vec::new();
+        let semaphore = Arc::new(Semaphore::new(100)); 
         
         for g in 0..NUM_GROUPS {
             let base_url = base_url.clone();
-            let client = client.clone();
+            let client = Arc::clone(&client);
             let stats = stats.clone();
             
             let task = tokio::spawn(async move {
@@ -236,7 +242,13 @@ mod mixed_workload_benchmark_tests {
                         .expect("Failed to register user");
 
                     if !register_response.status().is_success() {
-                        panic!("User registration failed for group {} user {}: {}", g, u, register_response.status());
+                        let status = register_response.status();
+                        let body = register_response.text().await.unwrap_or_else(|_| "<failed to read body>".into());
+
+                        panic!(
+                            "User registration failed for group {} user {}: status={}, body={}",
+                            g, u, status, body
+                        );
                     }
 
                     stats.users_registered.fetch_add(1, Ordering::SeqCst);
@@ -302,7 +314,7 @@ mod mixed_workload_benchmark_tests {
                 // Invio inviti agli altri utenti del gruppo
                 let mut invitation_tasks = Vec::new();
                 for user_idx in 1..users_per_group {
-                    let invitation_client = client.clone();
+                    let invitation_client = Arc::clone(&client);
                     let base_url = base_url.clone();
                     let owner_token = group_tokens[0].clone();
                     let invitee_user_data = group_users[user_idx].clone();
@@ -403,8 +415,9 @@ mod mixed_workload_benchmark_tests {
                 let token = all_tokens[ws_user_idx].clone();
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
-                let mut rng = rng.clone();
+                let rng = rng.clone();
                 let addr = server_host.clone();
+                let permit = semaphore.clone().acquire_owned().await.unwrap();
 
                 let handle = tokio::spawn(async move {
                     // Tentativo di connessione al WebSocket
@@ -419,6 +432,8 @@ mod mixed_workload_benchmark_tests {
                             return;
                         }
                     };
+
+                    drop(permit); // Rilascia il permesso una volta connesso
 
                     stats.websocket_passive_connections.fetch_add(1, Ordering::SeqCst);
 
@@ -439,7 +454,11 @@ mod mixed_workload_benchmark_tests {
 
                     // Loop di ascolto per NewMessage (senza rispondere)
                     while !stop_flag.load(Ordering::SeqCst) {
-                        let timeout_result = timeout(jitter(INTERVAL_WEBSOCKET_PER_GROUP, DELTA_INTERVAL_WEBSOCKET_PER_GROUP, &mut rng), ws_stream.next()).await;
+                        // lock RNG briefly to compute jitter, then drop before awaiting on socket
+                        let mut guard = rng.lock().await;
+                        let dur = jitter(INTERVAL_WEBSOCKET_PER_GROUP, DELTA_INTERVAL_WEBSOCKET_PER_GROUP, &mut *guard);
+                        drop(guard);
+                        let timeout_result = timeout(dur, ws_stream.next()).await;
                         
                         if let Ok(Some(Ok(Message::Text(text)))) = timeout_result {
                             if let Ok(ws_msg) = WebSocketMessage::from_json(&text) {
@@ -456,13 +475,14 @@ mod mixed_workload_benchmark_tests {
             }
 
             // WebSocket active users (ricevono E rispondono con update_read_at)
-            let addr = server_host.clone();
+                let addr = server_host.clone();
             for ws_user_idx in ws_start_idx + WEBSOCKET_PASSIVE_USERS..ws_start_idx + WEBSOCKET_USERS_PER_GROUP {
                 let token = all_tokens[ws_user_idx].clone();
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let mut rng = rng.clone();
+                let rng = rng.clone();
+                let client_clone = Arc::clone(&client);
 
                 let handle = tokio::spawn({
                     let addr = addr.clone();
@@ -499,18 +519,22 @@ mod mixed_workload_benchmark_tests {
 
                     // Loop di ascolto per NewMessage con risposta update_read_at
                     while !stop_flag.load(Ordering::SeqCst) {
-                        let timeout_result = timeout(jitter(INTERVAL_WEBSOCKET_PER_GROUP, DELTA_INTERVAL_WEBSOCKET_PER_GROUP, &mut rng), ws_stream.next()).await;
+                        // lock RNG briefly to compute jitter, then drop before awaiting on socket
+                        let mut guard = rng.lock().await;
+                        let dur = jitter(INTERVAL_WEBSOCKET_PER_GROUP, DELTA_INTERVAL_WEBSOCKET_PER_GROUP, &mut *guard);
+                        drop(guard);
+                        let timeout_result = timeout(dur, ws_stream.next()).await;
                         
                         if let Ok(Some(Ok(Message::Text(text)))) = timeout_result {
                             if let Ok(ws_msg) = WebSocketMessage::from_json(&text) {
                                 if let WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewMessage { message_id, .. }), .. } = ws_msg {
                                     // Simula mark as read del messaggio ricevuto
-                                    let client = Client::new();
+                                    let mark_read_client = Arc::clone(&client_clone);
                                     let payload = json!({
                                         "text_message_id": message_id,
                                     });
 
-                                    let mark_read_result = client
+                                    let mark_read_result = mark_read_client
                                         .patch(&format!("{}/api/text_message/update_read_at", base_url))
                                         .bearer_auth(&token)
                                         .json(&payload)
@@ -556,7 +580,7 @@ mod mixed_workload_benchmark_tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
         // --- Avvio task NOT READ READERS ---
-        let mut not_read_handles = Vec::new();
+    let mut not_read_handles = Vec::new();
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
@@ -568,15 +592,18 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let mut rng = rng.clone();
+                let rng = rng.clone();
+                let reader_client = Arc::clone(&client);
 
                 let handle = tokio::spawn(async move {
-                    let client = Client::new();
-
                     while !stop_flag.load(Ordering::SeqCst) {
-                        tokio::time::sleep(jitter(INTERVAL_NOT_READ_PER_GROUP, DELTA_INTERVAL_NOT_READ_PER_GROUP, &mut rng)).await;
+                        // compute jitter under lock then sleep
+                        let mut guard = rng.lock().await;
+                        let dur = jitter(INTERVAL_NOT_READ_PER_GROUP, DELTA_INTERVAL_NOT_READ_PER_GROUP, &mut *guard);
+                        drop(guard);
+                        tokio::time::sleep(dur).await;
                         // Find not read messages
-                        let not_read_result = client
+                        let not_read_result = reader_client
                             .get(&format!("{}/api/text_message/group/{}/messages/not-read-yet", base_url, group_id))
                             .bearer_auth(&token)
                             .send()
@@ -598,7 +625,7 @@ mod mixed_workload_benchmark_tests {
                                                             "text_message_id": msg_id,
                                                         });
 
-                                                        let mark_result = client
+                                                        let mark_result = reader_client
                                                             .patch(&format!("{}/api/text_message/update_read_at", base_url))
                                                             .bearer_auth(&token)
                                                             .json(&payload)
@@ -657,7 +684,7 @@ mod mixed_workload_benchmark_tests {
         }
 
         // --- Avvio task PAGINATED READERS ---
-        let mut paginated_handles = Vec::new();
+    let mut paginated_handles = Vec::new();
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
@@ -669,14 +696,17 @@ mod mixed_workload_benchmark_tests {
                 let stop_flag = Arc::clone(&stop_flag);
                 let stats = Arc::clone(&stats);
                 let base_url = base_url.clone();
-                let mut rng = rng.clone();
+                let rng = rng.clone();
+                let paginated_client = Arc::clone(&client);
 
-                let client = Client::new();
                 let handle = tokio::spawn(async move {
                     while !stop_flag.load(Ordering::SeqCst) {
-                        // Find paginated messages
-                        tokio::time::sleep(jitter(INTERVAL_PAGINATED_PER_GROUP, DELTA_INTERVAL_PAGINATED_PER_GROUP, &mut rng)).await;
-                        let paginated_result = client
+                        // Find paginated messages: compute jitter under lock then sleep
+                        let mut guard = rng.lock().await;
+                        let dur = jitter(INTERVAL_PAGINATED_PER_GROUP, DELTA_INTERVAL_PAGINATED_PER_GROUP, &mut *guard);
+                        drop(guard);
+                        tokio::time::sleep(dur).await;
+                        let paginated_result = paginated_client
                             .get(&format!("{}/api/text_message/group/{}/messages?limit=50", base_url, group_id))
                             .bearer_auth(&token)
                             .send()
@@ -697,7 +727,7 @@ mod mixed_workload_benchmark_tests {
         }
 
         // --- Avvio task MESSAGE SENDERS ---
-        let mut sender_handles = Vec::new();
+    let mut sender_handles = Vec::new();
         user_idx = 0;
 
         for g in 0..NUM_GROUPS {
@@ -709,19 +739,24 @@ mod mixed_workload_benchmark_tests {
                 let stats = Arc::clone(&stats);
                 let created_messages = Arc::clone(&created_messages);
                 let base_url = base_url.clone();
-                let mut rng = rng.clone();                let handle = tokio::spawn(async move {
-                    let client = Client::new();
+                let rng = rng.clone();
+                let sender_client = Arc::clone(&client);
+                let handle = tokio::spawn(async move {
                     let mut message_counter = 0;
 
                     while !stop_flag.load(Ordering::SeqCst) {
-                        tokio::time::sleep(jitter(INTERVAL_SENDERS_PER_GROUP, DELTA_INTERVAL_SENDERS_PER_GROUP, &mut rng)).await;
+                        // compute jitter under lock then sleep
+                        let mut guard = rng.lock().await;
+                        let dur = jitter(INTERVAL_SENDERS_PER_GROUP, DELTA_INTERVAL_SENDERS_PER_GROUP, &mut *guard);
+                        drop(guard);
+                        tokio::time::sleep(dur).await;
                         message_counter += 1;
                         let payload = json!({
                             "content": format!("Benchmark message {} from sender {}", message_counter, sender_idx),
                             "group_chat_id": group_id
                         });
 
-                        let result = client
+                        let result = sender_client
                             .post(&format!("{}/api/text_message/create", base_url))
                             .bearer_auth(&token)
                             .json(&payload)

@@ -1040,7 +1040,7 @@ Deployment_Node(database_infrastructure, "Database Server Infrastructure", "Sepa
     }
 }
 
-Rel(client, chat_server, "HTTPS/WebSocket", "TCP 8002")
+Rel(client, chat_server, "HTTP/WebSocket", "TCP 8002")
 Rel(chat_server, database, "SQL Connection", "TCP 5432")
 Rel(chat_server, auth_service, "Local API", "HTTP")
 Rel(database, db_storage, "Data Persistence", "File I/O")

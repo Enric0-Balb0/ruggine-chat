@@ -26,6 +26,10 @@ impl UserService {
             Err(err) => { return Err(err); }
         };
 
+        if payload.birthday > chrono::Utc::now().naive_utc().date() {
+            return Err(UserError::InvalidBirthday("Birthday cannot be in the future".to_string()).into());
+        }
+
         let user = self.add_user(payload).await;
 
         match user {

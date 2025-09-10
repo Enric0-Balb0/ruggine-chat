@@ -11,6 +11,7 @@ use crate::common::{cleanup_user_by_email, create_user_router};
 
 #[cfg(test)]
 mod register_e2e_tests {
+    use chrono::NaiveDate;
     use serde_json::Value;
     use ruggine_server::entity::user::UserStatus;
 
@@ -641,5 +642,34 @@ mod register_e2e_tests {
 
         // Cleanup
         cleanup_user_by_email(register_dto.email).await;
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_register_failure_birthday_date_in_the_future() {
+        // Arrange: Create router and register a user first
+        let mut register_dto = UserFactory::unique_fake_user_register_dto("e2e_register_duplicate");
+        register_dto.birthday = (chrono::Utc::now().date_naive() + chrono::Duration::days(1));
+
+        let mut register_payload = json!({
+            "email": register_dto.email,
+            "password": register_dto.password,
+            "username": register_dto.username,
+            "first_name": register_dto.first_name,
+            "last_name": register_dto.last_name,
+            "birthday": register_dto.birthday.format("%Y-%m-%d").to_string(),
+            "address": register_dto.address,
+            "gender": register_dto.gender
+        });
+
+        // Register user first time
+        let request1 = Request::builder()
+            .method("POST")
+            .uri("/register")
+            .header("content-type", "application/json")
+            .body(Body::from(register_payload.to_string()))
+            .unwrap();
+
+        let response1 = create_user_router().await.oneshot(request1).await.unwrap();
+        assert_eq!(response1.status(), StatusCode::BAD_REQUEST);
     }
 }

@@ -45,14 +45,19 @@ The Ruggine application follows a containerized architecture with:
 docker-compose -f docker-compose.prod.yml up -d --build
 docker-compose -f docker-compose.prod.yml up -d
 
+# Start with proxy
+docker-compose -f docker-compose.prod.yml up -d ruggine_proxy
+
+# 
+
 # View logs
 docker-compose logs -f
 
 # Stop services
-docker-compose down
+docker-compose -f docker-compose.prod.yml down
 
 # Stop and remove volumes (WARNING: deletes data)
-docker-compose down -v
+docker-compose -f docker-compose.prod.yml down -v
 ```
 
 ### Development
