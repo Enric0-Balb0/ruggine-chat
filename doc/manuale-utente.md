@@ -1,18 +1,17 @@
 # Manuale Utente - Ruggine Chat
 
 ## Indice
-1. [Introduzione](#introduzione)
-2. [Requisiti di Sistema](#requisiti-di-sistema)
-3. [Installazione](#installazione)
-4. [Primo Avvio e Registrazione](#primo-avvio-e-registrazione)
-5. [Interfaccia Utente](#interfaccia-utente)
-6. [Funzionalità Principali](#funzionalità-principali)
-7. [Gestione Gruppi](#gestione-gruppi)
-8. [Inviti e Partecipazione](#inviti-e-partecipazione)
-9. [Impostazioni](#impostazioni)
-10. [Risoluzione Problemi](#risoluzione-problemi)
-11. [FAQ](#faq)
-12. [Supporto](#supporto)
+1. [Introduzione](#1-introduzione)
+2. [Requisiti di Sistema](#2-requisiti-di-sistema)
+3. [Installazione](#3-installazione)
+4. [Primo Avvio e Registrazione](#4-primo-avvio-e-registrazione)
+5. [Interfaccia Utente](#5-interfaccia-utente)
+6. [Funzionalità Principali](#6-funzionalità-principali)
+7. [Gestione Gruppi](#7-gestione-gruppi)
+8. [Inviti e Partecipazione](#8-inviti-e-partecipazione)
+9. [Gestione Profilo Utente](#9-gestione-profilo-utente)
+10. [Monitoraggio Sistema (CPU Logs)](#10-monitoraggio-sistema-cpu-logs)
+11. [Appendice: Informazioni Tecniche](#appendice-informazioni-tecniche)
 
 ---
 
@@ -258,180 +257,105 @@ Per accedere alle impostazioni di un gruppo:
 
 ## 8. Inviti e Partecipazione
 
-### 8.1 Ricevere Inviti
+### 8.1 Panoramica Sistema Inviti
+
+Il sistema di inviti di Ruggine Chat permette di gestire l'accesso ai gruppi in modo controllato. Gli inviti possono essere inviati solo dagli amministratori dei gruppi e devono essere accettati dai destinatari per diventare effettivi.
+
+### 8.2 Ricevere Inviti
+
+![Lista Inviti Ricevuti](./screenshots/08-inviti-ricevuti.png)
+*Figura 8: Schermata con la lista degli inviti ricevuti*
 
 Quando ricevi un invito a un gruppo:
 1. **Notifica Invito**: Riceverai una notifica di nuovo invito
-2. **Lista Inviti**: Gli inviti in sospeso sono visibili in una sezione dedicata
-3. **Dettagli Invito**: Puoi vedere chi ti ha invitato e in quale gruppo
+2. **Accesso agli Inviti**: Clicca sul menu profilo e seleziona "Inviti"
+3. **Visualizzazione Inviti**: Potrai vedere tutti gli inviti che hai ricevuto con:
+   - Nome del gruppo che ti ha invitato
+   - Chi ha inviato l'invito (amministratore)
+   - Data e ora dell'invito
+   - Ruolo che ti è stato assegnato nel gruppo
+   - Stato dell'invito (Pending, Accepted, Rejected)
 
-### 8.2 Gestire Inviti Ricevuti
+#### Gestire Inviti Ricevuti:
 
-![Lista Inviti](./screenshots/08-lista-inviti.png)
-*Figura 8: Modal con lista degli inviti ricevuti*
+**Accettare un Invito:**
+1. Nella lista inviti, trova l'invito da accettare
+2. Clicca sul pulsante **"Accetta"**
+3. Il gruppo verrà aggiunto alla tua lista gruppi
+4. Potrai immediatamente partecipare alle conversazioni
+5. L'invito cambierà stato in "Accepted"
 
-Per ogni invito ricevuto puoi:
+**Rifiutare un Invito:**
+1. Nella lista inviti, trova l'invito da rifiutare
+2. Clicca sul pulsante **"Rifiuta"**
+3. L'invito cambierà stato in "Rejected"
+4. Non sarai aggiunto al gruppo
 
-#### Accettare un Invito:
-1. Apri la **lista inviti** dal menu principale
-2. Trova l'invito che vuoi accettare
-3. Clicca su **"Accetta"**
-4. Il gruppo verrà aggiunto alla tua lista gruppi
-5. Potrai immediatamente partecipare alle conversazioni
+### 8.3 Invitare Nuovi Membri (Solo Amministratori)
 
-#### Rifiutare un Invito:
-1. Apri la **lista inviti**
-2. Trova l'invito che vuoi rifiutare
-3. Clicca su **"Rifiuta"**
-4. L'invito verrà rimosso dalla lista
+Se sei amministratore di un gruppo, puoi invitare nuovi membri:
 
-### 8.3 Inviare Inviti (Solo Amministratori)
-
+#### Inviare Nuovi Inviti:
 ![Modal Invita Membro](./screenshots/09-invita-membro.png)
 *Figura 9: Modal per invitare un nuovo membro al gruppo*
 
-Se sei amministratore di un gruppo:
-1. Vai alle **impostazioni del gruppo**
-2. Clicca su **"Invita Membro"**
-3. Inserisci il **nome utente** della persona da invitare
-4. Seleziona il **ruolo** (Membro/Amministratore)
-5. Clicca su **"Invia Invito"**
-6. L'utente riceverà l'invito nella sua lista
+1. Vai alle **impostazioni del gruppo** o usa il pulsante "Nuovo Invito"
+2. Compila il modulo:
+   - **Nome Utente**: Inserisci il nome utente esatto della persona da invitare
+   - **Gruppo**: Seleziona il gruppo (se amministri più gruppi)
+   - **Ruolo**: Scegli tra "Member" o "Admin"
+3. Clicca su **"Invia Invito"**
+4. L'utente riceverà l'invito nella sua lista
+
 
 ---
 
-## 9. Impostazioni
+## 9. Gestione Profilo Utente
 
-### 9.1 Accesso alle Impostazioni
+### 9.1 Accesso alla Pagina Profilo
 
-![Menu Profilo](./screenshots/10-menu-profilo.png)
-*Figura 10: Menu profilo con opzioni disponibili*
+![Pagina Profilo](./screenshots/10-pagina-profilo.png)
+*Figura 10: Pagina profilo utente con informazioni e impostazioni*
 
+Per accedere al tuo profilo:
 1. Clicca sul **menu profilo** nell'header (icona utente)
-2. Seleziona **"Impostazioni"** dal menu a tendina
+2. Seleziona **"Profilo utente"** dal menu a tendina
+3. Si aprirà la pagina dedicata al tuo profilo
 
-### 9.2 Impostazioni Disponibili
+### 9.2 Informazioni Profilo
 
-#### Profilo Utente:
-- **Nome Visualizzato**: Modifica come appari agli altri utenti
-- **Stato**: Imposta il tuo stato (Online/Assente/Non Disturbare)
-- **Avatar**: (Se supportato) Carica una foto profilo
+Nella pagina profilo puoi visualizzare e gestire:
 
-#### Preferenze Interfaccia:
-- **Tema**: Scegli tra tema chiaro e scuro
-- **Lingua**: Seleziona la lingua dell'interfaccia
-- **Dimensione Font**: Regola la dimensione del testo
+#### Informazioni Base:
+- **Nome Utente**: Il tuo identificativo univoco nel sistema
+- **Email**: L'indirizzo email associato al tuo account
+- **Data Registrazione**: Quando ti sei registrato al servizio
+- **Ultimo Accesso**: Data e ora dell'ultimo login
 
-#### Notifiche:
-- **Notifiche Desktop**: Abilita/disabilita notifiche di sistema
-- **Suoni**: Abilita/disabilita suoni di notifica
-- **Anteprima Messaggi**: Mostra/nascondi anteprima nei popup
-
-#### Privacy e Sicurezza:
-- **Stato Online**: Chi può vedere quando sei online
-- **Lettura Messaggi**: Mostra/nascondi conferme di lettura
-
+#### Avatar e Presentazione:
+- **Foto Profilo**: (Se supportato) La tua immagine profilo
+- **Stato**: Il tuo stato attuale (Online, Assente, Non Disturbare)
+- **Bio**: (Se supportato) Una breve descrizione di te
 ---
 
-## 10. Risoluzione Problemi
+## 10. Monitoraggio Sistema (CPU Logs)
 
-### 10.1 Problemi di Connessione
+### 10.1 Accesso ai CPU Logs (Solo Amministratori)
 
-**Sintomi**: L'applicazione non si connette o perde la connessione
-**Soluzioni**:
-1. Verifica la connessione internet
-2. Controlla se il server è raggiungibile
-3. Riavvia l'applicazione
-4. Verifica le impostazioni firewall/antivirus
+![Dashboard CPU Logs](./screenshots/11-cpu-logs-dashboard.png)
+*Figura 12: Dashboard principale dei CPU Logs con grafici e metriche*
 
-### 10.2 Problemi di Login
+I CPU Logs sono disponibili solo per gli utenti con privilegi di amministratore:
+1. Clicca sul **menu profilo** nell'header
+2. Se sei amministratore, vedrai l'opzione **"CPU Logs"**
+3. Clicca per accedere al dashboard di monitoraggio
 
-**Sintomi**: Non riesci ad accedere con le tue credenziali
-**Soluzioni**:
-1. Verifica email e password
-2. Controlla se Caps Lock è attivo
-3. Prova a reimpostare la password
-4. Contatta l'amministratore se il problema persiste
+### 10.2 Panoramica Dashboard
 
-### 10.3 Messaggi Non Inviati
+Il dashboard CPU Logs fornisce informazioni dettagliate sulle prestazioni del server:
 
-**Sintomi**: I messaggi non vengono inviati o rimangono in "invio"
-**Soluzioni**:
-1. Controlla la connessione internet
-2. Verifica di essere ancora connesso al gruppo
-3. Ricarica la pagina/riavvia l'app
-4. Controlla se il messaggio è troppo lungo
-
-### 10.4 Prestazioni Lente
-
-**Sintomi**: L'applicazione è lenta o si blocca
-**Soluzioni**:
-1. Chiudi altre applicazioni per liberare memoria
-2. Riavvia l'applicazione
-3. Verifica i requisiti di sistema
-4. Aggiorna l'applicazione all'ultima versione
-
-### 10.5 Problemi di Visualizzazione
-
-**Sintomi**: L'interfaccia non si visualizza correttamente
-**Soluzioni**:
-1. Prova a cambiare tema (chiaro/scuro)
-2. Modifica la dimensione del font nelle impostazioni
-3. Riavvia l'applicazione
-4. Verifica la risoluzione dello schermo
-
----
-
-## 11. FAQ (Domande Frequenti)
-
-### Q: Come posso cambiare la mia password?
-**A**: Attualmente la funzione di cambio password non è disponibile nell'interfaccia. Contatta l'amministratore del sistema.
-
-### Q: Posso essere in più gruppi contemporaneamente?
-**A**: Sì, puoi partecipare a multipli gruppi (fino a 50) e passare tra di essi nella sidebar.
-
-### Q: Come faccio a sapere se un messaggio è stato letto?
-**A**: Attualmente non sono disponibili indicatori di lettura messaggi.
-
-### Q: Posso inviare file o immagini?
-**A**: Attualmente Ruggine Chat supporta solo messaggi di testo. Il supporto per file e media è previsto in future versioni.
-
-### Q: L'applicazione funziona offline?
-**A**: No, Ruggine Chat richiede una connessione internet attiva per funzionare.
-
-### Q: Come posso eliminare un messaggio inviato?
-**A**: Attualmente non è possibile eliminare messaggi già inviati.
-
-### Q: Quanti caratteri posso scrivere in un messaggio?
-**A**: Ogni messaggio può contenere fino a 1000 caratteri.
-
-### Q: Come esco da un gruppo?
-**A**: Attualmente non è possibile uscire autonomamente da un gruppo. Contatta l'amministratore del gruppo.
-
----
-
-## 12. Supporto
-
-### 12.1 Informazioni di Contatto
-
-Per assistenza tecnica o domande:
-- **Email Supporto**: [Inserire email di supporto]
-- **Documentazione Tecnica**: [Link al repository/documentazione]
-- **Report Bug**: [Link per segnalare problemi]
-
-### 12.2 Informazioni di Sistema
-
-Quando contatti il supporto, fornisci:
-- **Versione Applicazione**: Visibile nelle impostazioni
-- **Sistema Operativo**: Windows, macOS, Linux e versione
-- **Descrizione Dettagliata**: Del problema riscontrato
-- **Passi per Riprodurre**: Come si verifica il problema
-
-### 12.3 Aggiornamenti
-
-- **Controllo Aggiornamenti**: L'applicazione verifica automaticamente gli aggiornamenti
-- **Installazione**: Gli aggiornamenti vengono notificati all'utente
-- **Note di Rilascio**: Disponibili nel repository del progetto
+#### Metriche Principali:
+- **CPU Usage**: Percentuale di utilizzo CPU in tempo reale
 
 ---
 

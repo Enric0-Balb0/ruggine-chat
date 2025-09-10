@@ -126,9 +126,7 @@ impl ApiClient {
         }
         
         // Pulisci tutto il localStorage
-        if let Err(e) = self.storage_service.clear_session() {
-            leptos::logging::error!("Failed to clear session on 401: {:?}", e);
-        }
+        self.storage_service.clear_all();
         
         // Reindirizza al login usando window.location (più robusto)
         leptos::spawn_local(async {

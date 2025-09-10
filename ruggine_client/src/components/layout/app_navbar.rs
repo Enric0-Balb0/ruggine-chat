@@ -116,48 +116,12 @@ pub fn AppNavbar() -> impl IntoView {
         })
     };
 
-    let handle_settings = {
-        let toast = toast.clone();
-        let set_is_menu_open = set_is_menu_open;
-    Callback::new(move |_: leptos::ev::MouseEvent| {
-            set_is_menu_open.set(false);
-            toast.info("Impostazioni - Funzionalità in sviluppo");
-        })
-    };
-
     let handle_profile = {
         let set_is_menu_open = set_is_menu_open;
         let navigate = navigate.clone();
     Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             navigate("/profile", Default::default());
-        })
-    };
-
-    let handle_notifications = {
-        let toast = toast.clone();
-        let set_is_menu_open = set_is_menu_open;
-    Callback::new(move |_: leptos::ev::MouseEvent| {
-            set_is_menu_open.set(false);
-            toast.info("Notifiche - Funzionalità in sviluppo");
-        })
-    };
-
-    let handle_help = {
-        let toast = toast.clone();
-        let set_is_menu_open = set_is_menu_open;
-    Callback::new(move |_: leptos::ev::MouseEvent| {
-            set_is_menu_open.set(false);
-            toast.info("Aiuto & Supporto - Funzionalità in sviluppo");
-        })
-    };
-
-    let handle_stats = {
-        let toast = toast.clone();
-        let set_is_menu_open = set_is_menu_open;
-        Callback::new(move |_: leptos::ev::MouseEvent| {
-            set_is_menu_open.set(false);
-            toast.info("Statistiche - Funzionalità in sviluppo");
         })
     };
 
@@ -186,11 +150,7 @@ pub fn AppNavbar() -> impl IntoView {
                     // Dropdown menu
                     {
                         let handle_logout = handle_logout.clone();
-                        let handle_settings = handle_settings.clone();
                         let handle_profile = handle_profile.clone();
-                        let handle_notifications = handle_notifications.clone();
-                        let handle_help = handle_help.clone();
-                        let _handle_stats = handle_stats.clone();
                         
                         move || {
                             if is_menu_open.get() {
@@ -208,39 +168,10 @@ pub fn AppNavbar() -> impl IntoView {
                                         <div class="py-1">
                                             <button 
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                                                on:click={let handler = handle_settings.clone(); move |e| handler.call(e)}
-                                            >
-                                                <LucideIcon name="settings" size=icon_size::MEDIUM />
-                                                <span>Impostazioni</span>
-                                            </button>
-                                            
-                                            <button 
-                                                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
                                                 on:click={let handler = handle_profile.clone(); move |e| handler.call(e)}
                                             >
                                                 <LucideIcon name="user" size=icon_size::MEDIUM />
                                                 <span>Profilo utente</span>
-                                            </button>
-                                            
-                                            <button 
-                                                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                                                on:click={let handler = handle_notifications.clone(); move |e| handler.call(e)}
-                                            >
-                                                <LucideIcon name="bell" size=icon_size::MEDIUM />
-                                                <div class="flex flex-col items-start">
-                                                    <span>Notifiche</span>
-                                                    <span class="text-xs text-gray-600 dark:text-gray-300">3 non lette</span>
-                                                </div>
-                                            </button>
-                                            
-                                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                            
-                                            <button 
-                                                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                                                on:click={let handler = handle_help.clone(); move |e| handler.call(e)}
-                                            >
-                                                <LucideIcon name="help-circle" size=icon_size::MEDIUM />
-                                                <span>Aiuto & Supporto</span>
                                             </button>
                                             
                                             {if is_admin {

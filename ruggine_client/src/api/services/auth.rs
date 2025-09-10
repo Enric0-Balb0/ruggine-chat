@@ -59,8 +59,9 @@ impl AuthService {
 
     /// Clear user session (logout without API call)
     pub fn clear_session(&self) -> Result<(), AuthError> {
-        self.storage_service.clear_session()
-            .map_err(|e| AuthError::Storage(e))
+        // Clear ALL session data (both sessionStorage and localStorage)
+        self.storage_service.clear_all();
+        Ok(())
     }
 
     /// Check if token needs refresh (within threshold before expiry)
@@ -133,9 +134,8 @@ impl AuthService {
 
     /// Logout current user
     pub async fn logout(&self) -> Result<(), AuthError> {
-        // Just clear the session/token locally, no API call needed
-        self.storage_service.clear_session()
-            .map_err(AuthError::from)?;
+        // Clear ALL session data (both sessionStorage and localStorage)
+        self.storage_service.clear_all();
         Ok(())
     }
 
@@ -155,8 +155,8 @@ impl AuthService {
         match self.http_client.get::<serde_json::Value>(ApiEndpoints::AUTH_VERIFY).await {
             Ok(_) => Ok(true),
             Err(HttpError::Unauthorized) => {
-                self.storage_service.clear_session()
-                    .map_err(AuthError::from)?;
+                // Clear ALL data on unauthorized (both sessionStorage and localStorage)
+                self.storage_service.clear_all();
                 Ok(false)
             }
             Err(e) => Err(AuthError::from(e)),

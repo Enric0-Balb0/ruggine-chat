@@ -68,13 +68,11 @@ pub fn ShowInvitesModal(
         }
     });
 
-    // Tab state: 0 = Ricevuti (received), 1 = Inviati (sent)
-    let (active_tab, set_active_tab) = create_signal(0i32);
-    // Local copy of invites for the current tab
+    // Local copy of received invites only
     let (local_invites, set_local_invites) = create_signal(Vec::<Invitation>::new());
 
-    // helper to load invites for the active tab (Rc so it can be cloned into multiple callbacks)
-    let load_invites_for_tab = std::rc::Rc::new(move |tab: i32| {
+    // Load received invites only
+    let load_received_invites = move || {
         let set_local_invites = set_local_invites.clone();
         spawn_local(async move {
             let storage_service = StorageService::new();
@@ -91,37 +89,19 @@ pub fn ShowInvitesModal(
                     .get_user_profile()
                     .map(|u| u.id);
                 log::info!("ShowInvitesModal: current_user_id from storage = {:?}", current_user_id);
-                let filtered = match (tab, current_user_id) {
-                    // sent invites: only those where current user is the sender and not self-invites
-                    (1, Some(uid)) => all_invites.into_iter()
-                        .filter(|inv| inv.from_user_id == uid && inv.from_user_id != inv.to_user_id)
-                        .collect::<Vec<_>>(),
-                    // default: received invites (exclude self-invites)
-                    _ => all_invites.into_iter()
-                        .filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1) && inv.from_user_id != inv.to_user_id)
-                        .collect::<Vec<_>>()
-                };
+                // Only received invites (exclude self-invites)
+                let filtered = all_invites.into_iter()
+                    .filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1) && inv.from_user_id != inv.to_user_id)
+                    .collect::<Vec<_>>();
                 let local_len = filtered.len();
                 set_local_invites.set(filtered);
                 log::info!("ShowInvitesModal: local_invites set length = {}", local_len);
             }
         });
-    });
+    };
 
-    // initial load for received invites
-    {
-        let load = load_invites_for_tab.clone();
-        (load)(0);
-    }
-
-    // Reload invites whenever the active tab changes
-    {
-        let load = load_invites_for_tab.clone();
-        create_effect(move |_| {
-            let tab = active_tab.get();
-            (load)(tab);
-        });
-    }
+    // Initial load for received invites
+    load_received_invites();
 
     let groups_ctx = use_groups_context();
     let handle_close = move |_| {
@@ -177,7 +157,7 @@ pub fn ShowInvitesModal(
                     // clone before moving into set to allow creating filtered local list
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
-                    // refresh local tab view
+                    // refresh local view with received invites only
                     set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
                 }
                 // Toast di successo
@@ -217,7 +197,7 @@ pub fn ShowInvitesModal(
                     .with_auto_retry("reload invitations").await {
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
-                    // refresh local tab view
+                    // refresh local view with received invites only
                     set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
                 }
                 toast.success("Invito rifiutato.");
@@ -259,7 +239,7 @@ pub fn ShowInvitesModal(
                     >
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark m-0">
-                                "Inviti ai Gruppi"
+                                "Inviti Ricevuti"
                             </h2>
                             <button
                                 type="button"
@@ -281,33 +261,11 @@ pub fn ShowInvitesModal(
                                 <LucideIcon name="lightbulb" size=20 class="text-blue-500 dark:text-blue-400 mt-0.5" />
                                 <div class="flex-1">
                                     <p class="m-0 text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
-                                        <strong class="font-medium">Gestisci i tuoi inviti</strong>
+                                        <strong class="font-medium">Gestisci i tuoi inviti ricevuti</strong>
                                         <br/>
-                                        Visualizza, accetta o rifiuta gli inviti ai gruppi che hai ricevuto. Puoi anche vedere lo stato di ogni invito e quando è stato inviato e il ruolo che ti è stato assegnato nel gruppo
+                                        Visualizza, accetta o rifiuta gli inviti ai gruppi che hai ricevuto. Puoi vedere lo stato di ogni invito, quando è stato inviato e il ruolo che ti è stato assegnato nel gruppo.
                                     </p>
                                 </div>
-                            </div>
-                        </div>
-                        // Tab switcher: placed under description, buttons attached with sliding indicator
-                        <div class="mt-3">
-                            <div class="relative w-full rounded overflow-hidden">
-                            <div class="flex w-full divide-x divide-border dark:divide-border-dark">
-                                    <button
-                                        class=move || if active_tab.get() == 0 { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200 transition-colors" } else { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-transparent text-text-secondary dark:text-text-secondary-dark transition-colors" }
-                                        on:click=move |_| { set_active_tab.set(0); }
-                                    >
-                                        "Ricevuti"
-                                    </button>
-                                    <button
-                                        class=move || if active_tab.get() == 1 { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200 transition-colors" } else { "flex-1 px-3 py-1 text-sm text-center rounded-none bg-transparent text-text-secondary dark:text-text-secondary-dark transition-colors" }
-                                        on:click=move |_| { set_active_tab.set(1); }
-                                    >
-                                        "Inviati"
-                                    </button>
-                                </div>
-                                <div class="absolute bottom-0 h-0.5 bg-blue-500 dark:bg-blue-400 transition-all duration-300" style=move || {
-                                    if active_tab.get() == 0 { "left:0%; width:50%;".to_string() } else { "left:50%; width:50%;".to_string() }
-                                }></div>
                             </div>
                         </div>
                         <div class="divide-y divide-border dark:divide-border-dark overflow-hidden" style=move || {
@@ -326,7 +284,7 @@ pub fn ShowInvitesModal(
                                 if list.is_empty() {
                                     view! {
                                         <div class="py-8 text-center text-text-secondary dark:text-text-secondary-dark">
-                                            {if active_tab.get() == 0 { "Nessun invito ricevuto." } else { "Nessun invito inviato." }}
+                                            "Nessun invito ricevuto."
                                         </div>
                                     }.into_view()
                                 } else {
