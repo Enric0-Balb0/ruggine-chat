@@ -107,6 +107,11 @@ pub fn LandingPage() -> impl IntoView {
                             log::info!("Landing::handle_login: Profilo salvato correttamente con remember_me={}", remember_me_val);
                         }
                         
+                        // Aggiorna il context con il profilo utente
+                        auth_ctx.user_profile.set(Some(user_profile.clone()));
+                        log::info!("Landing::handle_login: Context aggiornato con profilo utente: {} {}", 
+                            user_profile.first_name, user_profile.last_name);
+                        
                         let success_message = format!("Login effettuato con successo! {}", user_profile.welcome_message_success());
                         toast.success(&success_message);
                         set_loading.set(false);

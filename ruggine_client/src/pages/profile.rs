@@ -151,9 +151,17 @@ pub fn ProfilePage() -> impl IntoView {
                 gender: Some(gender.clone()),
             };
             match user_service.update_profile(update).await {
-                Ok(_) => {
+                Ok(updated_profile) => {
                     set_success_profile.set(Some("Dati anagrafici aggiornati con successo!".to_string()));
                     toast.success("Dati anagrafici aggiornati!");
+                    
+                    // Aggiorna il context con il profilo modificato
+                    if let Some(auth_ctx) = use_context::<crate::context::auth_context::AuthContext>() {
+                        auth_ctx.user_profile.set(Some(updated_profile.clone()));
+                        log::info!("ProfilePage: Context aggiornato con profilo modificato: {} {}", 
+                            updated_profile.first_name, updated_profile.last_name);
+                    }
+                    
                     set_original_first_name.set(first_name);
                     set_original_last_name.set(last_name);
                     set_original_address.set(address);

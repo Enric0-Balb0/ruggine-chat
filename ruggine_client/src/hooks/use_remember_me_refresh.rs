@@ -125,7 +125,7 @@ async fn refresh_token_silently(
     );
     
     match auth_service.login(email.to_string(), password.to_string()).await {
-        Ok(_user_profile) => {
+        Ok(user_profile) => {
             log::info!("refresh_token_silently: Login automatico riuscito");
             
             // Ottieni il token dalla risposta del login
@@ -136,10 +136,16 @@ async fn refresh_token_silently(
                 // Salva il nuovo token in modo persistente (Remember Me è sempre true qui)
                 let _ = storage_service.store_token_with_remember_me(&token, true);
                 
-                // Aggiorna il context
+                // Aggiorna il context con il nuovo token
                 auth_ctx.token.set(Some(token.token.clone()));
             }
             
+            // Salva il profilo utente con Remember Me
+            let _ = storage_service.store_user_profile_with_remember_me(&user_profile, true);
+            
+            // Aggiorna il context con il nuovo profilo
+            auth_ctx.user_profile.set(Some(user_profile.clone()));
+
             // Verifica se il profilo è stato salvato
             if let Some(profile) = storage_service.get_user_profile() {
                 log::info!("refresh_token_silently: Profilo utente caricato correttamente: {} {}", 
@@ -184,6 +190,15 @@ pub fn use_remember_me_init() {
                 log::info!("use_remember_me_init: token trovato (exp={}), aggiorno context", token_response.exp);
                 // Se abbiamo un token salvato, aggiorna il context
                 auth_ctx.token.set(Some(token_response.token));
+                
+                // Aggiorna anche il profilo se presente in storage
+                if let Some(profile) = storage_service.get_user_profile() {
+                    log::info!("use_remember_me_init: profilo trovato in storage, aggiorno context: {} {}", 
+                        profile.first_name, profile.last_name);
+                    auth_ctx.user_profile.set(Some(profile));
+                } else {
+                    log::warn!("use_remember_me_init: token presente ma profilo mancante in storage");
+                }
             } else {
                 log::info!("use_remember_me_init: Remember Me attivo ma nessun token, provo login automatico");
                 // Se Remember Me è attivo ma non c'è token, prova login automatico

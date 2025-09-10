@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_router::*;
+use std::rc::Rc;
 use crate::components::{UserAvatar, ThemeSlider, LucideIcon, use_toast};
 use crate::components::ui::icons::icon_size;
 use crate::api::services::AuthService;
@@ -14,18 +15,13 @@ use crate::utils::error_recovery::NetworkOperation;
 /// Main app navbar for authenticated users (based on UI mock)
 #[component]
 pub fn AppNavbar() -> impl IntoView {
-    let auth_service = AuthService::new(
-        ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
-        StorageService::new(),
-    );
-
     // Toast for user feedback
     let toast = use_toast();
     let navigate = use_navigate();
     let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
 
-    // Recupera i dati dell'utente corrente
-    let user_profile = auth_service.get_current_user();
+    // Usa il context di autenticazione per ottenere il profilo utente reattivo
+    let auth_ctx = crate::context::auth_context::use_auth_context();
     
     // Debug logging per verificare il profilo utente e stato Remember Me
     let storage_debug = StorageService::new();
@@ -34,26 +30,33 @@ pub fn AppNavbar() -> impl IntoView {
     
     log::info!("AppNavbar: Remember Me attivo = {}, Token presente = {}", remember_me_active, has_token);
     
-    if let Some(ref profile) = user_profile {
-        log::info!("AppNavbar: Profilo utente caricato - nome: '{}', cognome: '{}', email: '{}'", 
-            profile.first_name, profile.last_name, profile.email);
-    } else {
-        log::warn!("AppNavbar: Nessun profilo utente trovato in storage");
+    // Crea un memo per il profilo utente che reagisce ai cambiamenti
+    let user_profile = create_memo(move |_| {
+        let profile = auth_ctx.user_profile.get();
         
-        // Verifica cosa abbiamo in localStorage
-        if remember_me_active {
-            log::info!("AppNavbar: Remember Me è attivo ma profilo mancante - possibile problema di auto-login");
-            if let Some((email, _)) = storage_debug.get_remember_me_credentials() {
-                log::info!("AppNavbar: Credenziali Remember Me trovate per email: {}", email);
-            } else {
-                log::warn!("AppNavbar: Credenziali Remember Me mancanti");
-            }
+        if let Some(ref profile) = profile {
+            log::info!("AppNavbar: Profilo utente caricato dal context - nome: '{}', cognome: '{}', email: '{}'", 
+                profile.first_name, profile.last_name, profile.email);
         } else {
-            log::info!("AppNavbar: Remember Me non attivo, utente deve fare login manuale");
+            log::warn!("AppNavbar: Nessun profilo utente trovato nel context");
+            
+            // Verifica cosa abbiamo in localStorage
+            if remember_me_active {
+                log::info!("AppNavbar: Remember Me è attivo ma profilo mancante - possibile problema di auto-login");
+                if let Some((email, _)) = storage_debug.get_remember_me_credentials() {
+                    log::info!("AppNavbar: Credenziali Remember Me trovate per email: {}", email);
+                } else {
+                    log::warn!("AppNavbar: Credenziali Remember Me mancanti");
+                }
+            } else {
+                log::info!("AppNavbar: Remember Me non attivo, utente deve fare login manuale");
+            }
         }
-    }
+        
+        profile
+    });
     
-    let is_admin = user_profile.as_ref().map(|u| u.is_admin()).unwrap_or(false);
+    let is_admin = move || user_profile.get().as_ref().map(|u| u.is_admin()).unwrap_or(false);
     
     // State for hamburger menu dropdown
     let (is_menu_open, set_is_menu_open) = create_signal(false);
@@ -75,18 +78,18 @@ pub fn AppNavbar() -> impl IntoView {
     
     // Handle menu item clicks
     let handle_logout = {
-    let auth_service = auth_service.clone();
     let toast = toast.clone();
     let navigate = navigate.clone();
     let set_is_menu_open = set_is_menu_open;
     let ws_ctx_opt = ws_ctx_opt.clone();
+    let auth_ctx = auth_ctx.clone();
         
     Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
-            let auth_service = auth_service.clone();
             let toast = toast.clone();
             let navigate = navigate.clone();
             let ws_to_use = ws_ctx_opt.clone();
+            let auth_ctx = auth_ctx.clone();
 
             spawn_local(async move {
                 if let Some(Some(ws)) = ws_to_use.clone() {
@@ -96,8 +99,18 @@ pub fn AppNavbar() -> impl IntoView {
                     }));
                 }
 
+                // Crea un nuovo AuthService per il logout
+                let auth_service = AuthService::new(
+                    ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
+                    StorageService::new(),
+                );
+
                 match auth_service.logout().with_auto_retry("logout").await {
                     Some(_) => {
+                        // Pulisci anche il context
+                        auth_ctx.token.set(None);
+                        auth_ctx.user_profile.set(None);
+                        
                         toast.success("Logout effettuato con successo!");
                         navigate("/login", Default::default());
                     },
@@ -105,6 +118,11 @@ pub fn AppNavbar() -> impl IntoView {
                         leptos::logging::error!("Logout failed after retries");
                         toast.error("Errore durante il logout. L'app verrà comunque disconnessa.");
                         // Force navigation even on failure since we want to log out anyway
+                        
+                        // Pulisci il context anche in caso di errore
+                        auth_ctx.token.set(None);
+                        auth_ctx.user_profile.set(None);
+                        
                         navigate("/login", Default::default());
                     }
                 }
@@ -151,6 +169,7 @@ pub fn AppNavbar() -> impl IntoView {
                     {
                         let handle_logout = handle_logout.clone();
                         let handle_profile = handle_profile.clone();
+                        let navigate_rc = Rc::new(navigate.clone());
                         
                         move || {
                             if is_menu_open.get() {
@@ -174,19 +193,22 @@ pub fn AppNavbar() -> impl IntoView {
                                                 <span>Profilo utente</span>
                                             </button>
                                             
-                                            {if is_admin {
-                                                view! {
-                                                    <button 
-                                                        class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                                                        on:click={let navigate = navigate.clone(); let set_is_menu_open = set_is_menu_open; move |_| { set_is_menu_open.set(false); navigate("/admin/cpu-logs", Default::default()); }}
-                                                    >
-                                                        <LucideIcon name="server" size=icon_size::MEDIUM />
-                                                        <span>"CPU Logs"</span>
-                                                    </button>
-                                                }.into_view()
-                                            } else {
-                                                view! { <div></div> }.into_view()
-                                            }}
+                                            {
+                                                let navigate_for_admin = navigate_rc.clone();
+                                                move || if is_admin() {
+                                                    view! {
+                                                        <button 
+                                                            class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                                                            on:click={let navigate = (*navigate_for_admin).clone(); let set_is_menu_open = set_is_menu_open; move |_| { set_is_menu_open.set(false); navigate("/admin/cpu-logs", Default::default()); }}
+                                                        >
+                                                            <LucideIcon name="server" size=icon_size::MEDIUM />
+                                                            <span>"CPU Logs"</span>
+                                                        </button>
+                                                    }.into_view()
+                                                } else {
+                                                    view! { <div></div> }.into_view()
+                                                }
+                                            }
                                             
                                             <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                             
@@ -221,7 +243,7 @@ pub fn AppNavbar() -> impl IntoView {
                     }}
                 </div>
                 
-                {match user_profile {
+                {move || match user_profile.get() {
                     Some(user) => {
                         // Usa direttamente first_name e last_name dal profilo invece di dividere full_name
                         let first_name = user.first_name.clone();
