@@ -96,6 +96,13 @@ impl GroupMembershipRepositoryTrait for GroupMembershipRepository {
         self.promote_admin_if_none_inner(group_chat_id).await
     }
 
+    async fn find_online_users_in_group(
+        &self,
+        group_id: i32,
+    ) -> Result<Vec<i32>, SqlxError> {
+        self.find_online_users_in_group_inner(group_id).await
+    }
+
     fn db_conn(&self) -> Arc<Database> {
         self.db_conn.clone()
     }

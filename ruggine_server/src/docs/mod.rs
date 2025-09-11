@@ -72,6 +72,7 @@ use crate::handler::{
         group_membership_handler::find_active_by_id_and_user_id::find_active_by_id_and_user_id,
         group_membership_handler::leave_group::leave_group,
         group_membership_handler::find_connected_users_and_online::find_connected_users_and_online,
+        group_membership_handler::find_online_users_in_group::find_online_users_in_group,
         text_message_handler::find_by_group_chat_id::find_by_group_chat_id,
         text_message_handler::create::create,
         text_message_handler::find_messages_not_sent_yet::find_messages_not_sent_yet,

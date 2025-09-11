@@ -25,6 +25,11 @@ pub trait GroupMembershipRepositoryTrait: Send + Sync {
         user_id: i32,
     ) -> Result<Vec<i32>, SqlxError>;
 
+    async fn find_online_users_in_group(
+        &self,
+        group_id: i32,
+    ) -> Result<Vec<i32>, SqlxError>;
+
     async fn promote_admin_if_none(&self, group_chat_id: i32) -> Result<Option<GroupMembershipWithInvitationRow>, SqlxError>;
 
     /* // user_id is passed because the user can see all other memberships in the group
