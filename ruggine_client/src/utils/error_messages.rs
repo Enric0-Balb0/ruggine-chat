@@ -84,7 +84,17 @@ fn http_error_to_register_message(http_error: &HttpError) -> String {
                 401 => "Non autorizzato. Verifica i tuoi permessi.".to_string(),
                 403 => "Accesso negato. Registrazione non consentita.".to_string(),
                 404 => "Servizio di registrazione non disponibile.".to_string(),
-                409 => "Un utente con questa email esiste già. Usa un'altra email.".to_string(),
+                409 => {
+                    // Check the specific conflict message from server
+                    if message.contains("Username already taken") {
+                        "Un utente con questo username esiste già. Scegli un altro username.".to_string()
+                    } else if message.contains("Email already taken") {
+                        "Un utente con questa email esiste già. Usa un'altra email.".to_string()
+                    } else {
+                        // Fallback message for other 409 conflicts
+                        "Un utente con questi dati esiste già. Modifica email o username.".to_string()
+                    }
+                },
                 422 => "Alcuni dati inseriti non sono validi. Controlla tutti i campi.".to_string(),
                 429 => "Troppe richieste di registrazione. Attendi qualche minuto.".to_string(),
                 500..=599 => "Il server sta riscontrando problemi. Riprova più tardi.".to_string(),
@@ -181,7 +191,27 @@ mod tests {
             message: "User already exists".to_string() 
         });
         let message = auth_error_to_register_message(&error);
+        assert_eq!(message, "Un utente con questi dati esiste già. Modifica email o username.");
+    }
+
+    #[test]
+    fn test_auth_error_to_register_message_email_conflict() {
+        let error = AuthError::Http(HttpError::Http { 
+            status: 409, 
+            message: "User already exists: Email already taken".to_string() 
+        });
+        let message = auth_error_to_register_message(&error);
         assert_eq!(message, "Un utente con questa email esiste già. Usa un'altra email.");
+    }
+
+    #[test]
+    fn test_auth_error_to_register_message_username_conflict() {
+        let error = AuthError::Http(HttpError::Http { 
+            status: 409, 
+            message: "User already exists: Username already taken".to_string() 
+        });
+        let message = auth_error_to_register_message(&error);
+        assert_eq!(message, "Un utente con questo username esiste già. Scegli un altro username.");
     }
 
     #[test]

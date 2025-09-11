@@ -70,10 +70,15 @@ pub fn ShowInvitesModal(
 
     // Local copy of received invites only
     let (local_invites, set_local_invites) = create_signal(Vec::<Invitation>::new());
+    let (all_invites, set_all_invites) = create_signal(Vec::<Invitation>::new());
+    
+    // Tab selection state
+    let (active_tab, set_active_tab) = create_signal("pending"); // "pending" or "history"
 
     // Load received invites only
     let load_received_invites = move || {
         let set_local_invites = set_local_invites.clone();
+        let set_all_invites = set_all_invites.clone();
         spawn_local(async move {
             let storage_service = StorageService::new();
             let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
@@ -84,24 +89,80 @@ pub fn ShowInvitesModal(
             if let Some(all_invites) = invitation_service.get_user_invitations()
                 .with_auto_retry("load user invitations").await {
                 // diagnostic logs: see how many invites returned and which user id we read from storage
-                log::info!("ShowInvitesModal: fetched invites count = {}", all_invites.len());
+                leptos::logging::log!("ShowInvitesModal: fetched invites count = {}", all_invites.len());
+                
                 let current_user_id = crate::utils::storage::StorageService::new()
                     .get_user_profile()
                     .map(|u| u.id);
-                log::info!("ShowInvitesModal: current_user_id from storage = {:?}", current_user_id);
-                // Only received invites (exclude self-invites)
-                let filtered = all_invites.into_iter()
-                    .filter(|inv| inv.to_user_id == current_user_id.unwrap_or(-1) && inv.from_user_id != inv.to_user_id)
+                leptos::logging::log!("ShowInvitesModal: current_user_id from storage = {:?}", current_user_id);
+                
+                // Debug: log all invites before filtering
+                for inv in &all_invites {
+                    leptos::logging::log!("ShowInvitesModal: invite {} - from_user_id: {}, to_user_id: {}, status: {}", 
+                        inv.id, inv.from_user_id, inv.to_user_id, inv.status);
+                }
+                
+                // Filter pending invites
+                let pending_filtered = all_invites.clone().into_iter()
+                    .filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            let is_for_me = inv.to_user_id == user_id;
+                            let not_self_invite = inv.from_user_id != inv.to_user_id;
+                            let is_pending = inv.status == crate::types::invitation::InvitationStatus::Pending;
+                            is_for_me && not_self_invite && is_pending
+                        } else {
+                            false
+                        }
+                    })
                     .collect::<Vec<_>>();
-                let local_len = filtered.len();
-                set_local_invites.set(filtered);
-                log::info!("ShowInvitesModal: local_invites set length = {}", local_len);
+                
+                // Filter all received invites (for history) - exclude pending
+                let all_filtered = all_invites.into_iter()
+                    .filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            let is_for_me = inv.to_user_id == user_id;
+                            let not_self_invite = inv.from_user_id != inv.to_user_id;
+                            let is_not_pending = inv.status != crate::types::invitation::InvitationStatus::Pending;
+                            is_for_me && not_self_invite && is_not_pending
+                        } else {
+                            false
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                
+                let pending_len = pending_filtered.len();
+                let all_len = all_filtered.len();
+                leptos::logging::log!("ShowInvitesModal: pending_invites length = {}, all_invites length = {}", pending_len, all_len);
+                
+                set_local_invites.set(pending_filtered);
+                set_all_invites.set(all_filtered);
+            } else {
+                leptos::logging::log!("ShowInvitesModal: failed to load invitations");
             }
         });
     };
 
-    // Initial load for received invites
-    load_received_invites();
+    // Set up polling to refresh invites when modal is open
+    {
+        let load_fn = load_received_invites.clone();
+        create_effect(move |_| {
+            if is_open.get() {
+                leptos::logging::log!("ShowInvitesModal: Modal opened, loading invites immediately");
+                // Load immediately when modal opens
+                load_fn();
+                
+                // Then start polling every 10 seconds
+                let load_fn_poll = load_fn.clone();
+                spawn_local(async move {
+                    loop {
+                        crate::utils::sleep_ms(10000).await; // Wait 10 seconds
+                        leptos::logging::log!("ShowInvitesModal: Polling for invitation updates");
+                        load_fn_poll();
+                    }
+                });
+            }
+        });
+    }
 
     let groups_ctx = use_groups_context();
     let handle_close = move |_| {
@@ -157,8 +218,31 @@ pub fn ShowInvitesModal(
                     // clone before moving into set to allow creating filtered local list
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
-                    // refresh local view with received invites only
-                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
+                    // refresh both pending and all invites lists
+                    let current_user_id = crate::utils::storage::StorageService::new()
+                        .get_user_profile()
+                        .map(|u| u.id);
+                    
+                    let all_filtered = cloned.clone().into_iter().filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            inv.to_user_id == user_id && inv.from_user_id != inv.to_user_id
+                        } else {
+                            false
+                        }
+                    }).collect::<Vec<_>>();
+                    
+                    let pending_filtered = cloned.into_iter().filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            inv.to_user_id == user_id && 
+                            inv.from_user_id != inv.to_user_id && 
+                            inv.status == crate::types::invitation::InvitationStatus::Pending
+                        } else {
+                            false
+                        }
+                    }).collect::<Vec<_>>();
+                    
+                    set_local_invites.set(pending_filtered);
+                    set_all_invites.set(all_filtered);
                 }
                 // Toast di successo
                 toast.success("Invito accettato! Ora fai parte del gruppo.");
@@ -197,8 +281,31 @@ pub fn ShowInvitesModal(
                     .with_auto_retry("reload invitations").await {
                     let cloned = new_list.clone();
                     set_invites_signal.set(new_list);
-                    // refresh local view with received invites only
-                    set_local_invites.set(cloned.into_iter().filter(|inv| inv.to_user_id == crate::utils::storage::StorageService::new().get_user_profile().map(|u| u.id).unwrap_or(-1) && inv.from_user_id != inv.to_user_id).collect());
+                    // refresh both pending and all invites lists
+                    let current_user_id = crate::utils::storage::StorageService::new()
+                        .get_user_profile()
+                        .map(|u| u.id);
+                    
+                    let all_filtered = cloned.clone().into_iter().filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            inv.to_user_id == user_id && inv.from_user_id != inv.to_user_id
+                        } else {
+                            false
+                        }
+                    }).collect::<Vec<_>>();
+                    
+                    let pending_filtered = cloned.into_iter().filter(|inv| {
+                        if let Some(user_id) = current_user_id {
+                            inv.to_user_id == user_id && 
+                            inv.from_user_id != inv.to_user_id && 
+                            inv.status == crate::types::invitation::InvitationStatus::Pending
+                        } else {
+                            false
+                        }
+                    }).collect::<Vec<_>>();
+                    
+                    set_local_invites.set(pending_filtered);
+                    set_all_invites.set(all_filtered);
                 }
                 toast.success("Invito rifiutato.");
                 // Call external callback if present (for side-effects like refresh)
@@ -268,29 +375,84 @@ pub fn ShowInvitesModal(
                                 </div>
                             </div>
                         </div>
+                        
+                        // Tab navigation
+                        <div class="flex border-b border-border dark:border-border-dark mb-4">
+                            <button
+                                class=move || {
+                                    let base = "px-4 py-2 text-sm font-medium transition-all duration-200 border-b-2 ";
+                                    if active_tab.get() == "pending" {
+                                        format!("{}text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400", base)
+                                    } else {
+                                        format!("{}text-text-secondary dark:text-text-secondary-dark border-transparent hover:text-text-primary dark:hover:text-text-primary-dark", base)
+                                    }
+                                }
+                                on:click=move |_| set_active_tab.set("pending")
+                            >
+                                {move || {
+                                    let pending_count = local_invites.get().len();
+                                    if pending_count > 0 {
+                                        format!("In attesa ({})", pending_count)
+                                    } else {
+                                        "In attesa".to_string()
+                                    }
+                                }}
+                            </button>
+                            <button
+                                class=move || {
+                                    let base = "px-4 py-2 text-sm font-medium transition-all duration-200 border-b-2 ";
+                                    if active_tab.get() == "history" {
+                                        format!("{}text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400", base)
+                                    } else {
+                                        format!("{}text-text-secondary dark:text-text-secondary-dark border-transparent hover:text-text-primary dark:hover:text-text-primary-dark", base)
+                                    }
+                                }
+                                on:click=move |_| set_active_tab.set("history")
+                            >
+                                {move || {
+                                    let total_count = all_invites.get().len();
+                                    format!("Cronologia ({})", total_count)
+                                }}
+                            </button>
+                        </div>
                         <div class="divide-y divide-border dark:divide-border-dark overflow-hidden" style=move || {
                             // make the invites list scroll when it grows beyond a reasonable number
-                            let list = local_invites.get();
-                            if list.len() > 6 {
+                            let current_list = if active_tab.get() == "pending" { 
+                                local_invites.get() 
+                            } else { 
+                                all_invites.get() 
+                            };
+                            if current_list.len() > 6 {
                                 "max-height: 340px; overflow-y: auto;".to_string()
                             } else {
                                 "max-height: none; overflow-y: visible;".to_string()
                             }
                         }>
                             {move || {
-                                let list = local_invites.get();
+                                let current_list = if active_tab.get() == "pending" { 
+                                    local_invites.get() 
+                                } else { 
+                                    all_invites.get() 
+                                };
+                                let tab = active_tab.get();
                                 let on_accept_cb = on_accept.clone();
                                 let on_reject_cb = on_reject.clone();
-                                if list.is_empty() {
+                                
+                                if current_list.is_empty() {
+                                    let empty_message = if tab == "pending" {
+                                        "Nessun invito in attesa."
+                                    } else {
+                                        "Nessun invito ricevuto."
+                                    };
                                     view! {
                                         <div class="py-8 text-center text-text-secondary dark:text-text-secondary-dark">
-                                            "Nessun invito ricevuto."
+                                            {empty_message}
                                         </div>
                                     }.into_view()
                                 } else {
                                     view! {
                                         <ul class="space-y-0">
-                                            {list.into_iter().map(|inv| {
+                                            {current_list.into_iter().map(|inv| {
                                                 let id = inv.id;
                                                 let group = group_names.get().get(&inv.group_chat_id).cloned().unwrap_or_else(|| format!("Gruppo {}", inv.group_chat_id));
                                                 let status = inv.status.clone();
@@ -304,15 +466,25 @@ pub fn ShowInvitesModal(
                                                     crate::types::invitation::MemberRole::Admin => " Admin",
                                                     crate::types::invitation::MemberRole::Member => " Membro",
                                                 };
+                                                
+                                                // Show responded date if available
+                                                let responded_info = if let Some(responded_at) = inv.responded_at {
+                                                    format!(" | Risposto il {}", responded_at.format("%d/%m/%Y %H:%M"))
+                                                } else {
+                                                    String::new()
+                                                };
+                                                
                                                 view! {
                                                     <li class="py-4 flex items-center gap-4">
                                                         <div class="flex-1 min-w-0">
                                                             <div class="font-medium text-text-primary dark:text-text-primary-dark">{group}</div>
-                                                            <div class="text-xs text-text-secondary dark:text-text-secondary-dark mt-1">Inviato il {sent_at} | Ruolo : <span class="font-semibold">{role}</span></div>
+                                                            <div class="text-xs text-text-secondary dark:text-text-secondary-dark mt-1">
+                                                                Inviato il {sent_at}{responded_info} | Ruolo : <span class="font-semibold">{role}</span>
+                                                            </div>
                                                         </div>
                                                         <div class="flex gap-2">
-                                                            {if is_pending {
-                                                                // invitation is pending -> show actionable buttons
+                                                            {if is_pending && tab == "pending" {
+                                                                // invitation is pending in the pending tab -> show actionable buttons
                                                                 if is_action_pending {
                                                                     view! {
                                                                         <>
@@ -337,9 +509,14 @@ pub fn ShowInvitesModal(
                                                                     }.into_view()
                                                                 }
                                                             } else {
-                                                                // not pending: show status label
+                                                                // in history tab or not pending: show status label
+                                                                let status_class = match status {
+                                                                    crate::types::invitation::InvitationStatus::Accepted => "bg-green-100 dark:bg-green-700/20 text-green-800 dark:text-green-200",
+                                                                    crate::types::invitation::InvitationStatus::Rejected => "bg-red-100 dark:bg-red-700/20 text-red-800 dark:text-red-200",
+                                                                    _ => "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300",
+                                                                };
                                                                 view! {
-                                                                    <span class="px-3 py-1 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-default">
+                                                                    <span class=format!("px-3 py-1 text-xs rounded cursor-default {}", status_class)>
                                                                         {status.display_name()}
                                                                     </span>
                                                                 }.into_view()

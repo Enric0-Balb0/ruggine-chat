@@ -119,6 +119,10 @@ impl AuthService {
             .await
             .map_err(AuthError::from)?;
 
+        // Debug log the response data
+        log::info!("AuthService::login: User data received - ID: {}, Email: {}", 
+            profile_response.data.id, profile_response.data.email);
+
         // Convert using the automatic conversion from ApiSuccessResponseUserReadDto
         let user_profile = UserProfile::from(profile_response);
 

@@ -92,6 +92,7 @@ pub fn AppNavbar() -> impl IntoView {
             let auth_ctx = auth_ctx.clone();
 
             spawn_local(async move {
+                // Send leave message first if WebSocket is available
                 if let Some(Some(ws)) = ws_to_use.clone() {
                     ws.send_message.set(Some(WebSocketMessage::Request {
                         request_id: uuid::Uuid::new_v4().to_string(),
@@ -127,8 +128,12 @@ pub fn AppNavbar() -> impl IntoView {
                     }
                 }
 
+                // Disconnect WebSocket only once, at the end
                 if let Some(Some(ws)) = ws_to_use.clone() {
-                    ws.disconnect.set(true);
+                    // Try to disconnect, but catch any panics if signal is disposed
+                    let _ = std::panic::catch_unwind(|| {
+                        ws.disconnect.set(true);
+                    });
                 }
             });
         })

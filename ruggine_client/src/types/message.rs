@@ -14,11 +14,11 @@ pub struct TextMessageCreateRequest {
     pub group_chat_id: i32,
 }
 
-/// DTO per update read_at (TextMessageInfoReadAtDtoUpdate)
+/// DTO per update read_at (TextMessageInfoReadAtDtoUpdate) - Server updated: only requires message ID
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMessageInfoReadAtDtoUpdate {
     pub text_message_id: i32,
-    pub read_at: String, // date-time
+    // Note: read_at field removed as per updated server API - server will use current timestamp
 }
 
 /// Text message info read DTO (corresponds to server TextMessageInfoReadDto)

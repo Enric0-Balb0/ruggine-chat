@@ -47,9 +47,19 @@ pub fn ChatMessage(
         // Delay leggermente più alto per assicurare che il primo frame (opacity 0, translate) venga dipinto
         // prima di passare allo stato finale e quindi la transizione sia percepibile.
         let msg_id = message.id;
+        let (is_mounted, set_is_mounted) = create_signal(true);
+        
+        // Cleanup quando il componente viene smontato
+        on_cleanup(move || {
+            set_is_mounted.set(false);
+        });
+        
         Timeout::new(80, move || {
-            set_entered.set(true);
-            ANIMATED_MESSAGE_IDS.with(|set| { set.borrow_mut().insert(msg_id); });
+            // Solo aggiorna se il componente è ancora montato
+            if is_mounted.get_untracked() {
+                set_entered.set(true);
+                ANIMATED_MESSAGE_IDS.with(|set| { set.borrow_mut().insert(msg_id); });
+            }
         }).forget();
     }
     let bubble_classes = if is_own {

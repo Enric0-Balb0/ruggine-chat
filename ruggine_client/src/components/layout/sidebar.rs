@@ -1,4 +1,5 @@
 use leptos::*;
+use wasm_bindgen::JsCast;
 use crate::components::{GroupItem, CreateGroupButton, ShowInvitesButton};
 use crate::components::modals::ShowInvitesModal;
 use crate::api::services::invitation::InvitationService;
@@ -80,32 +81,110 @@ pub fn Sidebar(
     let (invites, set_invites) = create_signal(Vec::<Invitation>::new());
     let (is_loading_invites, set_is_loading_invites) = create_signal(false);
 
-    
+    // Auto-refresh degli inviti ogni 30 secondi per aggiornare il counter
+    let auto_refresh_invites = move || {
+        spawn_local(async move {
+            let storage_service = crate::utils::storage::StorageService::new();
+            
+            // Controlla se abbiamo ancora un token valido
+            if let Some(token_response) = storage_service.get_token() {
+                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                http_client.set_auth_token(Some(token_response.token));
+                let service = InvitationService::new(http_client, storage_service);
+                
+                if let Some(invitations) = service.get_user_invitations()
+                    .with_auto_retry("auto refresh invitations").await {
+                    set_invites.set(invitations);
+                } else {
+                    // Se la chiamata fallisce (es. 401), potrebbe significare che il token è scaduto
+                    logging::warn!("Failed to refresh invitations - token may be expired");
+                }
+            } else {
+                // Nessun token disponibile, ferma gli auto-refresh
+                logging::log!("No token available, skipping invitations refresh");
+            }
+        });
+    };
+
+    // Store interval ID per poterlo pulire
+    let (interval_id, set_interval_id) = create_signal::<Option<i32>>(None);
+
+    // Effettua il primo caricamento degli inviti al mount
+    create_effect(move |_| {
+        // Solo se abbiamo un token
+        let storage_service = crate::utils::storage::StorageService::new();
+        if storage_service.get_token().is_some() {
+            auto_refresh_invites();
+        }
+    });
+
+    // Setup auto-refresh ogni 10 secondi
+    create_effect(move |_| {
+        let storage_service = crate::utils::storage::StorageService::new();
+        
+        if let Some(window) = web_sys::window() {
+            // Pulisci il precedente interval se esiste
+            if let Some(old_id) = interval_id.get() {
+                window.clear_interval_with_handle(old_id);
+            }
+            
+            // Solo se abbiamo un token, crea un nuovo interval
+            if storage_service.get_token().is_some() {
+                let refresh_fn = auto_refresh_invites.clone();
+                let new_interval_id = window.set_interval_with_callback_and_timeout_and_arguments_0(
+                    &wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+                        refresh_fn();
+                    }) as Box<dyn Fn()>).into_js_value().unchecked_into(),
+                    10000 // 10 secondi
+                ).unwrap_or(-1);
+                
+                set_interval_id.set(Some(new_interval_id));
+            } else {
+                // Nessun token, assicurati che l'interval sia pulito
+                set_interval_id.set(None);
+            }
+        }
+    });
+
+    // Cleanup interval quando il componente viene smontato
+    on_cleanup(move || {
+        if let Some(window) = web_sys::window() {
+            if let Some(id) = interval_id.get_untracked() {
+                window.clear_interval_with_handle(id);
+            }
+        }
+    });
 
     let handle_create_click = move |_| {
         on_create_group_click.call(());
     };
 
     let handle_show_invites_click = move |_| {
-        set_show_invites_modal.set(true);
-        set_is_loading_invites.set(true);
-        // Fetch inviti async
-        spawn_local(async move {
-            let storage_service = crate::utils::storage::StorageService::new();
-            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-            if let Some(token_response) = storage_service.get_token() {
+        let storage_service = crate::utils::storage::StorageService::new();
+        
+        // Controlla se abbiamo un token valido prima di aprire la modale
+        if let Some(token_response) = storage_service.get_token() {
+            set_show_invites_modal.set(true);
+            set_is_loading_invites.set(true);
+            
+            // Fetch inviti async
+            spawn_local(async move {
+                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
                 http_client.set_auth_token(Some(token_response.token));
-            }
-            let service = InvitationService::new(http_client, storage_service);
-            let invitations = service.get_user_invitations()
-                .with_auto_retry("load user invitations").await
-                .unwrap_or_else(|| {
-                    logging::error!("Failed to load invitations after retries");
-                    Vec::new()
-                });
-            set_invites.set(invitations);
-            set_is_loading_invites.set(false);
-        });
+                let service = InvitationService::new(http_client, storage_service);
+                
+                let invitations = service.get_user_invitations()
+                    .with_auto_retry("load user invitations").await
+                    .unwrap_or_else(|| {
+                        logging::error!("Failed to load invitations after retries");
+                        Vec::new()
+                    });
+                set_invites.set(invitations);
+                set_is_loading_invites.set(false);
+            });
+        } else {
+            logging::warn!("No valid token available, cannot load invitations");
+        }
     };
 
     let handle_close_invites_modal = move |_| {

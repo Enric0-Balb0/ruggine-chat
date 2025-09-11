@@ -134,6 +134,7 @@ pub struct Invitation {
     pub updated_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub role_at_join: MemberRole,
+    pub responded_at: Option<DateTime<Utc>>, // When the user responded to the invitation
     // Denormalized data for UI
     pub group_name: Option<String>,
     pub from_user_name: Option<String>,
@@ -160,6 +161,9 @@ impl From<ApiSuccessResponseInvitationReadDto> for Invitation {
                 .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()),
             expires_at: None,
             role_at_join: invitation_data.role_at_join,
+            responded_at: invitation_data.responded_at
+                .as_ref()
+                .and_then(|s| s.parse().ok()),
             group_name: None,
             from_user_name: None,
             to_user_name: None,
@@ -183,6 +187,9 @@ impl From<ApiSuccessResponseVecInvitationReadDto> for Vec<Invitation> {
                     .unwrap_or_else(|| invitation_data.sent_at.parse().unwrap_or_default()),
                 expires_at: None,
                 role_at_join: invitation_data.role_at_join,
+                responded_at: invitation_data.responded_at
+                    .as_ref()
+                    .and_then(|s| s.parse().ok()),
                 group_name: None,
                 from_user_name: None,
                 to_user_name: None,

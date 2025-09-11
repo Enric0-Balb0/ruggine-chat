@@ -149,39 +149,99 @@ pub fn InviteMemberModal(
             let group_name = group_name.clone();
             let on_close = on_close.clone();
             spawn_local(async move {
-                use crate::utils::error_recovery::NetworkOperation;
-                
                 _set_internal_is_inviting.set(true);
                 let storage_service = crate::utils::storage::StorageService::new();
+                
+                // First, check if user is trying to invite themselves (before making server request)
+                if let Some(current_user) = storage_service.get_user_profile() {
+                    if username_value == current_user.username {
+                        set_error_message.set(Some("Non puoi invitare te stesso".to_string()));
+                        _set_internal_is_inviting.set(false);
+                        return;
+                    }
+                }
+                
                 let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
                 if let Some(token_response) = storage_service.get_token() {
                     http_client.set_auth_token(Some(token_response.token));
                 }
                 let user_service = UserService::new(http_client.clone(), storage_service.clone());
-                let invitation_service = InvitationService::new(http_client, storage_service);
+                let invitation_service = InvitationService::new(http_client, storage_service.clone());
 
-                if let Some(user) = user_service.get_user_by_username(&username_value)
-                    .with_auto_retry("find user").await {
-                    let req = InvitationCreateRequest {
-                        to_user_id: user.id.parse().unwrap_or(0),
-                        group_chat_id,
-                        role_at_join: match selected_role {
-                            MemberRole::Member => ApiMemberRole::Member,
-                            MemberRole::Admin => ApiMemberRole::Admin,
-                        },
-                    };
-                    
-                    if let Some(_) = invitation_service.send_invitation(&req)
-                        .with_auto_retry("send invitation").await {
-                        set_error_message.set(None);
-                        let group = group_name.clone().unwrap_or_else(|| "gruppo".to_string());
-                        toast.success(&format!("Invito inviato con successo per {}!", group));
-                        on_close.call(());
-                    } else {
-                        set_error_message.set(Some("Errore nell'invio dell'invito".to_string()));
+                // Search for the user
+                match user_service.get_user_by_username(&username_value).await {
+                    Ok(Some(user)) => {
+                        // User found, now try to send invitation
+                        let req = InvitationCreateRequest {
+                            to_user_id: user.id.parse().unwrap_or(0),
+                            group_chat_id,
+                            role_at_join: match selected_role {
+                                MemberRole::Member => ApiMemberRole::Member,
+                                MemberRole::Admin => ApiMemberRole::Admin,
+                            },
+                        };
+                        
+                        match invitation_service.send_invitation(&req).await {
+                            Ok(_) => {
+                                set_error_message.set(None);
+                                let group = group_name.clone().unwrap_or_else(|| "gruppo".to_string());
+                                toast.success(&format!("Invito inviato con successo per {}!", group));
+                                on_close.call(());
+                            }
+                            Err(auth_error) => {
+                                // Handle specific invitation errors
+                                let error_msg = match &auth_error {
+                                    crate::error::AuthError::Http(http_error) => {
+                                        match http_error {
+                                            crate::api::http_error::HttpError::Http { status, message } => {
+                                                match *status {
+                                                    409 => {
+                                                        if message.contains("User already in the group") {
+                                                            "L'utente è già membro di questo gruppo".to_string()
+                                                        } else if message.contains("Already an invitation pending") {
+                                                            "Questo utente ha già un invito in sospeso per questo gruppo".to_string()
+                                                        } else {
+                                                            "Conflitto durante l'invio dell'invito".to_string()
+                                                        }
+                                                    }
+                                                    400 => "Dati dell'invito non validi".to_string(),
+                                                    403 => "Non hai i permessi per invitare membri in questo gruppo".to_string(),
+                                                    404 => "Gruppo non trovato".to_string(),
+                                                    _ => format!("Errore durante l'invio dell'invito: {}", message)
+                                                }
+                                            }
+                                            _ => "Errore durante l'invio dell'invito".to_string()
+                                        }
+                                    }
+                                    _ => "Errore durante l'invio dell'invito".to_string()
+                                };
+                                set_error_message.set(Some(error_msg));
+                            }
+                        }
                     }
-                } else {
-                    set_error_message.set(Some("Utente non trovato".to_string()));
+                    Ok(None) => {
+                        // User not found (server returned data: null)
+                        set_error_message.set(Some(format!("Utente '{}' non trovato", username_value)));
+                    }
+                    Err(auth_error) => {
+                        // Handle user search errors - add more detailed error information
+                        let error_msg = match &auth_error {
+                            crate::error::AuthError::Http(http_error) => {
+                                match http_error {
+                                    crate::api::http_error::HttpError::Http { status, message } => {
+                                        match *status {
+                                            400 => "Nome utente non valido".to_string(),
+                                            404 => format!("Utente '{}' non trovato", username_value),
+                                            _ => format!("Errore durante la ricerca dell'utente (status: {}): {}", status, message)
+                                        }
+                                    }
+                                    _ => format!("Errore durante la ricerca dell'utente: {:?}", http_error)
+                                }
+                            }
+                            _ => format!("Errore durante la ricerca dell'utente: {:?}", auth_error)
+                        };
+                        set_error_message.set(Some(error_msg));
+                    }
                 }
                 _set_internal_is_inviting.set(false);
             });

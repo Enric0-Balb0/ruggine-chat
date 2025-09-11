@@ -164,10 +164,11 @@ impl StorageService {
         self.remove_session_item(StorageKeys::USER_PROFILE);
     }
 
-    /// Clear all stored data
+    /// Clear all stored data including Remember Me
     pub fn clear_all(&self) {
         self.remove_token();
         self.remove_user_profile();
+        let _ = self.clear_remember_me(); // Clear Remember Me data too
     }
 
     /// Clear user session (sessionStorage only, preserves localStorage for Remember Me)

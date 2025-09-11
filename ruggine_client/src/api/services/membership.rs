@@ -96,12 +96,23 @@ impl GroupMembershipService {
     // Qui puoi aggiungere altri metodi membership-specifici (leave, join, ecc.)
 
     /// Get connected users currently online (returns vector of user ids)
+    /// Returns empty vector if user is not online or request fails
     pub async fn find_connected_users_and_online(&self) -> Result<Vec<i32>, AuthError> {
-        let response: ApiSuccessResponseVecUserId = self.http_client
-            .get(ApiEndpoints::group_membership_connected_users_online())
-            .await
-            .map_err(AuthError::from)?;
-        Ok(response.data)
+        match self.http_client
+            .get::<ApiSuccessResponseVecUserId>(ApiEndpoints::group_membership_connected_users_online())
+            .await {
+            Ok(response) => Ok(response.data),
+            Err(http_error) => {
+                // Handle 403 Forbidden (user not online) gracefully
+                match &http_error {
+                    crate::api::http_error::HttpError::Http { status, .. } if *status == 403 => {
+                        log::warn!("User is not online, returning empty online users list");
+                        Ok(vec![]) // Return empty list instead of error
+                    },
+                    _ => Err(AuthError::from(http_error))
+                }
+            }
+        }
     }
 }
 

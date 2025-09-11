@@ -56,23 +56,41 @@ impl MessageService {
     }
 
     /// Aggiorna la lettura di un messaggio (update read_at)
+    /// Server ora gestisce automaticamente il timestamp, richiede solo l'ID del messaggio
     pub async fn update_message_read_at(
         &self,
         text_message_id: i32,
-        read_at: String,
     ) -> Result<(), AuthError> {
         use crate::types::message::TextMessageInfoReadAtDtoUpdate;
-        let req = TextMessageInfoReadAtDtoUpdate { text_message_id, read_at };
-        // La risposta non viene usata, ma si può gestire se serve
-    // No debug logging
+        let req = TextMessageInfoReadAtDtoUpdate { text_message_id };
+        
+        // Debug logging per vedere esattamente cosa stiamo inviando
+        web_sys::console::log_1(&format!("🔄 Sending update_read_at request: message_id={} (server will set current timestamp)", text_message_id).into());
+        
         // Server returns the updated message-info DTO (TextMessageInfoReadDto).
         // Deserialize into the client-side equivalent to match the server shape.
         let resp: Result<crate::types::common::ApiSuccessResponse<crate::types::message::TextMessageInfoReadDto>, crate::error::AuthError> =
             self.http_client.patch(ApiEndpoints::TEXT_MESSAGE_UPDATE_READ_AT, &req).await.map_err(AuthError::from);
-        // Ignore response body for now; return Ok/Err based on HTTP result
+        
+        // Gestione della risposta con trattamento speciale per errore 400
         match resp {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e),
+            Ok(_) => {
+                web_sys::console::log_1(&format!("✅ update_read_at successful for message {}", text_message_id).into());
+                Ok(())
+            }
+            Err(e) => {
+                // Gestione specifica per errore 400 (messaggio già letto)
+                match &e {
+                    AuthError::Http(http_err) if http_err.to_string().contains("400") => {
+                        web_sys::console::log_1(&format!("⚠️ update_read_at for message {} - already marked as read (400), treating as success", text_message_id).into());
+                        Ok(()) // Tratta 400 come successo perché il messaggio è già letto
+                    }
+                    _ => {
+                        web_sys::console::log_1(&format!("❌ update_read_at failed for message {}: {:?}", text_message_id, e).into());
+                        Err(e)
+                    }
+                }
+            }
         }
     }
 }

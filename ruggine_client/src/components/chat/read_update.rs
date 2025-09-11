@@ -32,6 +32,9 @@ pub async fn process_update_batch(
         };
         if !already_marked {
             to_send.push(id);
+            web_sys::console::log_1(&format!("🔄 Adding message {} to read update batch for group {}", id, group_id).into());
+        } else {
+            web_sys::console::log_1(&format!("⏭️ Skipping message {} - already marked as read for group {}", id, group_id).into());
         }
     }
 
@@ -53,8 +56,7 @@ pub async fn process_update_batch(
                     http_client.set_auth_token(Some(token.token));
                 }
                 let message_service = MessageService::new(http_client, storage_service);
-                let now = chrono::Utc::now().to_rfc3339();
-                let res = message_service.update_message_read_at(id_clone, now).await;
+                let res = message_service.update_message_read_at(id_clone).await;
                 (id_clone, res)
             };
             futs.push(fut);

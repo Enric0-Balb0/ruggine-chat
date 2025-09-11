@@ -5,6 +5,7 @@ use crate::utils::{StorageService, auth_error_to_register_message};
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::components::{ThemeToggle, use_toast};
+use chrono;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RegistrationStep {
@@ -90,6 +91,22 @@ pub fn RegisterPage() -> impl IntoView {
                     validation_errors.push("La data di nascita è obbligatoria".to_string());
                     set_birthday_error.set(true);
                     return validation_errors;
+                }
+                
+                // Validate birthday is not in the future
+                if !birthday.get_untracked().trim().is_empty() {
+                    if let Ok(birth_date) = chrono::NaiveDate::parse_from_str(&birthday.get_untracked(), "%Y-%m-%d") {
+                        let today = chrono::Local::now().date_naive();
+                        if birth_date > today {
+                            validation_errors.push("La data di nascita non può essere nel futuro".to_string());
+                            set_birthday_error.set(true);
+                            return validation_errors;
+                        }
+                    } else {
+                        validation_errors.push("Formato data non valido".to_string());
+                        set_birthday_error.set(true);
+                        return validation_errors;
+                    }
                 }
                 if gender.get_untracked().trim().is_empty() {
                     validation_errors.push("Il genere è obbligatorio".to_string());
@@ -201,6 +218,7 @@ pub fn RegisterPage() -> impl IntoView {
                             let error_message = auth_error_to_register_message(&error);
                             set_error_message.set(Some(error_message.clone()));
                             toast.error(&error_message);
+                            // Don't reset form values on error - keep user's input
                         }
                     }
                 });
@@ -288,6 +306,7 @@ pub fn RegisterPage() -> impl IntoView {
                                 id="birthday"
                                 class=get_input_class(birthday_error)
                                 prop:value=birthday
+                                max=move || chrono::Local::now().format("%Y-%m-%d").to_string()
                                 on:input=move |ev| {
                                     set_birthday.set(event_target_value(&ev));
                                     // Clear error when user starts typing
@@ -304,19 +323,18 @@ pub fn RegisterPage() -> impl IntoView {
                             <select
                                 id="gender"
                                 class=get_input_class(gender_error)
-                                prop:value=gender
                                 on:change=move |ev| {
                                     set_gender.set(event_target_value(&ev));
                                     // Clear error when user makes a selection
-                                        if gender_error.get_untracked() {
+                                    if gender_error.get_untracked() {
                                         set_gender_error.set(false);
                                     }
                                 }
                             >
-                                <option value="">"Seleziona"</option>
-                                <option value="male">"M"</option>
-                                <option value="female">"F"</option>
-                                <option value="other">"Altro"</option>
+                                <option value="" selected=move || gender.get().is_empty()>"Seleziona"</option>
+                                <option value="male" selected=move || gender.get() == "male">"M"</option>
+                                <option value="female" selected=move || gender.get() == "female">"F"</option>
+                                <option value="other" selected=move || gender.get() == "other">"Altro"</option>
                             </select>
                         </div>
                     </div>

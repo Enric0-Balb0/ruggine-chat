@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos::wasm_bindgen::JsCast;
+use gloo_timers;
 use crate::types::user::{UserProfile, UserStatus, UserType, Gender};
 use crate::api::services::UserService;
 use crate::hooks::fetch_missing_users::fetch_missing_users;
@@ -120,27 +121,57 @@ pub fn GroupDetailsModal(
                         // We reuse the existing user_service and a transient user cache to avoid changing global cache behavior here.
                         // Create a small in-memory cache signal to receive fetched profiles
                         let temp_cache = create_rw_signal(std::collections::HashMap::<i32, UserProfile>::new());
-                        fetch_missing_users(missing_ids, temp_cache.clone(), user_service.clone());
+                        fetch_missing_users(missing_ids.clone(), temp_cache.clone(), user_service.clone());
 
-                        // Wait a short time for fetches to complete and then merge profiles into group_members
-                        // (non-blocking: we schedule a follow-up task)
+                        // Reactive update: watch for changes in the temp cache and update members immediately
                         let set_members_signal_clone = set_members_signal.clone();
                         let members_signal_clone = members_signal.clone();
-                        spawn_local(async move {
-                            // Give the batched fetch a chance to complete; tuned delay to be small but allow network
-                            crate::utils::sleep_ms(150).await;
-                            let mut updated_members = members_signal_clone.get_untracked();
-                            let cache_snapshot = temp_cache.get_untracked();
-                            for gm in &mut updated_members {
-                                if let Some(profile) = cache_snapshot.get(&gm.user_profile.id) {
-                                    // Preserve the runtime presence flag if it was already set
-                                    let prev_online = gm.user_profile.is_online;
-                                    let mut merged = profile.clone();
-                                    merged.is_online = prev_online || merged.is_online;
-                                    gm.user_profile = merged;
+                        let missing_count = missing_ids.len();
+                        
+                        create_effect(move |_| {
+                            let cache_snapshot = temp_cache.get();
+                            
+                            // Update UI progressively as each user is loaded (don't wait for all)
+                            if !cache_snapshot.is_empty() {
+                                let current_members = members_signal_clone.get();
+                                let mut updated_members = current_members.clone();
+                                let mut updated = false;
+                                
+                                // Debug: log cache contents and current members
+                                leptos::logging::log!("[GROUP DETAILS] Cache progress: {}/{} users loaded", 
+                                    cache_snapshot.len(), missing_count);
+                                leptos::logging::log!("[GROUP DETAILS] Current members count: {}", current_members.len());
+                                
+                                for (i, gm) in updated_members.iter_mut().enumerate() {
+                                    leptos::logging::log!("[GROUP DETAILS] Member {}: ID={}, first_name='{}', username='{}'", 
+                                        i, gm.user_profile.id, gm.user_profile.first_name, gm.user_profile.username);
+                                    
+                                    if let Some(profile) = cache_snapshot.get(&gm.user_profile.id) {
+                                        // Only update if this user wasn't already updated (check if it's still a placeholder)
+                                        if gm.user_profile.first_name.is_empty() || gm.user_profile.username.is_empty() {
+                                            leptos::logging::log!("[GROUP DETAILS] Updating member {} with profile: {} {} (username: {})", 
+                                                gm.user_profile.id, profile.first_name, profile.last_name, profile.username);
+                                            // Preserve the runtime presence flag if it was already set
+                                            let prev_online = gm.user_profile.is_online;
+                                            let mut merged = profile.clone();
+                                            merged.is_online = prev_online || merged.is_online;
+                                            gm.user_profile = merged;
+                                            updated = true;
+                                        } else {
+                                            leptos::logging::log!("[GROUP DETAILS] Member {} already updated, skipping", gm.user_profile.id);
+                                        }
+                                    } else {
+                                        leptos::logging::log!("[GROUP DETAILS] No cached profile found for member {}", gm.user_profile.id);
+                                    }
+                                }
+                                
+                                if updated {
+                                    leptos::logging::log!("[GROUP DETAILS] Setting updated members to signal");
+                                    set_members_signal_clone.set(updated_members);
+                                } else {
+                                    leptos::logging::log!("[GROUP DETAILS] No updates needed");
                                 }
                             }
-                            set_members_signal_clone.set(updated_members);
                         });
 
                         // Fetch connected online user ids and mark members accordingly
@@ -183,43 +214,48 @@ pub fn GroupDetailsModal(
                 let set_members_signal = set_members_signal.clone();
                 let members_signal = members_signal.clone();
 
-                create_effect(move |_| {
-                    // ws_ctx_opt: Option<Option<UseGroupMessageWs>>
-                    if let Some(Some(ws)) = ws_ctx_opt.as_ref() {
-                        // read the current messages buffer (clone) and inspect the last one
-                        let msgs = ws.messages.get();
-                        if let Some(last_msg) = msgs.last().cloned() {
-                            match last_msg {
-                                WebSocketMessage::Event { event, .. } => {
-                                    if let ServerEvent::Groups(group_event) = event {
-                                        match group_event {
-                                            GroupEvent::Joined { user_id } => {
-                                                // mark member online if present
-                                                set_members_signal.update(|members| {
-                                                    for gm in members.iter_mut() {
-                                                        if gm.user_profile.id == user_id {
-                                                            gm.user_profile.is_online = true;
+                spawn_local(async move {
+                    loop {
+                        // ws_ctx_opt: Option<Option<UseGroupMessageWs>>
+                        if let Some(Some(ws)) = ws_ctx_opt.as_ref() {
+                            // read the current messages buffer (clone) and inspect the last one
+                            let msgs = ws.messages.get_untracked();
+                            if let Some(last_msg) = msgs.last().cloned() {
+                                match last_msg {
+                                    WebSocketMessage::Event { event, .. } => {
+                                        if let ServerEvent::Groups(group_event) = event {
+                                            match group_event {
+                                                GroupEvent::Joined { user_id } => {
+                                                    // mark member online if present
+                                                    set_members_signal.update(|members| {
+                                                        for gm in members.iter_mut() {
+                                                            if gm.user_profile.id == user_id {
+                                                                gm.user_profile.is_online = true;
+                                                            }
                                                         }
-                                                    }
-                                                });
-                                            }
-                                            GroupEvent::Left { user_id } => {
-                                                // mark member offline if present
-                                                set_members_signal.update(|members| {
-                                                    for gm in members.iter_mut() {
-                                                        if gm.user_profile.id == user_id {
-                                                            gm.user_profile.is_online = false;
+                                                    });
+                                                }
+                                                GroupEvent::Left { user_id } => {
+                                                    // mark member offline if present
+                                                    set_members_signal.update(|members| {
+                                                        for gm in members.iter_mut() {
+                                                            if gm.user_profile.id == user_id {
+                                                                gm.user_profile.is_online = false;
+                                                            }
                                                         }
-                                                    }
-                                                });
+                                                    });
+                                                }
+                                                _ => {}
                                             }
-                                            _ => {}
                                         }
                                     }
+                                    _ => {}
                                 }
-                                _ => {}
                             }
                         }
+                        
+                        // Wait before checking again
+                        gloo_timers::future::TimeoutFuture::new(100).await;
                     }
                 });
             }

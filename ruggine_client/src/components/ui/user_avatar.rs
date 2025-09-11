@@ -40,6 +40,11 @@ pub fn UserAvatar(
 }
 
 fn get_initials(name: &str, surname: &str) -> String {
+    // Se nome o cognome sono vuoti, mostra puntini mentre carica
+    if name.is_empty() || surname.is_empty() {
+        return "••".to_string(); // Caratteri più estetici mentre carica
+    }
+    
     let name_initial = name.chars().next().unwrap_or('?').to_uppercase().to_string();
     let surname_initial = surname.chars().next().unwrap_or('?').to_uppercase().to_string();
     format!("{}{}", name_initial, surname_initial)

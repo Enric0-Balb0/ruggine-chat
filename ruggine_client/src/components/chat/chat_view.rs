@@ -2,6 +2,7 @@ use leptos::*;
 use leptos::html::Div;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
+use gloo_timers;
 use crate::hooks::GroupMembershipWithDetails;
 use crate::api::services::GroupMembershipService;
 use crate::components::use_toast;
@@ -9,6 +10,7 @@ use leptos_router::use_navigate;
 use crate::hooks::use_groups_context;
 use crate::components::{InviteMemberModal, InviteMemberRequest, MessageInputArea, GroupDetailsModal, LucideIcon};
 use crate::hooks::use_group_socket_messages::use_group_socket_messages;
+use crate::hooks::use_group_message_ws::use_group_message_ws;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::hooks::use_group_initial_messages::use_group_initial_messages;
@@ -52,77 +54,72 @@ pub fn ChatView(
     let unread_message_ids = use_unread_message_ids_context();
     let unread_marked_read = use_unread_marked_read_context();
     let group_id_for_update = group_data.membership.group_chat_id;
-    let add_message: Rc<dyn Fn(Message)> = {
-        let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
-        let unread_counts = unread_counts.clone();
-        let group_id = group_id_for_update;
-        Rc::new(move |msg: Message| {
-            set_local_messages_rc.update(|msgs| msgs.push(msg.clone()));
-            let unread_counts = unread_counts.clone();
-            let msg_id = msg.id;
-            leptos::spawn_local(async move {
-                use crate::api::services::message::MessageService;
-                use crate::config::constants::AppConstants;
-                use crate::utils::storage::StorageService;
-                use crate::api::client::ApiClient;
-                use crate::utils::error_recovery::NetworkOperation;
-                
-                let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
-                let storage_service = StorageService::new();
-                if let Some(token) = storage_service.get_token() {
-                    http_client.set_auth_token(Some(token.token));
-                }
-                let message_service = MessageService::new(http_client, storage_service);
-                let now = chrono::Utc::now().to_rfc3339();
-                
-                if let Some(()) = message_service.update_message_read_at(msg_id, now)
-                    .with_auto_retry("mark message as read").await {
-                    decrement_unread_for_group(&unread_counts, group_id);
-                    unread_message_ids.update(|map| {
-                        if let Some(vec_ids) = map.get_mut(&group_id) {
-                            vec_ids.retain(|id| *id != msg_id);
-                        }
-                    });
-                }
-            });
-        })
-    };
+
     let (initial_messages, initial_loading, _initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
 
+    // Create a single WebSocket hook for both chat messages and presence tracking
+    let storage = StorageService::new();
+    let unified_ws_hook = if let Some(token_response) = storage.get_token() {
+        Some(use_group_message_ws(token_response.token))
+    } else {
+        None
+    };
+
+    // Use the unified hook for chat messages
     let ws_messages = use_group_socket_messages(
         group_data.membership.group_chat_id,
-        ws_ctx.as_ref().and_then(|w| w.as_ref().cloned()),
+        unified_ws_hook.clone(),
         local_messages,
     );
     use std::collections::HashSet;
     use crate::types::message_ws::{WebSocketMessage, ServerEvent, GroupEvent};
-    let ws_ctx_for_presence = ws_ctx.clone();
     let (ws_online_user_ids, set_ws_online_user_ids) = create_signal(HashSet::<i32>::new());
     let (initial_online_user_ids, set_initial_online_user_ids) = create_signal(HashSet::<i32>::new());
 
+    // Process WebSocket events for presence tracking
+    // Use the same unified WebSocket hook for presence tracking
     {
-        let ws_ctx_for_presence = ws_ctx_for_presence.clone();
         let set_ws_online_user_ids = set_ws_online_user_ids.clone();
-        create_effect(move |_| {
-            if let Some(Some(ws)) = ws_ctx_for_presence.as_ref() {
-                let msgs = ws.messages.get();
-                let mut set: HashSet<i32> = HashSet::new();
-                for msg in msgs.into_iter() {
-                    if let WebSocketMessage::Event { event, .. } = msg {
-                        if let ServerEvent::Groups(group_event) = event {
-                            match group_event {
-                                GroupEvent::Joined { user_id } => { set.insert(user_id); },
-                                GroupEvent::Left { user_id } => { set.remove(&user_id); },
-                                _ => (),
+        if let Some(ws_hook) = unified_ws_hook.clone() {
+            spawn_local(async move {
+                let mut last_processed_count = 0usize;
+                
+                loop {
+                    let msgs = ws_hook.messages.get_untracked();
+                    
+                    // Process only new messages since last iteration
+                    if msgs.len() > last_processed_count {
+                        for msg in msgs.iter().skip(last_processed_count) {
+                            if let WebSocketMessage::Event { event, .. } = msg {
+                                if let ServerEvent::Groups(group_event) = event {
+                                    match group_event {
+                                        GroupEvent::Joined { user_id } => {
+                                            set_ws_online_user_ids.update(|set| {
+                                                set.insert(*user_id);
+                                            });
+                                        }
+                                        GroupEvent::Left { user_id } => {
+                                            set_ws_online_user_ids.update(|set| {
+                                                set.remove(user_id);
+                                            });
+                                        }
+                                        GroupEvent::NewMessage { .. } => {
+                                            // Chat messages are handled separately, ignore here
+                                        }
+                                    }
+                                }
                             }
                         }
+                        
+                        last_processed_count = msgs.len();
                     }
+                    
+                    // Check for new messages every 100ms
+                    gloo_timers::future::TimeoutFuture::new(100).await;
                 }
-                leptos::logging::log!("[WS DEBUG] Rebuilt WS-derived online set for group {} => {:?}", group_data.membership.group_chat_id, set);
-                set_ws_online_user_ids.set(set);
-            }
-        });
+            });
+        }
     }
 
     {
@@ -141,7 +138,6 @@ pub fn ChatView(
             if let Some(ids) = membership_service.find_connected_users_and_online()
                 .with_auto_retry("load online users").await {
                 let set: HashSet<i32> = ids.into_iter().collect();
-                leptos::logging::log!("[CHAT] initial online ids => {:?}", set);
                 set_initial.set(set);
             }
         });
@@ -149,8 +145,12 @@ pub fn ChatView(
 
     let online_count = create_memo(move |_| {
         let mut union_set = HashSet::<i32>::new();
-        for id in initial_online_user_ids.get().iter() { union_set.insert(*id); }
-        for id in ws_online_user_ids.get().iter() { union_set.insert(*id); }
+        let initial_ids = initial_online_user_ids.get();
+        let ws_ids = ws_online_user_ids.get();
+        
+        for id in initial_ids.iter() { union_set.insert(*id); }
+        for id in ws_ids.iter() { union_set.insert(*id); }
+        
         let mut count = union_set.len();
         let storage = StorageService::new();
         if let Some(user) = storage.get_user_profile() {
@@ -158,8 +158,84 @@ pub fn ChatView(
                 count += 1;
             }
         }
+        
         count
     });
+
+    // Reactive member count with polling to track group membership changes
+    let (current_member_count, set_current_member_count) = create_signal(
+        group_data.group_details
+            .as_ref()
+            .and_then(|g| g.member_count)
+            .unwrap_or(1)
+    );
+    
+    // Poll for member count updates every 10 seconds
+    {
+        let group_id = group_data.membership.group_chat_id;
+        let set_current_member_count = set_current_member_count.clone();
+        
+        // Initial setup and periodic polling
+        leptos::spawn_local(async move {
+            use crate::utils::storage::StorageService;
+            use crate::utils::error_recovery::NetworkOperation;
+            
+            // Do an immediate poll first
+            let storage = StorageService::new();
+            let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+            if let Some(token_response) = storage.get_token() {
+                http.set_auth_token(Some(token_response.token));
+            }
+            let membership_service = crate::api::services::membership::GroupMembershipService::new(http.clone(), storage.clone());
+            
+            let group_id_str = group_id.to_string();
+            if let Some(group_members) = membership_service.get_by_group_chat_id(&group_id_str)
+                .with_auto_retry("initial poll group member count").await {
+                
+                let new_count = group_members.len() as i32;
+                let current_count = current_member_count.get_untracked();
+                if new_count != current_count {
+                    leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
+                        group_id, current_count, new_count);
+                    set_current_member_count.set(new_count);
+                }
+            } else {
+                leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch initial group members for {}", group_id);
+            }
+            
+            loop {
+                // Wait 5 seconds between polls (reduced for testing)
+                crate::utils::sleep_ms(5000).await;
+                
+                
+                // Create membership service to get actual group members
+                let storage_service = crate::utils::storage::StorageService::new();
+                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                if let Some(token_response) = storage_service.get_token() {
+                    http_client.set_auth_token(Some(token_response.token));
+                }
+                let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
+                
+                // Fetch group members to get actual count
+                let group_id_str = group_id.to_string();
+                if let Some(group_members) = membership_service.get_by_group_chat_id(&group_id_str)
+                    .with_auto_retry("poll group member count").await {
+                    
+                    let new_count = group_members.len() as i32;
+                    let current_count = current_member_count.get_untracked();
+                    if new_count != current_count {
+                        leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
+                            group_id, current_count, new_count);
+                        set_current_member_count.set(new_count);
+                    }
+                } else {
+                    leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch group members for {}", group_id);
+                }
+            }
+        });
+    }
+    
+    let member_count = create_memo(move |_| current_member_count.get());
 
     let unread_counts = use_unread_counts_context();
 
@@ -224,6 +300,56 @@ pub fn ChatView(
             }, std::time::Duration::from_millis(50));
         });
     }
+    
+    // Create add_message callback with auto-scroll functionality
+    let add_message: Rc<dyn Fn(Message)> = {
+        let set_local_messages_rc = Rc::clone(&set_local_messages_rc);
+        let unread_counts = unread_counts.clone();
+        let group_id = group_id_for_update;
+        let messages_container_ref_for_send = messages_container_ref.clone();
+        Rc::new(move |msg: Message| {
+            set_local_messages_rc.update(|msgs| msgs.push(msg.clone()));
+            
+            // Auto-scroll to bottom after sending a message
+            let messages_container_ref_scroll = messages_container_ref_for_send.clone();
+            leptos::spawn_local(async move {
+                // Small delay to ensure DOM is updated
+                crate::utils::timers::sleep_ms(10).await;
+                if let Some(container) = messages_container_ref_scroll.get() {
+                    container.set_scroll_top(container.scroll_height());
+                    leptos::logging::log!("[SEND MESSAGE DEBUG] Auto-scrolled to bottom after sending message");
+                }
+            });
+            
+            let unread_counts = unread_counts.clone();
+            let msg_id = msg.id;
+            leptos::spawn_local(async move {
+                use crate::api::services::message::MessageService;
+                use crate::config::constants::AppConstants;
+                use crate::utils::storage::StorageService;
+                use crate::api::client::ApiClient;
+                use crate::utils::error_recovery::NetworkOperation;
+                
+                let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                let storage_service = StorageService::new();
+                if let Some(token) = storage_service.get_token() {
+                    http_client.set_auth_token(Some(token.token));
+                }
+                let message_service = MessageService::new(http_client, storage_service);
+                
+                if let Some(()) = message_service.update_message_read_at(msg_id)
+                    .with_auto_retry("mark message as read").await {
+                    decrement_unread_for_group(&unread_counts, group_id);
+                    unread_message_ids.update(|map| {
+                        if let Some(vec_ids) = map.get_mut(&group_id) {
+                            vec_ids.retain(|id| *id != msg_id);
+                        }
+                    });
+                }
+            });
+        })
+    };
+    
     let flush_scheduled: std::rc::Rc<std::cell::Cell<bool>> = std::rc::Rc::new(std::cell::Cell::new(false));
     {
         let messages = messages.clone();
@@ -505,12 +631,36 @@ pub fn ChatView(
                         set_user_scrolled_once_cl.set(true);
                         set_scrolled_initial_cl2.set(true);
                     }
+                    leptos::logging::log!("[SCROLL DEBUG] Scroll event triggered");
+                    
+                    // Ottenere l'ID utente corrente per escludere i propri messaggi
+                    let current_user_id = {
+                        use crate::utils::storage::StorageService;
+                        let storage = StorageService::new();
+                        storage.get_user_profile().map(|profile| profile.id)
+                    };
+                    
                     let doc = web_sys::window().unwrap().document().unwrap();
-                    let msg_ids: Vec<i32> = messages.get_untracked().iter().map(|m| m.id).collect();
+                    let current_messages = messages.get_untracked();
+                    let msg_ids: Vec<i32> = current_messages.iter().map(|m| m.id).collect();
+                    leptos::logging::log!("[SCROLL DEBUG] Checking {} messages for visibility", msg_ids.len());
 
                     for msg_id in msg_ids {
+                        // Trovare il messaggio per controllare il sender_id
+                        let msg_opt = current_messages.iter().find(|m| m.id == msg_id);
+                        if let Some(msg) = msg_opt {
+                            // Saltare i messaggi inviati dall'utente corrente
+                            if let Some(user_id) = current_user_id {
+                                if msg.sender_id == user_id {
+                                    leptos::logging::log!("[SCROLL DEBUG] Skipping own message {}", msg_id);
+                                    continue;
+                                }
+                            }
+                        }
+                        
                         if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg_id)) {
                             if is_element_in_viewport(&container_clone, &elem) {
+                                leptos::logging::log!("[SCROLL DEBUG] Message {} is visible in viewport", msg_id);
                                 let mut should_update = false;
                                 let initial_ids_map = unread_message_ids.get_untracked();
                                 if let Some(initial_ids) = initial_ids_map.get(&group_id_for_update) {
@@ -531,6 +681,7 @@ pub fn ChatView(
                                 }
 
                                 if should_update {
+                                    leptos::logging::log!("[SCROLL DEBUG] Message {} should be marked as read", msg_id);
                                     {
                                         let mut buf = pending_for_closure.borrow_mut();
                                         if !buf.contains(&msg_id) {
@@ -679,6 +830,143 @@ pub fn ChatView(
                 set_show.set(remain > 200);
             }
             messages_for_visibility.get();
+        });
+    }
+
+    // Auto mark visible messages as read when messages list changes
+    {
+        let messages_for_auto_read = messages.clone();
+        let messages_container_ref_for_auto_read = messages_container_ref.clone();
+        let pending_auto_read = std::rc::Rc::new(std::cell::RefCell::new(Vec::<i32>::new()));
+        let flush_auto_read = std::rc::Rc::new(std::cell::Cell::new(false));
+        let unread_counts_auto_read = unread_counts.clone();
+        let unread_message_ids_auto_read = unread_message_ids.clone();
+        let unread_marked_read_auto_read = unread_marked_read.clone();
+        let unified_ws_hook_auto_read = unified_ws_hook.clone();
+        
+        create_effect(move |_| {
+            let current_messages = messages_for_auto_read.get();
+            
+            // Only process if we have a container and messages
+            if let Some(container) = messages_container_ref_for_auto_read.get() {
+                if !current_messages.is_empty() {
+                    leptos::logging::log!("[AUTO READ DEBUG] Checking {} messages for auto-read", current_messages.len());
+                    
+                    // Use a short timeout to ensure DOM is updated
+                    let container_clone = container.clone();
+                    let pending_clone = pending_auto_read.clone();
+                    let flush_flag = flush_auto_read.clone();
+                    let unread_counts_clone = unread_counts_auto_read.clone();
+                    let unread_message_ids_clone = unread_message_ids_auto_read.clone();
+                    let unread_marked_read_clone = unread_marked_read_auto_read.clone();
+                    let ws_hook_clone = unified_ws_hook_auto_read.clone();
+                    
+                    set_timeout(move || {
+                        // Ottenere l'ID utente corrente per escludere i propri messaggi
+                        let current_user_id = {
+                            use crate::utils::storage::StorageService;
+                            let storage = StorageService::new();
+                            storage.get_user_profile().map(|profile| profile.id)
+                        };
+                        
+                        let doc = web_sys::window().unwrap().document().unwrap();
+                        let mut found_visible = false;
+                        
+                        for msg in current_messages.iter() {
+                            // Saltare i messaggi inviati dall'utente corrente
+                            if let Some(user_id) = current_user_id {
+                                if msg.sender_id == user_id {
+                                    leptos::logging::log!("[AUTO READ DEBUG] Skipping own message {}", msg.id);
+                                    continue;
+                                }
+                            }
+                            
+                            if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg.id)) {
+                                if is_element_in_viewport(&container_clone, &elem) {
+                                    leptos::logging::log!("[AUTO READ DEBUG] Message {} is visible and will be marked as read", msg.id);
+                                    
+                                    let mut should_update = false;
+                                    let initial_ids_map = unread_message_ids_clone.get_untracked();
+                                    if let Some(initial_ids) = initial_ids_map.get(&group_id_for_update) {
+                                        if initial_ids.contains(&msg.id) {
+                                            should_update = true;
+                                        }
+                                    }
+
+                                    if !should_update {
+                                        // Check if it's from WebSocket messages
+                                        if let Some(ws_hook) = ws_hook_clone.clone() {
+                                            let ws_ids: Vec<i32> = ws_hook.messages.get_untracked()
+                                                .iter()
+                                                .filter_map(|ws_msg| {
+                                                    if let WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewMessage { message_id, .. }), .. } = ws_msg {
+                                                        Some(*message_id)
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                                .collect();
+                                            if ws_ids.contains(&msg.id) {
+                                                let in_initial = initial_ids_map.get(&group_id_for_update)
+                                                    .map(|v| v.contains(&msg.id)).unwrap_or(false);
+                                                if !in_initial {
+                                                    should_update = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if should_update {
+                                        {
+                                            let mut buf = pending_clone.borrow_mut();
+                                            if !buf.contains(&msg.id) {
+                                                buf.push(msg.id);
+                                                found_visible = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // If we found visible messages, trigger the batch processing
+                        if found_visible && !flush_flag.get() {
+                            let pending_for_flush = pending_clone.clone();
+                            let flush_flag_for_flush = flush_flag.clone();
+                            
+                            flush_flag_for_flush.set(true);
+                            
+                            set_timeout(move || {
+                                leptos::spawn_local(async move {
+                                    loop {
+                                        let mut batch: Vec<i32> = Vec::new();
+                                        {
+                                            let mut guard = pending_for_flush.borrow_mut();
+                                            if guard.is_empty() {
+                                                break;
+                                            }
+                                            for _ in 0..UPDATE_BATCH_SIZE.min(guard.len()) {
+                                                if let Some(id) = guard.pop() {
+                                                    batch.push(id);
+                                                }
+                                            }
+                                        }
+                                        if batch.is_empty() {
+                                            break;
+                                        }
+                                        leptos::logging::log!("[AUTO READ DEBUG] Processing batch of {} messages", batch.len());
+                                        process_update_batch(batch, unread_counts_clone.clone(), unread_message_ids_clone.clone(), unread_marked_read_clone.clone(), group_id_for_update).await;
+                                        crate::utils::timers::sleep_ms(10).await;
+                                    }
+                                    
+                                    flush_flag_for_flush.set(false);
+                                });
+                            }, std::time::Duration::from_millis(UPDATE_DEBOUNCE_MS));
+                        }
+                        
+                    }, std::time::Duration::from_millis(100));
+                }
+            }
         });
     }
 
@@ -992,13 +1280,7 @@ pub fn ChatView(
                 </h2>
                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-text-secondary-dark">
                     <span>
-                        {move || match group_data_clone.group_details.as_ref() {
-                            Some(group) => match group.member_count {
-                                Some(count) => format!("{} membri", count),
-                                None => "Membri: N/A".to_string(),
-                            },
-                            None => "Caricamento...".to_string(),
-                        }}
+                        {move || format!("{} membri", member_count.get())}
                     </span>
                     <span>"•"</span>
                     <span>{move || format!("{} online", online_count.get())}</span>

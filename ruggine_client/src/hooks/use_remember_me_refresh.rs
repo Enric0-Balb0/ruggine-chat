@@ -173,8 +173,8 @@ pub fn use_remember_me_init() {
     let storage_service = StorageService::new();
     let auth_ctx = use_auth_context();
     
-    // Al caricamento dell'app, controlla se c'è un token valido salvato
-    create_effect(move |_| {
+    // Esegui la logica solo una volta al caricamento dell'app, non come effect reattivo
+    spawn_local(async move {
         let is_active = storage_service.is_remember_me_active();
         log::info!("use_remember_me_init: is_remember_me_active = {}", is_active);
         
@@ -185,36 +185,92 @@ pub fn use_remember_me_init() {
             log::info!("use_remember_me_init: Nessuna credenziale Remember Me trovata");
         }
         
-        if is_active {
-            if let Some(token_response) = storage_service.get_token() {
-                log::info!("use_remember_me_init: token trovato (exp={}), aggiorno context", token_response.exp);
-                // Se abbiamo un token salvato, aggiorna il context
-                auth_ctx.token.set(Some(token_response.token));
-                
-                // Aggiorna anche il profilo se presente in storage
-                if let Some(profile) = storage_service.get_user_profile() {
-                    log::info!("use_remember_me_init: profilo trovato in storage, aggiorno context: {} {}", 
-                        profile.first_name, profile.last_name);
-                    auth_ctx.user_profile.set(Some(profile));
-                } else {
-                    log::warn!("use_remember_me_init: token presente ma profilo mancante in storage");
-                }
+        // Controlla sempre se c'è un token (indipendentemente da Remember Me)
+        if let Some(token_response) = storage_service.get_token() {
+            log::info!("use_remember_me_init: token trovato (exp={}), aggiorno context", token_response.exp);
+            // Se abbiamo un token salvato, aggiorna il context
+            let token_string = token_response.token.clone(); // Clone per evitare move
+            auth_ctx.token.set(Some(token_string.clone()));
+            
+            // Aggiorna anche il profilo se presente in storage
+            if let Some(profile) = storage_service.get_user_profile() {
+                log::info!("use_remember_me_init: profilo trovato in storage, aggiorno context: {} {}", 
+                    profile.first_name, profile.last_name);
+                auth_ctx.user_profile.set(Some(profile));
             } else {
-                log::info!("use_remember_me_init: Remember Me attivo ma nessun token, provo login automatico");
-                // Se Remember Me è attivo ma non c'è token, prova login automatico
-                if let Some((email, password)) = storage_service.get_remember_me_credentials() {
-                    log::info!("use_remember_me_init: credenziali trovate, avvio login automatico per {}", email);
-                    let storage_clone = storage_service.clone();
-                    let auth_clone = auth_ctx.clone();
-                    spawn_local(async move {
-                        let _ = refresh_token_silently(&email, &password, &storage_clone, &auth_clone).await;
-                    });
-                } else {
-                    log::warn!("use_remember_me_init: Remember Me attivo ma credenziali mancanti");
+                log::warn!("use_remember_me_init: token presente ma profilo mancante in storage");
+                
+                // Se abbiamo un token ma non il profilo, proviamo a recuperare il profilo dal server
+                // usando il token che abbiamo - questo può accadere quando:
+                // 1. Il logout non ha cancellato il token ma ha rimosso il profilo
+                // 2. C'è stato un problema nel salvataggio del profilo
+                // 3. L'utente ha cancellato manualmente i dati del profilo
+                
+                log::info!("use_remember_me_init: tentativo di recupero profilo dal server usando token esistente");
+                let user_service = crate::api::services::user::UserService::new(
+                    ApiClient::new(AppConstants::DEFAULT_SERVER_URL),
+                    storage_service.clone(),
+                );
+                
+                // Impostiamo temporaneamente il token nel context per poter fare la chiamata API
+                auth_ctx.token.set(Some(token_string.clone()));
+                
+                // Tentativi di recuperare il profilo dal server
+                match user_service.get_current_profile().await {
+                    Ok(profile) => {
+                        log::info!("use_remember_me_init: profilo recuperato dal server: {} {}", 
+                            profile.first_name, profile.last_name);
+                        
+                        // Salviamo il profilo in storage
+                        let _ = storage_service.store_user_profile(&profile);
+                        
+                        // Aggiorniamo il context
+                        auth_ctx.user_profile.set(Some(profile));
+                        
+                        log::info!("use_remember_me_init: token e profilo ripristinati con successo");
+                    }
+                    Err(e) => {
+                        log::error!("use_remember_me_init: impossibile recuperare profilo dal server: {:?}", e);
+                        
+                        // Se il token non è valido o il server restituisce errore,
+                        // proviamo il login automatico se disponibile
+                        if is_active && storage_service.get_remember_me_credentials().is_some() {
+                            log::info!("use_remember_me_init: provo login automatico come fallback");
+                            let (email, password) = storage_service.get_remember_me_credentials().unwrap();
+                            let storage_clone = storage_service.clone();
+                            let auth_clone = auth_ctx.clone();
+                            
+                            match refresh_token_silently(&email, &password, &storage_clone, &auth_clone).await {
+                                Ok(_) => {
+                                    log::info!("use_remember_me_init: login automatico riuscito come fallback");
+                                }
+                                Err(_) => {
+                                    log::warn!("use_remember_me_init: login automatico fallito, rimuovo token");
+                                    let _ = storage_service.clear_session();
+                                    auth_ctx.token.set(None);
+                                }
+                            }
+                        } else {
+                            log::warn!("use_remember_me_init: nessuna credenziale Remember Me disponibile, rimuovo token");
+                            let _ = storage_service.clear_session();
+                            auth_ctx.token.set(None);
+                        }
+                    }
                 }
             }
+        } else if is_active {
+            log::info!("use_remember_me_init: Remember Me attivo ma nessun token, provo login automatico");
+            // Se Remember Me è attivo ma non c'è token, prova login automatico
+            if let Some((email, password)) = storage_service.get_remember_me_credentials() {
+                log::info!("use_remember_me_init: credenziali trovate, avvio login automatico per {}", email);
+                let storage_clone = storage_service.clone();
+                let auth_clone = auth_ctx.clone();
+                let _ = refresh_token_silently(&email, &password, &storage_clone, &auth_clone).await;
+            } else {
+                log::warn!("use_remember_me_init: Remember Me attivo ma credenziali mancanti");
+            }
         } else {
-            log::info!("use_remember_me_init: Remember Me non attivo");
+            log::info!("use_remember_me_init: Remember Me non attivo e nessun token presente");
         }
     });
 }

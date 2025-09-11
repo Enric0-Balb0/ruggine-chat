@@ -113,10 +113,6 @@ mod message_types_tests {
         let update = TestFactory::mock_read_update_request(200);
         
         assert_eq!(update.text_message_id, 200);
-        assert!(!update.read_at.is_empty());
-        
-        // Verify date format
-        let _parsed: DateTime<Utc> = update.read_at.parse().expect("Should be valid ISO 8601 format");
     }
 
     #[test]
@@ -128,7 +124,6 @@ mod message_types_tests {
         
         for (i, update) in updates.iter().enumerate() {
             assert_eq!(update.text_message_id, message_ids[i]);
-            assert!(!update.read_at.is_empty());
         }
     }
 }
@@ -274,15 +269,9 @@ mod batch_processing_tests {
             assert_eq!(update.text_message_id, message_ids[i]);
         }
         
-        // Verify all timestamps are valid and recent
+        // Verify all message IDs are correctly set
         for update in &updates {
-            let parsed_time: DateTime<Utc> = update.read_at
-                .parse()
-                .expect("Should be valid timestamp");
-            
-            let now = Utc::now();
-            let diff = now.signed_duration_since(parsed_time);
-            assert!(diff.num_seconds() < 10, "Timestamp should be very recent");
+            assert!(update.text_message_id > 0, "Message ID should be positive");
         }
     }
 
@@ -441,14 +430,8 @@ mod timestamp_tests {
     fn test_read_update_timestamp_format() {
         let update = TestFactory::mock_read_update_request(1);
         
-        // Verify ISO 8601 format
-        let parsed: DateTime<Utc> = update.read_at
-            .parse()
-            .expect("Read update timestamp should be valid ISO 8601 format");
-        
-        let now = Utc::now();
-        let diff = now.signed_duration_since(parsed);
-        assert!(diff.num_seconds() < 10);
+        // Verify message ID is set correctly
+        assert_eq!(update.text_message_id, 1);
     }
 
     #[test]

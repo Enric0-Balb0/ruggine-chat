@@ -119,7 +119,6 @@ impl MessageFactory {
     pub fn text_message_read_update(text_message_id: i32) -> TextMessageInfoReadAtDtoUpdate {
         TextMessageInfoReadAtDtoUpdate {
             text_message_id,
-            read_at: chrono::Utc::now().to_rfc3339(),
         }
     }
     
@@ -184,7 +183,6 @@ impl MessageFactory {
     pub fn mock_message_info_read_dto(message_id: i32, read_at_id: i32) -> TextMessageInfoReadAtDtoUpdate {
         TextMessageInfoReadAtDtoUpdate {
             text_message_id: message_id,
-            read_at: chrono::Utc::now().to_rfc3339(),
         }
     }
 
