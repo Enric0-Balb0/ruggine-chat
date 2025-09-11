@@ -6,6 +6,7 @@ use crate::utils::{ThemeProvider, use_theme};
 use crate::components::ToastProvider;
 use crate::context::auth_context::{provide_auth_context, use_auth_context};
 use crate::context::unread_counts_context::provide_unread_counts_context;
+use crate::context::invitations_context::provide_invitations_context;
 use crate::hooks::{RememberMeRefreshProvider, use_remember_me_init};
 use crate::hooks::use_app_group_ws::use_app_group_ws;
 
@@ -13,6 +14,7 @@ use crate::hooks::use_app_group_ws::use_app_group_ws;
 pub fn App() -> impl IntoView {
     provide_auth_context();
     provide_unread_counts_context();
+    provide_invitations_context();
     
     view! {
         <ThemeProvider>
@@ -37,6 +39,16 @@ pub fn AppContent() -> impl IntoView {
     // Inizializza il WebSocket globalmente per tutta l'app (una sola volta)
     let ws_ctx = use_app_group_ws(token);
     provide_context(ws_ctx.clone());
+
+    // Populate invitations context once when we have a token so pending_count is correct
+    create_effect(move |_| {
+        if token.get().is_some() {
+            leptos::logging::log!("[APP] token available, calling refresh_invitations()");
+            spawn_local(async move {
+                let _ = crate::context::invitations_context::refresh_invitations().await;
+            });
+        }
+    });
 
     // Register a beforeunload handler so that when the user closes the tab/window
     // we attempt to synchronously close all shared websockets. This will send

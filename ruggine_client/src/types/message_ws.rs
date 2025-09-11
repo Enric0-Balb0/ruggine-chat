@@ -79,6 +79,8 @@ pub enum GroupEvent {
         content: String,
         sent_at: DateTime<Utc>,
     },
+    NewInvitation { invitation_id: i32 },
+    NewGroupChat { group_chat_id: i32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

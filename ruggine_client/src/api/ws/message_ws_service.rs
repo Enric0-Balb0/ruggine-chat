@@ -16,9 +16,10 @@ pub struct MessageWsService {
     // whether the signal still exists before attempting to set it. This avoids
     // updating a signal after its leptos scope has been disposed.
     status: Rc<RefCell<Option<RwSignal<WsStatus>>>>,
-    // use an Rc<RefCell<..>> so the JS closure can safely access the optional callback
-    // even if the service mutates or drops the stored callback later
-    on_message: Rc<RefCell<Option<Box<dyn Fn(WebSocketMessage) + 'static>>>>,
+    // use an Rc<RefCell<..>> so the JS closure can safely access the list of callbacks
+    // This allows multiple consumers (multiple UseGroupMessageWs instances) to
+    // register handlers without overwriting each other.
+    on_message: Rc<RefCell<Vec<Option<Box<dyn Fn(WebSocketMessage) + 'static>>>>>,
 }
 
 impl MessageWsService {
@@ -26,7 +27,7 @@ impl MessageWsService {
         Self {
             ws: None,
             status: Rc::new(RefCell::new(Some(status))),
-            on_message: Rc::new(RefCell::new(None)),
+            on_message: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -35,12 +36,34 @@ impl MessageWsService {
         self.status.borrow().as_ref().map(|s| s.read_only())
     }
 
-    // Set the callback for receiving messages
+    // Register a callback for receiving messages. Multiple callbacks are allowed
+    // and will all be invoked for each incoming message.
     pub fn set_on_message<F>(&mut self, callback: F)
     where
         F: Fn(WebSocketMessage) + 'static,
     {
-        self.on_message.borrow_mut().replace(Box::new(callback));
+        self.on_message.borrow_mut().push(Some(Box::new(callback)));
+        // return the index of the callback as a handle
+        // note: caller can ignore the return value if they don't need removal
+        // but we keep compatibility by not changing the signature here; we'll
+        // provide a separate method to add and return id if needed.
+    }
+
+    /// Register a callback and return a numeric id that can be used to remove it later.
+    pub fn add_on_message<F>(&mut self, callback: F) -> usize
+    where
+        F: Fn(WebSocketMessage) + 'static,
+    {
+        let mut v = self.on_message.borrow_mut();
+        v.push(Some(Box::new(callback)));
+        v.len() - 1
+    }
+
+    /// Remove a previously-registered callback by id. Safe to call multiple times.
+    pub fn remove_on_message(&mut self, id: usize) {
+        if let Some(slot) = self.on_message.borrow_mut().get_mut(id) {
+            *slot = None;
+        }
     }
 
     // Connect to the WebSocket (full url, e.g. ws://...)
@@ -102,12 +125,17 @@ impl MessageWsService {
                 let txt: String = txt.into();
                 log!("[SOCKET] Message received on {} (svc={}): {}", url_clone, svc_ptr_clone, txt);
                 match serde_json::from_str::<WebSocketMessage>(&txt) {
-                    Ok(msg) => {
-                        // Borrow the optional callback at runtime and call if present
-                        if let Some(cb) = on_message_rc.borrow().as_ref() {
-                            cb(msg);
+                        Ok(msg) => {
+                            // Borrow the list of callbacks at runtime and call each
+                            // callback present. We hold the borrow while invoking
+                            // callbacks; callbacks should avoid mutating the list to
+                            // prevent borrow conflicts.
+                            for cb_opt in on_message_rc.borrow().iter() {
+                                if let Some(cb) = cb_opt {
+                                    cb(msg.clone());
+                                }
+                            }
                         }
-                    }
                     Err(e) => {
                         log!("[WS] Errore parsing messaggio WS su {}: {:?}", url_clone, e);
                     }
@@ -119,7 +147,7 @@ impl MessageWsService {
         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
 
-        self.ws = Some(ws);
+    self.ws = Some(ws);
     }
 
     // Send a serialized message only if the connection is Open
@@ -152,7 +180,8 @@ impl MessageWsService {
         self.ws = None;
     // Clear the on_message callback so any incoming frames that arrive during
     // shutdown won't try to call into leptos signals which may have been dropped.
-    self.on_message.borrow_mut().take();
+    // Clear all registered callbacks so they won't be called after disconnect
+    self.on_message.borrow_mut().clear();
     // Clear the stored status signal reference so closures won't try to update
     // it after the leptos scope has been disposed.
     self.status.borrow_mut().take();

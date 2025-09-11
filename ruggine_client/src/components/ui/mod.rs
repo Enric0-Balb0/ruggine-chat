@@ -17,3 +17,7 @@ pub use user_avatar::UserAvatar;
 // Unread badge component
 pub mod unread_badge;
 pub use unread_badge::UnreadBadge;
+
+// Online users counter component
+pub mod online_users_counter;
+pub use online_users_counter::OnlineUsersCounter;

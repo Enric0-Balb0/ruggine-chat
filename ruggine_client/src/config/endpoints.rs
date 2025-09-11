@@ -57,6 +57,10 @@ impl ApiEndpoints {
     pub fn group_membership_connected_users_online() -> &'static str {
         Self::GROUP_MEMBERSHIP_CONNECTED_USERS_ONLINE
     }
+
+    pub fn group_membership_online_users_in_group(group_id: &str) -> String {
+        format!("/group_membership/online-users-in-group/{}", group_id)
+    }
     
     pub fn group_participants(group_id: &str) -> String {
         format!("{}/{}/participants", Self::GROUP_BY_ID, group_id)

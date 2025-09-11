@@ -31,7 +31,8 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     // Instance identifier to help debug duplicate connections
     let instance_id = uuid::Uuid::new_v4().to_string();
     leptos::logging::log!("[WS INST] Created UseGroupMessageWs instance {} (reused)", instance_id);
-    ws_service.borrow_mut().set_on_message({
+    // Register callback and keep its id so we can remove it when this hook is dropped.
+    let callback_id = ws_service.borrow_mut().add_on_message({
         let _ws_service = ws_service.clone();
         move |msg: WebSocketMessage| {
             // Log the parsed message JSON for debugging (helps correlate with raw frames)
@@ -63,9 +64,28 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                                 });
                             }
                         }
+                        // Handle new invitation events
+                        if let ServerEvent::Groups(GroupEvent::NewInvitation { invitation_id }) = event {
+                            leptos::logging::log!("[WS DEBUG] NewInvitation event received for invitation {}", invitation_id);
+                            // Update invitations context
+                            spawn_local({
+                                let invitation_id = *invitation_id;
+                                async move {
+                                    crate::context::invitations_context::add_new_invitation(invitation_id).await;
+                                }
+                            });
+                        }
                     }
         }
     });
+
+    // Ensure we remove the callback when the scope using this hook is disposed
+    {
+        let ws_service = ws_service.clone();
+        on_cleanup(move || {
+            ws_service.borrow_mut().remove_on_message(callback_id);
+        });
+    }
 
     // Do NOT auto-connect here. Connection is triggered centrally (e.g. at login)
     // to ensure the socket is opened only once when the user logs in and

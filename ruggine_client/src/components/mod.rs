@@ -17,7 +17,7 @@ pub mod theme;
 
 // Re-exports for backward compatibility and ease of use
 pub use ui::{
-    UserAvatar,
+    UserAvatar, OnlineUsersCounter,
     LucideIcon, ToastProvider, use_toast,
 };
 
