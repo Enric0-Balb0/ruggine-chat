@@ -4,6 +4,8 @@ use crate::types::message::Message;
 use crate::types::WebSocketMessage;
 use crate::types::message_ws::{ServerEvent, GroupEvent};
 use crate::hooks::use_group_message_ws::UseGroupMessageWs;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// Hook that returns a reactive signal with all deduplicated socket messages, sorted by date.
 pub fn use_group_socket_messages(
@@ -16,20 +18,103 @@ pub fn use_group_socket_messages(
     // Note: unread counts are updated at the websocket hook level (use_group_message_ws).
     // This hook focuses on assembling deduplicated messages for the chat view.
 
+    // Signal to control loop termination
+    let (should_continue, set_should_continue) = create_signal(true);
+    
+    // Additional atomic flag for robust termination control
+    let atomic_should_continue = Arc::new(AtomicBool::new(true));
+
     // Use spawn_local to avoid signal disposal panics
     {
         let ws_ctx_clone = ws_ctx.clone();
         let set_all_messages = set_all_messages.clone();
+        let atomic_continue = atomic_should_continue.clone();
         spawn_local(async move {
+            leptos::logging::log!("[WS SOCKET MSGS] Starting message polling loop for group {}", group_id);
             loop {
+                // Check atomic flag first (most reliable)
+                if !atomic_continue.load(Ordering::Relaxed) {
+                    leptos::logging::log!("[WS SOCKET MSGS] Atomic flag set to false, breaking loop");
+                    break;
+                }
+                
+                // Check if we should continue - safely handle disposed signal
+                let should_continue_val = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    should_continue.get_untracked()
+                })) {
+                    Ok(val) => val,
+                    Err(_) => {
+                        leptos::logging::log!("[WS SOCKET MSGS] should_continue signal disposed, breaking loop");
+                        break;
+                    }
+                };
+                
+                if !should_continue_val {
+                    leptos::logging::log!("[WS SOCKET MSGS] should_continue signal set to false, breaking loop");
+                    break;
+                }
+                
                 let _current_user_id = crate::utils::storage::StorageService::new()
                     .get_user_profile()
                     .map(|u| u.id);
+                
+                // Safely get WebSocket messages with proper error handling
                 let ws_msgs = ws_ctx_clone.as_ref().and_then(|w| {
-                    // Use get_untracked to avoid signal tracking
-                    Some(w.messages.get_untracked())
+                    // Use catch_unwind to handle disposed signals
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        w.messages.get_untracked()
+                    })) {
+                        Ok(msgs) => Some(msgs),
+                        Err(_) => {
+                            leptos::logging::log!("[WS SOCKET MSGS] Messages signal disposed, stopping loop");
+                            // Set atomic flag to stop the loop
+                            atomic_continue.store(false, Ordering::Relaxed);
+                            // Safely set should_continue to false with error handling
+                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                set_should_continue.set(false)
+                            }));
+                            None
+                        }
+                    }
                 });
-                let local_msgs = local_messages.get_untracked();
+                
+                // Safely get local messages
+                let local_msgs = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    local_messages.get_untracked()
+                })) {
+                    Ok(msgs) => msgs,
+                    Err(_) => {
+                        leptos::logging::log!("[WS SOCKET MSGS] Local messages signal disposed, stopping loop");
+                        // Safely set should_continue to false with error handling
+                        if let Err(_) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            set_should_continue.set(false)
+                        })) {
+                            leptos::logging::log!("[WS SOCKET MSGS] set_should_continue signal also disposed, breaking immediately");
+                        }
+                        break;
+                    }
+                };
+                // Check if we should not continue (safely handle disposed signal)
+                if !atomic_continue.load(Ordering::Relaxed) {
+                    leptos::logging::log!("[WS SOCKET MSGS] Atomic flag set to false during loop, breaking");
+                    break;
+                }
+                
+                let should_continue_val = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    should_continue.get_untracked()
+                })) {
+                    Ok(val) => val,
+                    Err(_) => {
+                        leptos::logging::log!("[WS SOCKET MSGS] should_continue signal disposed in loop, breaking");
+                        break;
+                    }
+                };
+                
+                if !should_continue_val {
+                    leptos::logging::log!("[WS SOCKET MSGS] should_continue signal set to false during loop, breaking");
+                    break;
+                }
+                
                 let mut all_msgs = local_msgs;
                 if let (Some(_ws_ctx), Some(ws_msgs)) = (ws_ctx_clone.as_ref(), ws_msgs) {
                     let mut new_msgs: Vec<Message> = vec![];
@@ -54,6 +139,7 @@ pub fn use_group_socket_messages(
                     }
                     all_msgs.extend(new_msgs);
                 }
+                
                 use std::collections::HashMap;
                 let mut map = HashMap::new();
                 for msg in all_msgs {
@@ -61,13 +147,37 @@ pub fn use_group_socket_messages(
                 }
                 let mut deduped: Vec<_> = map.into_values().collect();
                 deduped.sort_by_key(|m| m.sent_at);
-                set_all_messages.set(deduped);
+                
+                // Safely update the signal
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    set_all_messages.set(deduped);
+                })) {
+                    Ok(_) => {},
+                    Err(_) => {
+                        leptos::logging::log!("[WS SOCKET MSGS] Set signal disposed, breaking loop");
+                        break;
+                    }
+                }
                 
                 // Wait before checking again
                 gloo_timers::future::TimeoutFuture::new(100).await;
             }
+            leptos::logging::log!("[WS SOCKET MSGS] Message polling loop ended for group {}", group_id);
         });
     }
+
+    // Cleanup: stop the loop when the component unmounts
+    let atomic_continue_cleanup = atomic_should_continue.clone();
+    on_cleanup(move || {
+        leptos::logging::log!("[WS SOCKET MSGS] Cleanup called for group {}", group_id);
+        // Set atomic flag first (most reliable)
+        atomic_continue_cleanup.store(false, Ordering::Relaxed);
+        
+        // Also try to set the signal (with error handling)
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            set_should_continue.set(false);
+        }));
+    });
 
     all_messages
 }

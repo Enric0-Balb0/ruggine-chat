@@ -3,6 +3,8 @@ use leptos::html::Div;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use gloo_timers;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use crate::hooks::GroupMembershipWithDetails;
 use crate::api::services::GroupMembershipService;
 use crate::components::use_toast;
@@ -81,12 +83,40 @@ pub fn ChatView(
     // Use the same unified WebSocket hook for presence tracking
     {
         let set_ws_online_user_ids = set_ws_online_user_ids.clone();
+        let (should_continue_presence, set_should_continue_presence) = create_signal(true);
+        // Atomic flag to coordinate loop termination without touching signals after disposal
+        let atomic_continue_presence = Arc::new(AtomicBool::new(true));
+        
+        // Setup cleanup for presence tracking signal
+        let set_should_continue_presence_cleanup = set_should_continue_presence.clone();
+        let atomic_for_cleanup = atomic_continue_presence.clone();
+        on_cleanup(move || {
+            // first set atomic flag to false so background tasks stop without touching signals
+            atomic_for_cleanup.store(false, Ordering::Relaxed);
+            if let Err(_) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                set_should_continue_presence_cleanup.set(false);
+            })) {
+                leptos::logging::log!("[PRESENCE TRACKING] Cleanup: presence signal already disposed");
+            }
+        });
+        
         if let Some(ws_hook) = unified_ws_hook.clone() {
+            let atomic_loop = atomic_continue_presence.clone();
             spawn_local(async move {
                 let mut last_processed_count = 0usize;
-                
-                loop {
-                    let msgs = ws_hook.messages.get_untracked();
+
+                    // Use atomic flag only for loop control to avoid touching signals that may be disposed
+                    while atomic_loop.load(Ordering::Relaxed) {
+                    // Safely get WebSocket messages with proper error handling
+                    let msgs = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        ws_hook.messages.get_untracked()
+                    })) {
+                        Ok(msgs) => msgs,
+                        Err(_) => {
+                            leptos::logging::log!("[PRESENCE TRACKING] Messages signal disposed, stopping presence tracking");
+                            break;
+                        }
+                    };
                     
                     // Process only new messages since last iteration
                     if msgs.len() > last_processed_count {
@@ -95,14 +125,42 @@ pub fn ChatView(
                                 if let ServerEvent::Groups(group_event) = event {
                                     match group_event {
                                         GroupEvent::Joined { user_id } => {
-                                            set_ws_online_user_ids.update(|set| {
-                                                set.insert(*user_id);
-                                            });
+                                            leptos::logging::log!("[PRESENCE] User {} joined, adding to online set", user_id);
+                                            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                                set_ws_online_user_ids.update(|set| {
+                                                    set.insert(*user_id);
+                                                });
+                                            })) {
+                                                Ok(_) => {},
+                                                Err(_) => {
+                                                    leptos::logging::log!("[PRESENCE] Online users signal disposed, stopping tracking");
+                                                    // ensure loop stops even if signals are disposed
+                                                    atomic_loop.store(false, Ordering::Relaxed);
+                                                    // Safely set should_continue to false if possible
+                                                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                                        set_should_continue_presence.set(false);
+                                                    }));
+                                                    return;
+                                                }
+                                            }
                                         }
                                         GroupEvent::Left { user_id } => {
-                                            set_ws_online_user_ids.update(|set| {
-                                                set.remove(user_id);
-                                            });
+                                            leptos::logging::log!("[PRESENCE] User {} left, removing from online set", user_id);
+                                            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                                set_ws_online_user_ids.update(|set| {
+                                                    set.remove(user_id);
+                                                });
+                                                })) {
+                                                Ok(_) => {},
+                                                Err(_) => {
+                                                    leptos::logging::log!("[PRESENCE] Online users signal disposed, stopping tracking");
+                                                    atomic_loop.store(false, Ordering::Relaxed);
+                                                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                                        set_should_continue_presence.set(false);
+                                                    }));
+                                                    return;
+                                                }
+                                            }
                                         }
                                         GroupEvent::NewMessage { .. } => {
                                             // Chat messages are handled separately, ignore here
@@ -118,8 +176,11 @@ pub fn ChatView(
                     // Check for new messages every 100ms
                     gloo_timers::future::TimeoutFuture::new(100).await;
                 }
+                leptos::logging::log!("[PRESENCE] Presence tracking loop ended");
             });
         }
+        
+        // Note: cleanup is already handled by atomic flag in the main on_cleanup above
     }
 
     {
@@ -174,6 +235,22 @@ pub fn ChatView(
     {
         let group_id = group_data.membership.group_chat_id;
         let set_current_member_count = set_current_member_count.clone();
+        let (should_continue_polling, set_should_continue_polling) = create_signal(true);
+        
+        // Setup cleanup for polling signal
+        let set_should_continue_polling_cleanup = set_should_continue_polling.clone();
+        // Atomic flag to coordinate polling loop termination safely
+        let atomic_continue_polling = Arc::new(AtomicBool::new(true));
+        let atomic_for_polling_cleanup = atomic_continue_polling.clone();
+        on_cleanup(move || {
+            // prefer atomic stop first
+            atomic_for_polling_cleanup.store(false, Ordering::Relaxed);
+            if let Err(_) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                set_should_continue_polling_cleanup.set(false);
+            })) {
+                leptos::logging::log!("[MEMBER COUNT POLL] Cleanup: polling signal already disposed");
+            }
+        });
         
         // Initial setup and periodic polling
         leptos::spawn_local(async move {
@@ -193,20 +270,44 @@ pub fn ChatView(
                 .with_auto_retry("initial poll group member count").await {
                 
                 let new_count = group_members.len() as i32;
-                let current_count = current_member_count.get_untracked();
+                // Safely get current count
+                let current_count = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    current_member_count.get_untracked()
+                })) {
+                    Ok(count) => count,
+                    Err(_) => {
+                        leptos::logging::log!("[MEMBER COUNT POLL] Member count signal disposed during initial poll");
+                        return;
+                    }
+                };
+                
                 if new_count != current_count {
                     leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
                         group_id, current_count, new_count);
-                    set_current_member_count.set(new_count);
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        set_current_member_count.set(new_count);
+                    })) {
+                        Ok(_) => {},
+                        Err(_) => {
+                            leptos::logging::log!("[MEMBER COUNT POLL] Cannot set member count, signal disposed");
+                            return;
+                        }
+                    }
                 }
             } else {
                 leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch initial group members for {}", group_id);
             }
             
-            loop {
-                // Wait 5 seconds between polls (reduced for testing)
+            let atomic_loop_polling = atomic_continue_polling.clone();
+            // rely primarily on atomic flag for loop control; internal checks will safely read signals
+            while atomic_loop_polling.load(Ordering::Relaxed) {
+                // Wait 5 seconds between polls
                 crate::utils::sleep_ms(5000).await;
                 
+                // Check atomic flag only - don't read signals that may be disposed during logout
+                if !atomic_loop_polling.load(Ordering::Relaxed) {
+                    break;
+                }
                 
                 // Create membership service to get actual group members
                 let storage_service = crate::utils::storage::StorageService::new();
@@ -222,17 +323,42 @@ pub fn ChatView(
                     .with_auto_retry("poll group member count").await {
                     
                     let new_count = group_members.len() as i32;
-                    let current_count = current_member_count.get_untracked();
+                    // Safely get current count
+                    let current_count = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        current_member_count.get_untracked()
+                    })) {
+                        Ok(count) => count,
+                        Err(_) => {
+                            leptos::logging::log!("[MEMBER COUNT POLL] Member count signal disposed during polling");
+                            // Set atomic flag to stop loop
+                            atomic_loop_polling.store(false, Ordering::Relaxed);
+                            break;
+                        }
+                    };
+                    
                     if new_count != current_count {
                         leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
                             group_id, current_count, new_count);
-                        set_current_member_count.set(new_count);
+                        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            set_current_member_count.set(new_count);
+                        })) {
+                            Ok(_) => {},
+                            Err(_) => {
+                                leptos::logging::log!("[MEMBER COUNT POLL] Cannot set member count, signal disposed");
+                                // Set atomic flag to stop loop
+                                atomic_loop_polling.store(false, Ordering::Relaxed);
+                                break;
+                            }
+                        }
                     }
                 } else {
                     leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch group members for {}", group_id);
                 }
             }
+            leptos::logging::log!("[MEMBER COUNT POLL] Member count polling ended for group {}", group_id);
         });
+        
+        // Note: cleanup is already handled by atomic flag in the main on_cleanup above
     }
     
     let member_count = create_memo(move |_| current_member_count.get());
@@ -850,7 +976,6 @@ pub fn ChatView(
             // Only process if we have a container and messages
             if let Some(container) = messages_container_ref_for_auto_read.get() {
                 if !current_messages.is_empty() {
-                    leptos::logging::log!("[AUTO READ DEBUG] Checking {} messages for auto-read", current_messages.len());
                     
                     // Use a short timeout to ensure DOM is updated
                     let container_clone = container.clone();
@@ -876,14 +1001,12 @@ pub fn ChatView(
                             // Saltare i messaggi inviati dall'utente corrente
                             if let Some(user_id) = current_user_id {
                                 if msg.sender_id == user_id {
-                                    leptos::logging::log!("[AUTO READ DEBUG] Skipping own message {}", msg.id);
                                     continue;
                                 }
                             }
                             
                             if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg.id)) {
                                 if is_element_in_viewport(&container_clone, &elem) {
-                                    leptos::logging::log!("[AUTO READ DEBUG] Message {} is visible and will be marked as read", msg.id);
                                     
                                     let mut should_update = false;
                                     let initial_ids_map = unread_message_ids_clone.get_untracked();
@@ -954,7 +1077,6 @@ pub fn ChatView(
                                         if batch.is_empty() {
                                             break;
                                         }
-                                        leptos::logging::log!("[AUTO READ DEBUG] Processing batch of {} messages", batch.len());
                                         process_update_batch(batch, unread_counts_clone.clone(), unread_message_ids_clone.clone(), unread_marked_read_clone.clone(), group_id_for_update).await;
                                         crate::utils::timers::sleep_ms(10).await;
                                     }
@@ -1344,6 +1466,13 @@ pub fn ChatView(
                     let mut missing_sender_ids: Vec<i32> = Vec::new();
                     let storage_service = StorageService::new();
                     let user_profile = storage_service.get_user_profile();
+                    
+                    // Debug: check user profile
+                    if let Some(ref profile) = user_profile {
+                        leptos::logging::log!("[USER_PROFILE DEBUG] Current user ID: {}", profile.id);
+                    } else {
+                        leptos::logging::log!("[USER_PROFILE DEBUG] No user profile found in storage!");
+                    }
 
                     let mut children = Vec::new();
                     let mut prev_date: Option<chrono::NaiveDate> = None;

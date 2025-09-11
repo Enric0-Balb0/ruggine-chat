@@ -1,5 +1,6 @@
 use wasm_bindgen::JsCast;
 use leptos::*;
+use gloo_timers;
 use crate::types::Invitation;
 use crate::api::services::group::GroupChatService;
 use crate::api::client::ApiClient;
@@ -9,6 +10,9 @@ use crate::components::LucideIcon;
 use crate::hooks::groups_provider::use_groups_context;
 use crate::components::ui::feedback::use_toast;
 use crate::utils::error_recovery::NetworkOperation;
+use crate::hooks::use_group_message_ws::UseGroupMessageWs;
+use crate::types::message_ws::{WebSocketMessage, ClientAction, GroupAction};
+use uuid;
 
 #[component]
 pub fn ShowInvitesModal(
@@ -165,6 +169,9 @@ pub fn ShowInvitesModal(
     }
 
     let groups_ctx = use_groups_context();
+    
+    // Try to get WebSocket context - may not be available
+    let ws_ctx = use_context::<Option<UseGroupMessageWs>>();
     let handle_close = move |_| {
         // Refetch gruppi quando si chiude il modal
         groups_ctx.groups_hook.refresh_groups.dispatch(());
@@ -192,11 +199,13 @@ pub fn ShowInvitesModal(
     let set_pending_for_reject = set_pending_invites.clone();
     let on_accept_cb_clone = on_accept.clone();
     let on_reject_cb_clone = on_reject.clone();
+    let ws_ctx_for_accept = ws_ctx.clone();
     let handle_accept_invite = Callback::new(move |invitation_id: i32| {
         let set_invites_signal = set_invites_signal.clone();
         let toast = toast_for_accept.clone();
         let set_pending = set_pending_for_accept.clone();
         let on_accept_cb = on_accept_cb_clone.clone();
+        let ws_ctx = ws_ctx_for_accept.clone();
         spawn_local(async move {
             // mark pending
             set_pending.update(|s| { s.insert(invitation_id); });
@@ -246,6 +255,25 @@ pub fn ShowInvitesModal(
                 }
                 // Toast di successo
                 toast.success("Invito accettato! Ora fai parte del gruppo.");
+                
+                // IMPORTANT: Refresh groups list to include the new group
+                groups_ctx.groups_hook.refresh_groups.dispatch(());
+                
+                // After groups refresh, give some time for WebSocket to establish connection
+                // and then send join message for the new group
+                gloo_timers::future::TimeoutFuture::new(1000).await;
+                
+                // If we have a WebSocket connection, send a join message to notify other members
+                if let Some(Some(ws)) = ws_ctx.as_ref() {
+                    web_sys::console::log_1(&"Sending join message after accepting invitation".into());
+                    ws.send_message.set(Some(WebSocketMessage::Request {
+                        request_id: uuid::Uuid::new_v4().to_string(),
+                        action: ClientAction::Groups(GroupAction::Join {}),
+                    }));
+                } else {
+                    web_sys::console::log_1(&"No WebSocket context available for join message".into());
+                }
+                
                 // notify optional external handler
                 if let Some(cb) = on_accept.as_ref() {
                     cb.call(invitation_id);

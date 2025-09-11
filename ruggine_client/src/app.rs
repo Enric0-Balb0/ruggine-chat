@@ -78,13 +78,22 @@ pub fn AppContent() -> impl IntoView {
     // Close socket on logout (token -> None)
     {
         let token = token.clone();
+        let (prev_token, set_prev_token) = create_signal::<Option<String>>(None);
+        
         create_effect(move |_| {
-            // when token becomes None, disconnect the shared service for previous token
-            if token.get().is_none() {
-                if let Some(prev_token) = auth_ctx.token.get() {
-                    crate::api::ws::global_ws::disconnect_for_token(&prev_token);
+            let current_token = token.get();
+            let previous_token = prev_token.get_untracked();
+            
+            // If token goes from Some -> None (logout), disconnect the previous token's socket
+            if current_token.is_none() && previous_token.is_some() {
+                if let Some(token_to_disconnect) = previous_token {
+                    leptos::logging::log!("[APP CLEANUP] Disconnecting WebSocket for token on logout");
+                    crate::api::ws::global_ws::disconnect_for_token(&token_to_disconnect);
                 }
             }
+            
+            // Update previous token for next comparison
+            set_prev_token.set(current_token.clone());
         });
     }
 

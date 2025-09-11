@@ -5,6 +5,7 @@ use crate::config::{endpoints::ApiEndpoints, constants::AppConstants};
 use crate::types::user::{UserReadDto, ApiSuccessResponseUserReadDto};
 use crate::types::UserProfile;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// User search and management service
 #[derive(Clone)]
@@ -46,50 +47,86 @@ impl UserService {
 
     /// Get user profile by username (new OpenAPI)
     pub async fn get_user_by_username(&self, username: &str) -> Result<Option<UserSearchResult>, AuthError> {
-        // Prova prima il formato diretto (UserReadDto)
+        let endpoint = ApiEndpoints::user_by_username(username);
+        web_sys::console::log_1(&format!("Searching user at endpoint: {}", endpoint).into());
+        
+        // Use serde_json::Value to handle both response formats
         match self.http_client
-            .get::<UserReadDto>(&ApiEndpoints::user_by_username(username))
+            .get::<Value>(&endpoint)
             .await {
-            Ok(user_data) => {
-                web_sys::console::log_1(&format!("Successfully found user (direct format): {:?}", user_data).into());
-                Ok(Some(UserSearchResult {
-                    id: user_data.id.to_string(),
-                    username: user_data.username,
-                    first_name: user_data.first_name,
-                    last_name: user_data.last_name,
-                    email: user_data.email,
-                }))
-            },
-            Err(http_error) => {
-                web_sys::console::log_1(&format!("Direct format failed: {:?}", http_error).into());
+            Ok(response_value) => {
+                web_sys::console::log_1(&format!("Raw response: {}", response_value).into());
+                web_sys::console::log_1(&format!("Response type: {}", response_value.to_string()).into());
                 
-                // Se il formato diretto fallisce, prova il formato wrapped
-                match self.http_client
-                    .get::<crate::types::user::ApiSuccessResponseUserReadDto>(&ApiEndpoints::user_by_username(username))
-                    .await {
-                    Ok(wrapped_response) => {
-                        web_sys::console::log_1(&format!("Wrapped format response: {:?}", wrapped_response).into());
-                        let user_data = wrapped_response.data;
-                        web_sys::console::log_1(&format!("Successfully found user (wrapped format): {:?}", user_data).into());
-                        Ok(Some(UserSearchResult {
-                            id: user_data.id.to_string(),
-                            username: user_data.username,
-                            first_name: user_data.first_name,
-                            last_name: user_data.last_name,
-                            email: user_data.email,
-                        }))
-                    },
-                    Err(wrapped_error) => {
-                        web_sys::console::log_1(&format!("Both formats failed. Direct error: {:?}, Wrapped error: {:?}", http_error, wrapped_error).into());
-                        // Gestisci 404 come utente non trovato
-                        match &http_error {
-                            crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
-                                web_sys::console::log_1(&"User not found (404)".into());
-                                Ok(None)
+                // Check if response has data field
+                if response_value.is_object() {
+                    if let Some(data_value) = response_value.get("data") {
+                        web_sys::console::log_1(&format!("Found data field: {}", data_value).into());
+                        if data_value.is_null() {
+                            // Case: {"data": null} - user not found
+                            web_sys::console::log_1(&format!("User '{}' not found (data is null)", username).into());
+                            Ok(None)
+                        } else {
+                            // Case: {"data": {...}} - user found, try to deserialize
+                            web_sys::console::log_1(&format!("User data value: {}", data_value).into());
+                            match serde_json::from_value::<UserReadDto>(data_value.clone()) {
+                                Ok(user_data) => {
+                                    web_sys::console::log_1(&format!("User found: {:?}", user_data).into());
+                                    Ok(Some(UserSearchResult {
+                                        id: user_data.id.to_string(),
+                                        username: user_data.username,
+                                        first_name: user_data.first_name,
+                                        last_name: user_data.last_name,
+                                        email: user_data.email,
+                                    }))
+                                },
+                                Err(e) => {
+                                    web_sys::console::log_1(&format!("Failed to deserialize user data: {:?}", e).into());
+                                    Err(AuthError::Http(crate::api::http_error::HttpError::Deserialization(
+                                        format!("Failed to parse user data: {}", e)
+                                    )))
+                                }
+                            }
+                        }
+                    } else {
+                        // No "data" field - could be direct response format
+                        web_sys::console::log_1(&"No 'data' field found, trying direct parsing".into());
+                        
+                        // Try to parse the response directly as UserReadDto
+                        match serde_json::from_value::<UserReadDto>(response_value.clone()) {
+                            Ok(user_data) => {
+                                web_sys::console::log_1(&format!("Direct parsing successful: {:?}", user_data).into());
+                                Ok(Some(UserSearchResult {
+                                    id: user_data.id.to_string(),
+                                    username: user_data.username,
+                                    first_name: user_data.first_name,
+                                    last_name: user_data.last_name,
+                                    email: user_data.email,
+                                }))
                             },
-                            _ => Err(AuthError::from(http_error))
+                            Err(e) => {
+                                web_sys::console::log_1(&format!("Direct parsing failed: {:?}", e).into());
+                                Err(AuthError::Http(crate::api::http_error::HttpError::Deserialization(
+                                    format!("Response missing 'data' field and direct parsing failed: {}", e)
+                                )))
+                            }
                         }
                     }
+                } else {
+                    // Response is not an object - might be null or array
+                    web_sys::console::log_1(&format!("Response is not an object: {}", response_value).into());
+                    Ok(None)
+                }
+            },
+            Err(http_error) => {
+                web_sys::console::log_1(&format!("Error fetching user '{}': {:?}", username, http_error).into());
+                // Handle 404 as user not found
+                match &http_error {
+                    crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
+                        web_sys::console::log_1(&"User not found (404)".into());
+                        Ok(None)
+                    },
+                    _ => Err(AuthError::from(http_error))
                 }
             }
         }
@@ -97,42 +134,84 @@ impl UserService {
 
     /// Get user profile by ID
     pub async fn get_user_by_id(&self, user_id: &str) -> Result<Option<UserSearchResult>, AuthError> {
-        // Prova prima il formato diretto (UserReadDto)
+        let endpoint = ApiEndpoints::user_by_id(user_id);
+        web_sys::console::log_1(&format!("Searching user by ID at endpoint: {}", endpoint).into());
+        
+        // Use serde_json::Value to handle both response formats
         match self.http_client
-            .get::<UserReadDto>(&ApiEndpoints::user_by_id(user_id))
+            .get::<Value>(&endpoint)
             .await {
-            Ok(user_data) => {
-                web_sys::console::log_1(&format!("Direct format success for user {}", user_id).into());
-                Ok(Some(UserSearchResult {
-                    id: user_data.id.to_string(),
-                    email: user_data.email,
-                    username: user_data.username,
-                    first_name: user_data.first_name,
-                    last_name: user_data.last_name,
-                }))
-            },
-            Err(http_error) => {
-                web_sys::console::log_1(&format!("Direct format failed for user {}, trying wrapped format", user_id).into());
-                // Se fallisce, prova il formato wrappato
-                match self.http_client
-                    .get::<crate::types::user::ApiSuccessResponseUserReadDto>(&ApiEndpoints::user_by_id(user_id))
-                    .await {
-                    Ok(response) => {
-                        let user_data = response.data;
-                        web_sys::console::log_1(&format!("Wrapped format success for user {}", user_id).into());
-                        Ok(Some(UserSearchResult::from(user_data)))
-                    },
-                    Err(wrapped_error) => {
-                        web_sys::console::log_1(&format!("Both formats failed for user {}. Direct error: {:?}, Wrapped error: {:?}", user_id, http_error, wrapped_error).into());
-                        // Gestisci 404 come utente non trovato
-                        match &http_error {
-                            crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
-                                web_sys::console::log_1(&format!("User {} not found (404)", user_id).into());
-                                Ok(None)
+            Ok(response_value) => {
+                web_sys::console::log_1(&format!("Raw response for user ID {}: {}", user_id, response_value).into());
+                
+                // Check if response has data field
+                if response_value.is_object() {
+                    if let Some(data_value) = response_value.get("data") {
+                        web_sys::console::log_1(&format!("Found data field for ID: {}", data_value).into());
+                        
+                        if data_value.is_null() {
+                            // Case: {"data": null} - user not found
+                            web_sys::console::log_1(&format!("User with ID '{}' not found (data is null)", user_id).into());
+                            Ok(None)
+                        } else {
+                            // Case: {"data": {...}} - user found, try to deserialize
+                            match serde_json::from_value::<UserReadDto>(data_value.clone()) {
+                                Ok(user_data) => {
+                                    web_sys::console::log_1(&format!("User found by ID: {:?}", user_data).into());
+                                    Ok(Some(UserSearchResult {
+                                        id: user_data.id.to_string(),
+                                        email: user_data.email,
+                                        username: user_data.username,
+                                        first_name: user_data.first_name,
+                                        last_name: user_data.last_name,
+                                    }))
+                                },
+                                Err(e) => {
+                                    web_sys::console::log_1(&format!("Failed to deserialize user data: {:?}", e).into());
+                                    Err(AuthError::Http(crate::api::http_error::HttpError::Deserialization(
+                                        format!("Failed to parse user data: {}", e)
+                                    )))
+                                }
+                            }
+                        }
+                    } else {
+                        // No "data" field - try direct parsing
+                        web_sys::console::log_1(&"No 'data' field found for user ID, trying direct parsing".into());
+                        
+                        match serde_json::from_value::<UserReadDto>(response_value.clone()) {
+                            Ok(user_data) => {
+                                web_sys::console::log_1(&format!("Direct parsing successful for ID: {:?}", user_data).into());
+                                Ok(Some(UserSearchResult {
+                                    id: user_data.id.to_string(),
+                                    email: user_data.email,
+                                    username: user_data.username,
+                                    first_name: user_data.first_name,
+                                    last_name: user_data.last_name,
+                                }))
                             },
-                            _ => Err(AuthError::from(http_error))
+                            Err(e) => {
+                                web_sys::console::log_1(&format!("Direct parsing failed for ID: {:?}", e).into());
+                                Err(AuthError::Http(crate::api::http_error::HttpError::Deserialization(
+                                    format!("Response missing 'data' field and direct parsing failed: {}", e)
+                                )))
+                            }
                         }
                     }
+                } else {
+                    // Response is not an object - might be null or array
+                    web_sys::console::log_1(&format!("Response for ID is not an object: {}", response_value).into());
+                    Ok(None)
+                }
+            },
+            Err(http_error) => {
+                web_sys::console::log_1(&format!("Error fetching user by ID '{}': {:?}", user_id, http_error).into());
+                // Handle 404 as user not found
+                match &http_error {
+                    crate::api::http_error::HttpError::Http { status, .. } if *status == 404 => {
+                        web_sys::console::log_1(&format!("User {} not found (404)", user_id).into());
+                        Ok(None)
+                    },
+                    _ => Err(AuthError::from(http_error))
                 }
             }
         }

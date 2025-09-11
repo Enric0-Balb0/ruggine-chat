@@ -40,26 +40,26 @@ pub fn ChatMessage(
     let _fallback_time = time_str.clone();
     // Evita warning se l'originale non viene più usato direttamente
     let _original_sender_username = sender_username;
-    // entrance animation only the first time a given message id is mounted
+    // Safe entrance animation: messages start visible, but may get a subtle entrance effect
     let already_animated = ANIMATED_MESSAGE_IDS.with(|set| set.borrow().contains(&message.id));
-    let (entered, set_entered) = create_signal(already_animated);
+    
+    // Start with visible state to ensure messages always show
+    let (has_entered, set_has_entered) = create_signal(already_animated);
+    
     if !already_animated {
-        // Delay leggermente più alto per assicurare che il primo frame (opacity 0, translate) venga dipinto
-        // prima di passare allo stato finale e quindi la transizione sia percepibile.
+        // Mark as animated and trigger entrance effect
         let msg_id = message.id;
-        let (is_mounted, set_is_mounted) = create_signal(true);
+        let set_entered = set_has_entered;
         
-        // Cleanup quando il componente viene smontato
-        on_cleanup(move || {
-            set_is_mounted.set(false);
-        });
-        
-        Timeout::new(80, move || {
-            // Solo aggiorna se il componente è ancora montato
-            if is_mounted.get_untracked() {
+        Timeout::new(50, move || {
+            // Safe signal update
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 set_entered.set(true);
-                ANIMATED_MESSAGE_IDS.with(|set| { set.borrow_mut().insert(msg_id); });
-            }
+            }));
+            
+            ANIMATED_MESSAGE_IDS.with(|set| { 
+                set.borrow_mut().insert(msg_id); 
+            });
         }).forget();
     }
     let bubble_classes = if is_own {
@@ -87,23 +87,35 @@ pub fn ChatMessage(
     // apply it to the root container (so avatar + bubble move together) and increase a bit
     let sent_offset = if is_own { "translate-x-3" } else { "" };
 
+    // Simple safe animation using inline styles so Tailwind purge can't remove utilities.
+    // We animate opacity + translateY via inline style; default is not-entered (slightly lower/faded).
+    let computed_style = move || {
+        let entered = has_entered.try_get().unwrap_or(false);
+        if entered {
+            // fully visible, at final position
+            "opacity: 1; transform: translateY(0px); transition: opacity 300ms ease-out, transform 300ms ease-out;"
+        } else {
+            // initial state: slightly lower and slightly faded
+            "opacity: 0.9; transform: translateY(12px); transition: opacity 300ms ease-out, transform 300ms ease-out;"
+        }
+    };
+
     view! {
-        <div class=move || {
-            // root classes: add a stable marker `chat-msg` and `continued` when applicable
-            let mut classes = String::new();
-            classes.push_str("chat-msg ");
-            if continued { classes.push_str("continued "); }
-            classes.push_str(base);
-            // apply horizontal offset to the whole message row for own messages
-            if !sent_offset.is_empty() { classes.push_str(" "); classes.push_str(sent_offset); }
-            // spacing is now controlled entirely by CSS .chat-msg and .chat-msg.continued rules
-            
-            if entered.get() {
-                format!("{} opacity-100 translate-y-0 transition-all duration-200 ease-out", classes)
-            } else {
-                format!("{} opacity-0 translate-y-2 transition-all duration-200 ease-out", classes)
+        <div
+            class=move || {
+                // root classes: add a stable marker `chat-msg` and `continued` when applicable
+                let mut classes = String::new();
+                classes.push_str("chat-msg ");
+                if continued { classes.push_str("continued "); }
+                classes.push_str(base);
+                // apply horizontal offset to the whole message row for own messages
+                if !sent_offset.is_empty() { classes.push_str(" "); classes.push_str(sent_offset); }
+                // spacing is now controlled entirely by CSS .chat-msg and .chat-msg.continued rules
+                
+                classes
             }
-        }>
+            style=move || computed_style()
+        >
             <Show
                 when=move || show_sender
                 fallback=move || {

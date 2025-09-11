@@ -21,8 +21,10 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
     // refresh/navigation.
     {
         let token_prev = create_rw_signal::<Option<String>>(None);
+        let (should_continue, set_should_continue) = create_signal(true);
+        
         spawn_local(async move {
-            loop {
+            while should_continue.get_untracked() {
                 // Safely get token values without tracking
                 let current = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     token.get_untracked()
@@ -35,7 +37,15 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
                     }
                 };
                 
-                let previous = token_prev.get_untracked();
+                let previous = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    token_prev.get_untracked()
+                })) {
+                    Ok(val) => val,
+                    Err(_) => {
+                        leptos::logging::log!("[WS APP] Previous token signal disposed, stopping");
+                        break;
+                    }
+                };
                 
                 // detect transition None -> Some (login)
                 if previous.is_none() && current.is_some() {
@@ -103,11 +113,27 @@ pub fn use_app_group_ws(token: ReadSignal<Option<String>>) -> Option<UseGroupMes
                         }
                     }
                 }
-                token_prev.set(current.clone());
+                
+                // Safely update previous token
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    token_prev.set(current.clone());
+                })) {
+                    Ok(_) => {},
+                    Err(_) => {
+                        leptos::logging::log!("[WS APP] Cannot set previous token, signal disposed");
+                        break;
+                    }
+                }
                 
                 // Wait before checking again
                 gloo_timers::future::TimeoutFuture::new(100).await;
             }
+            leptos::logging::log!("[WS APP] Connection monitoring loop ended");
+        });
+        
+        // Cleanup: stop the monitoring loop when component unmounts
+        on_cleanup(move || {
+            set_should_continue.set(false);
         });
     }
 
