@@ -380,6 +380,8 @@ pub async fn create_group_chat_state() -> GroupChatState {
     GroupChatState {
         group_chat_service: service_init.group_chat_service(),
         user_service: service_init.user_service(),
+        websocket_group_service: None,
+        ws_manager: None
     }
 }
 

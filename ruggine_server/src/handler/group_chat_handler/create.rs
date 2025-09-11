@@ -3,6 +3,7 @@ use crate::error::{api_error::ApiError, request_error::ValidatedRequest};
 use crate::response::api_response::ApiSuccessResponse;
 use crate::state::group_chat_state::GroupChatState;
 use axum::{extract::State, Extension, Json};
+use tracing::warn;
 use crate::entity::user::User;
 
 #[utoipa::path(
@@ -31,6 +32,17 @@ pub async fn create(
         .group_chat_service
         .create(payload, current_user.id)
         .await?;
+
+    if let Some(websocket_service) = &state.websocket_group_service {
+        crate::handler::websocket::chat_handler::handle_new_group_chat(
+            websocket_service.clone(),
+            state.ws_manager.clone().unwrap().clone(),
+            group_chat.id,
+            current_user.id,
+        ).await;
+    } else {
+        warn!("WebSocket group service not available for sending notifications");
+    }
     
     Ok(Json(ApiSuccessResponse::send(group_chat)))
 }

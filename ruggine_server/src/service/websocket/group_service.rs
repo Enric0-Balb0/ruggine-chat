@@ -97,6 +97,18 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
         Ok(connection_ids)
     }
 
+    async fn connections_to_broadcast_by_user_id(&self, to_user_id: i32) -> Result<Vec<String>, WebSocketError> {
+        let mut connection_ids = Vec::new();
+
+        if let Some(connections) = self.group_subscriptions.read().await.get(&to_user_id).cloned() {
+            for conn_id in connections {
+                connection_ids.push(conn_id);
+            }
+        }
+
+        Ok(connection_ids)
+    }
+
     async fn get_connections_number_for_user_id(&self, user_id: i32) -> i32 {
         match self.group_subscriptions.read().await.get(&user_id) {
             Some(connections) => connections.len() as i32,

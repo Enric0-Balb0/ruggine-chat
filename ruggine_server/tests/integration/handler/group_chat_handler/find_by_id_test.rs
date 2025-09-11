@@ -31,6 +31,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
             user_service: Arc::new(user_service),
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Act
@@ -68,6 +70,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
             user_service: Arc::new(user_service),
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Act
@@ -98,6 +102,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
             user_service: Arc::new(user_service),
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Act: Find both groups
@@ -144,6 +150,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
             user_service: Arc::new(user_service),
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Act: Both users try to find the same group
@@ -188,6 +196,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service: Arc::new(group_chat_service),
             user_service: Arc::new(user_service),
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Act
@@ -217,6 +227,8 @@ mod find_by_id_handler_integration_tests {
         let state = GroupChatState {
             group_chat_service,
             user_service,
+            websocket_group_service: None,
+            ws_manager: None
         };
 
         // Create group chat using service

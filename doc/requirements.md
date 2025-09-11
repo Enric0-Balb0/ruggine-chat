@@ -1054,6 +1054,88 @@ note right of database_infrastructure : Dockerized database with\npersistent vol
 @enduml
 ```
 
+## Server Architecture Diagram
+
+The following diagram shows the high-level software architecture of the Ruggine server:
+
+```plantuml
+@startuml
+!theme plain
+
+package "Client Layer" {
+    [HTTP Client] as client_http
+    [WebSocket Client] as client_ws
+}
+
+package "Ruggine Server" {
+    [Middleware] as middleware
+    
+    package "API Layer" {
+        [REST Routes] as rest_routes
+        [WebSocket Routes] as ws_routes
+    }
+    
+    [Handlers] as handlers
+    
+    package "Business Logic" {
+        [Services] as services
+        [Repositories] as repositories
+    }
+    
+    [Database Connection] as db_conn
+}
+
+database "PostgreSQL" as db
+
+' Vertical arrangement
+client_http --> middleware
+client_ws -.-> middleware
+
+middleware --> rest_routes
+middleware -.-> ws_routes
+
+rest_routes --> handlers
+ws_routes -.-> handlers
+
+handlers --> services
+services --> repositories
+repositories --> db_conn
+db_conn --> db
+
+' Layout positioning
+client_http -[hidden]- client_ws
+rest_routes -[hidden]- ws_routes
+services -[hidden]- repositories
+
+note right of client_http : REST API follows\nlayered architecture
+note right of client_ws : WebSocket direct\nto handlers
+
+@enduml
+```
+
+### Architecture Overview
+
+This server follows a **Layered Architecture** pattern (also known as Clean Architecture), ensuring separation of concerns and maintainability.
+
+**REST API Flow:**
+- HTTP requests go through Routes → Handlers → Services → Repositories → Database
+- Traditional layered architecture for stateless operations
+
+**WebSocket Flow:**
+- WebSocket connections bypass traditional routing for real-time communication
+- Share the same business logic components (Services, Repositories)
+
+**Architectural Layers:**
+- **Presentation Layer**: Routes and Handlers (API endpoints and request processing)
+- **Application Layer**: Services (business logic and orchestration)
+- **Data Access Layer**: Repositories (database operations and data mapping)
+- **Infrastructure Layer**: Middleware, database connections, external services
+
+**Key Principles:**
+- Dependency inversion (repositories as traits/interfaces)
+- Single responsibility per layer
+- Clear separation between business logic and data access
+
 ## Deployment Specifications
 
 ### Client Deployment

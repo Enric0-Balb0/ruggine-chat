@@ -335,38 +335,6 @@ pub async fn handle_new_group_message(
     text_message: TextMessageReadDto,
     sender_user_username: String,
 ) {
-    /* match message.unwrap() {
-        tungstenite::Message::Text(text) => {
-            let parsed: WebSocketMessage = serde_json::from_str(&text).unwrap();
-            match parsed {
-                WebSocketMessage::Event { event, timestamp } => {
-                    // Success
-                    match event {
-                        crate::websocket::ServerEvent::Groups(NewMessage {
-                                                                           message_id,
-                                                                           group_id,
-                                                                           sender_id,
-                                                                           sender_username,
-                                                                           content,
-                                                                           sent_at,
-                                                                       }) => {
-                            assert_eq!(content, "Test message from e2e test");
-                            break; // Exit after receiving the expected message
-                        }
-                        _ => {
-                            panic!("Unexpected event type");
-                        }
-                    }
-                }
-                _ => {
-                    panic!("Unexpected WS message type");
-                }
-            }
-        }
-        _ => {
-            panic!("Unexpected WS message type");
-        }
-    } */
     // Search for active connections in the group
     let connection_ids = match group_service.connections_to_broadcast_new_message(group_id).await {
         Ok(res) => res,
@@ -392,6 +360,66 @@ pub async fn handle_new_group_message(
         group_service.update_sent_at_for_a_user(conn_id.0, text_message.id).await;
         if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id.1, e);
+            continue;
+        }
+    }
+}
+
+pub async fn handle_new_invitation(
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    invitation_id: i32,
+    to_user_id: i32,
+) {
+    // Search for active connections in the group
+    let connection_ids = match group_service.connections_to_broadcast_by_user_id(to_user_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Error finding connections for new invitation id {} for user id {}: {:?}", invitation_id, to_user_id, e);
+            return;
+        }
+    };
+
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::NewInvitation {
+            invitation_id,
+        }),
+        timestamp: Utc::now(),
+    };
+
+    for conn_id in connection_ids {
+        if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id, e);
+            continue;
+        }
+    }
+}
+
+pub async fn handle_new_group_chat(
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    group_chat_id: i32,
+    created_by_user_id: i32,
+) {
+    // Search for active connections in the group
+    let connection_ids = match group_service.connections_to_broadcast_by_user_id(created_by_user_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Error finding connections for new group chat id {} for user id {}: {:?}", group_chat_id, created_by_user_id, e);
+            return;
+        }
+    };
+
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::NewGroupChat {
+            group_chat_id,
+        }),
+        timestamp: Utc::now(),
+    };
+
+    for conn_id in connection_ids {
+        if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id, e);
             continue;
         }
     }

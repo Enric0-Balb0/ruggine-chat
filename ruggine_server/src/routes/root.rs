@@ -15,16 +15,18 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::state::cpu_usage_log_state::CpuUsageLogState;
 
 pub fn routes(db_conn: Arc<Database>) -> Router {
+    // Crea lo stato per i WebSocket
     let auth_state = AuthState::new(&db_conn);
     let user_state = UserState::new(&db_conn);
     let token_state = TokenState::new(&db_conn);
-    let group_chat_state = GroupChatState::new(&db_conn);
-    let invitation_state = InvitationState::new(&db_conn);
+    let websocket_state = WebSocketState::new(Arc::new(token_state.clone()), &db_conn);
+    let group_chat_state = GroupChatState::new(&db_conn)
+        .with_websocket_service(websocket_state.manager.clone(), websocket_state.group_service.clone());
     let group_membership_state = GroupMembershipState::new(&db_conn);
     let cpu_usage_log_state = CpuUsageLogState::new(&db_conn);
-    
-    // Crea lo stato per i WebSocket
-    let websocket_state = WebSocketState::new(Arc::new(token_state.clone()), &db_conn);
+
+    let invitation_state = InvitationState::new(&db_conn)
+        .with_websocket_service(websocket_state.manager.clone(), websocket_state.group_service.clone());
     
     // Crea lo stato per i text message con il servizio WebSocket
     let text_message_state = TextMessageState::new(&db_conn)

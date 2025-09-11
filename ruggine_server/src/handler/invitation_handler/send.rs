@@ -4,6 +4,7 @@ use crate::response::api_response::ApiSuccessResponse;
 use crate::state::invitation_state::InvitationState;
 use crate::entity::user::User;
 use axum::{extract::State, Extension, Json};
+use tracing::warn;
 
 #[utoipa::path(
     post,
@@ -28,6 +29,18 @@ pub async fn send(
     State(state): State<InvitationState>,
     ValidatedRequest(payload): ValidatedRequest<InvitationCreateDto>,
 ) -> Result<Json<ApiSuccessResponse<InvitationReadDto>>, ApiError> {
-    let invitation = state.invitation_service.send(payload, current_user.id).await?;
+    let invitation = state.invitation_service.send(payload.clone(), current_user.id).await?;
+
+    if let Some(websocket_service) = &state.websocket_group_service {
+        crate::handler::websocket::chat_handler::handle_new_invitation(
+            websocket_service.clone(),
+            state.ws_manager.clone().unwrap().clone(),
+            invitation.id,
+            payload.to_user_id,
+        ).await;
+    } else {
+        warn!("WebSocket group service not available for sending notifications");
+    }
+
     Ok(Json(ApiSuccessResponse::send(invitation)))
 }
