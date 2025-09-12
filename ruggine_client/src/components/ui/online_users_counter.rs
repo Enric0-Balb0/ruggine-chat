@@ -123,7 +123,7 @@ pub fn OnlineUsersCounter() -> impl IntoView {
         spawn_local(async move {
             // Poll up to 6s for join acknowledgement
             let mut waited = 0u32;
-            while waited < 6000 {
+            while waited < 2000 {
                 if !mounted_watcher.load(Ordering::SeqCst) {
                     return; // component unmounted
                 }
@@ -149,9 +149,9 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                 let membership_service = GroupMembershipService::new(http_client, storage_service.clone());
 
                 // Debug: confirm token available (do not print the token itself)
-                leptos::logging::log!("[ONLINE COUNTER] Token present, delaying 2000ms then calling find_connected_users_and_online()");
+                leptos::logging::log!("[ONLINE COUNTER] Token present, delaying 500ms then calling find_connected_users_and_online()");
                 // Delay to give server time to finalize join processing
-                gloo_timers::future::TimeoutFuture::new(2000).await;
+                gloo_timers::future::TimeoutFuture::new(500).await;
 
                 match membership_service.find_connected_users_and_online().await {
                     Ok(online_user_ids) => {
@@ -289,7 +289,7 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                         <div class="text-sm font-medium text-text-primary dark:text-text-primary-dark">"Online"</div>
                         <div class="text-sm text-text-secondary dark:text-text-secondary-dark">
                             {move || match online_count.get() {
-                                Some(count) => format!("{} utenti connessi", count),
+                                Some(count) => format!("{} membri online", count),
                                 None => {
                                     // show a small circular loader while waiting for join + initial load
                                     "".to_string()

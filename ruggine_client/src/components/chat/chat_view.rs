@@ -257,6 +257,9 @@ pub fn ChatView(
             }
             let last_id = locals.last().unwrap().id;
             let anchor_scroll_locked_for_send_inner = anchor_scroll_locked_for_send.clone();
+            // Capture the current container (if any) now so the delayed closure does not
+            // access the reactive NodeRef signal after the component may have been disposed.
+            let captured_container_for_scroll = messages_container_ref_for_scroll.get();
             set_timeout(move || {
                 let doc = match web_sys::window() {
                     Some(w) => match w.document() { Some(d) => d, None => return },
@@ -266,7 +269,7 @@ pub fn ChatView(
                     if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
                         let _ = elem.scroll_into_view_with_bool(true);
                     }
-                } else if let Some(container) = messages_container_ref_for_scroll.get() {
+                } else if let Some(container) = captured_container_for_scroll.clone() {
                     if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
                         container.set_scroll_top(container.scroll_height());
                     }
@@ -286,10 +289,12 @@ pub fn ChatView(
             
             // Auto-scroll to bottom after sending a message
             let messages_container_ref_scroll = messages_container_ref_for_send.clone();
+            // Capture the container now to avoid accessing the NodeRef inside the async task
+            let captured_container_for_send = messages_container_ref_for_send.get();
             leptos::spawn_local(async move {
                 // Small delay to ensure DOM is updated
                 crate::utils::timers::sleep_ms(10).await;
-                if let Some(container) = messages_container_ref_scroll.get() {
+                if let Some(container) = captured_container_for_send.clone() {
                     container.set_scroll_top(container.scroll_height());
                     leptos::logging::log!("[SEND MESSAGE DEBUG] Auto-scrolled to bottom after sending message");
                 }

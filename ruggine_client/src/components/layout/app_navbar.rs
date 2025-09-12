@@ -60,6 +60,9 @@ pub fn AppNavbar() -> impl IntoView {
     
     // State for hamburger menu dropdown
     let (is_menu_open, set_is_menu_open) = create_signal(false);
+
+    // State for avatar hover menu (shows username/email)
+    let (is_avatar_hover_open, set_is_avatar_hover_open) = create_signal(false);
     
     // Toggle menu
     let toggle_menu = move |_| {
@@ -250,30 +253,43 @@ pub fn AppNavbar() -> impl IntoView {
                 
                 {move || match user_profile.get() {
                     Some(user) => {
-                        // Usa direttamente first_name e last_name dal profilo invece di dividere full_name
+                        // Use a hoverable group wrapper so a small menu with username/email
+                        // appears when hovering the avatar. Capture clones for closure use.
                         let first_name = user.first_name.clone();
                         let last_name = user.last_name.clone();
-                        // Usa l'username dal profilo o fallback all'email
-                        let username = if !user.username.is_empty() {
-                            user.username.clone()
-                        } else {
-                            user.email.split('@').next().unwrap_or("user").to_string()
-                        };
-                        
-                        log::info!("AppNavbar: Creo avatar con nome='{}', cognome='{}', username='{}'", 
-                            first_name, last_name, username);
-                        
+                        let username = if !user.username.is_empty() { user.username.clone() } else { user.email.split('@').next().unwrap_or("user").to_string() };
+                        let email = user.email.clone();
+
                         view! {
-                            <UserAvatar 
-                                name=first_name 
-                                surname=last_name 
-                                username=username 
-                                size="md" 
-                            />
+                            <div 
+                                class="relative"
+                                on:mouseenter=move |_| set_is_avatar_hover_open.set(true)
+                                on:mouseleave=move |_| set_is_avatar_hover_open.set(false)
+                            >
+                                <UserAvatar 
+                                    name=first_name.clone()
+                                    surname=last_name.clone()
+                                    username=username.clone()
+                                    size="md"
+                                />
+
+                                <div class=move || {
+                                    let base = "absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded shadow-lg border border-gray-200 dark:border-gray-700 py-2 px-3 z-50 transition-opacity duration-150";
+                                    if is_avatar_hover_open.get() {
+                                        format!("{} opacity-100 pointer-events-auto", base)
+                                    } else {
+                                        format!("{} opacity-0 pointer-events-none", base)
+                                    }
+                                }>
+                                    <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{move || format!("{} {}", first_name.clone(), last_name.clone())}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">{move || format!("@{}", username.clone())}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{move || email.clone()}</div>
+                                </div>
+                            </div>
                         }.into_view()
                     },
                     None => {
-                        log::warn!("AppNavbar: Usando avatar di default");
+                        // Default avatar without hover menu
                         view! {
                             <UserAvatar 
                                 name="User".to_string() 
