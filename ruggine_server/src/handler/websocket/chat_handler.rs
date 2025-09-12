@@ -14,12 +14,13 @@ use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::Response;
 use futures::{SinkExt, StreamExt};
+use utoipa::openapi::info;
 use std::sync::Arc;
 use axum::Extension;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
-use crate::dto::text_message_dto::TextMessageReadDto;
+use crate::dto::text_message_dto::{TextMessageInfoReadDto, TextMessageReadDto};
 use crate::dto::user_dto::UpdateOnlineDto;
 use crate::entity::user::User;
 
@@ -365,6 +366,42 @@ pub async fn handle_new_group_message(
     }
 }
 
+pub async fn handle_new_read_text_message(
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    text_message_info: TextMessageInfoReadDto,
+    group_id: i32,
+) {
+    // Search for active connections for the user
+    let connection_ids = match group_service.connections_to_broadcast_by_user_id(text_message_info.user_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Errore broadcast new_read_text_message user {}: {:?}", text_message_info.user_id, e);
+            return;
+        }
+    };
+
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::NewReadTextMessage {
+            group_id,
+            text_message_id: text_message_info.text_message_id,
+            user_id: text_message_info.user_id,
+        }),
+        timestamp: Utc::now(),
+    };
+
+    info!("Broadcasting NewReadTextMessage for message {} in group {} to {} connections", text_message_info.text_message_id, group_id, connection_ids.len());
+
+    for conn_id in connection_ids {
+        if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id, e);
+            continue;
+        }
+    }
+
+    info!("Broadcasted NewReadTextMessage for message {} in group {} to all connections", text_message_info.text_message_id, group_id);
+}
+
 pub async fn handle_new_invitation(
     group_service: Arc<dyn WebSocketGroupServiceTrait>,
     manager: Arc<dyn WebSocketManagerTrait>,
@@ -421,12 +458,16 @@ pub async fn handle_new_group_chat(
         timestamp: Utc::now(),
     };
 
+    info!("Broadcasting new group chat {} to {} connections", group_chat_id, connection_ids.len());
+
     for conn_id in connection_ids {
         if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id, e);
             continue;
         }
     }
+
+    info!("Broadcasted new group chat {} to all connections", group_chat_id);
 }
 
 pub async fn handle_new_group_membership(

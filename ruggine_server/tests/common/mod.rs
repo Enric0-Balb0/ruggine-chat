@@ -773,7 +773,7 @@ pub async fn mark_message_as_read(auth_user_id: i32, text_message_id: i32) {
         }
     ).await {
         Ok(_) => {}
-        Err(e) => panic!("Failed mark message as sent: {:?}", e),
+        Err(e) => panic!("Failed mark message as read: {:?}", e),
     }
 }
 
