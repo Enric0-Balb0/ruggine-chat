@@ -69,19 +69,12 @@ pub fn ChatMessage(
     };
     // Remove the small bottom margin on the header/time when this message continues a group
     let header_margin = if continued { "" } else { "mb-1" };
-    // Wrapper base flex row (reverse per messaggi propri) + top alignment.
-    // Non usiamo più padding interno per compensare l'avatar; usiamo sempre uno spacer come fallback simmetrico.
-    // Wrapper base flex row (reverse for own messages) + top alignment.
-    // We use a small spacer when avatar is hidden to keep alignment symmetric.
     let base = if is_own { "flex w-full items-start flex-row-reverse" } else { "flex w-full items-start flex-row" };
 
     // Remove per-message margin logic - now handled entirely by CSS .chat-msg rules
 
     // determine time position classes depending on ownership
     let time_pos = if is_own { "left-2 text-left" } else { "right-2 text-right" };
-
-    // Add extra lateral padding on the side where the timestamp will sit so
-    // very short messages don't place the time directly under the content.
     let bubble_padding = if is_own { "pl-10 pr-3 pt-1.5 pb-6" } else { "pl-3 pr-10 pt-1.5 pb-6" };
     // small horizontal offset for own messages to shift the column slightly to the right
     // apply it to the root container (so avatar + bubble move together) and increase a bit

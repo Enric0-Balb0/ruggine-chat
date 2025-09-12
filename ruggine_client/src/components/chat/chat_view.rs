@@ -3,8 +3,6 @@ use leptos::html::Div;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use gloo_timers;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use crate::hooks::GroupMembershipWithDetails;
 use crate::api::services::GroupMembershipService;
 use crate::components::use_toast;
@@ -16,7 +14,6 @@ use crate::hooks::use_group_message_ws::use_group_message_ws;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::hooks::use_group_initial_messages::use_group_initial_messages;
-use crate::utils::error_recovery::NetworkOperation;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
 use crate::types::message::Message;
@@ -103,11 +100,37 @@ pub fn ChatView(
             .unwrap_or(1)
     );
 
+    // Signal to track when current user has left the group
+    let (current_user_left_group, set_current_user_left_group) = create_signal(false);
+    
+    // Signal to track if leave was initiated locally (to avoid double navigation)
+    let (leave_initiated_locally, set_leave_initiated_locally) = create_signal(false);
+
+    // Navigation hooks
+    let navigate = use_navigate();
+    let groups_ctx = use_groups_context();
+
+    // Effect to handle navigation when current user leaves group (only for remote leave events)
+    {
+        let navigate = navigate.clone();
+        let groups_ctx = groups_ctx.clone();
+        create_effect(move |_| {
+            if current_user_left_group.get() && !leave_initiated_locally.get() {
+                log::info!("Current user left group {} remotely, redirecting to home", group_data.membership.group_chat_id);
+                // Refresh groups list and navigate to home
+                groups_ctx.groups_hook.refresh_groups.dispatch(());
+                navigate("/", Default::default());
+            }
+        });
+    }
+
     // Process WebSocket events for presence tracking in a reactive way (no polling loop)
     {
         let ws_hook = unified_ws_hook.clone();
         let set_initial = set_initial_online_user_ids.clone();
         let set_current_member_count = set_current_member_count.clone();
+        let set_user_left = set_current_user_left_group.clone();
+        let current_group_id = group_data.membership.group_chat_id;
         create_effect(move |prev_len: Option<usize>| {
             if let Some(hook) = ws_hook.as_ref() {
                 let msgs = hook.messages.get();
@@ -125,6 +148,27 @@ pub fn ChatView(
                                             let set_initial_inner = set_initial.clone();
                                             let set_members_inner = set_current_member_count.clone();
                                             let gid = group_id_for_update;
+                                            
+                                            // Check if this is the current user leaving
+                                            let is_current_user_leaving = if let GroupEvent::LeftGroupMembership { left_membership_username, .. } = group_event {
+                                                let storage = StorageService::new();
+                                                if let Some(user_profile) = storage.get_user_profile() {
+                                                    let current_username = user_profile.email.split('@').next().unwrap_or("");
+                                                    current_username == left_membership_username || user_profile.email == *left_membership_username
+                                                } else {
+                                                    false
+                                                }
+                                            } else {
+                                                false
+                                            };
+                                            
+                                            // If current user left, trigger navigation
+                                            if is_current_user_leaving {
+                                                log::info!("Current user left group {}, triggering navigation", current_group_id);
+                                                set_user_left.set(true);
+                                                return current_len;
+                                            }
+                                            
                                             spawn_local(async move {
                                                 use crate::api::client::ApiClient;
                                                 use crate::api::services::membership::GroupMembershipService;
@@ -139,17 +183,35 @@ pub fn ChatView(
                                                 let membership_service = GroupMembershipService::new(http, storage);
 
                                                 // Refresh online users for this group
-                                                if let Some(ids) = membership_service.find_online_users_in_group(gid)
-                                                    .with_auto_retry("refresh online users").await {
-                                                    let new_set: std::collections::HashSet<i32> = ids.into_iter().collect();
-                                                    set_initial_inner.set(new_set);
+                                                match membership_service.find_online_users_in_group(gid).await {
+                                                    Ok(ids) => {
+                                                        let new_set: std::collections::HashSet<i32> = ids.into_iter().collect();
+                                                        set_initial_inner.set(new_set);
+                                                    }
+                                                    Err(e) => {
+                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
+                                                            log::info!("No longer member of group {}, stopping online user updates", gid);
+                                                            set_initial_inner.set(std::collections::HashSet::new());
+                                                        } else {
+                                                            log::error!("Error refreshing online users for group {}: {:?}", gid, e);
+                                                        }
+                                                    }
                                                 }
 
                                                 // Refresh member count for this group
-                                                if let Some(group_members) = membership_service.get_by_group_chat_id(&gid.to_string())
-                                                    .with_auto_retry("refresh group members").await {
-                                                    let new_count = group_members.len() as i32;
-                                                    set_members_inner.set(new_count);
+                                                match membership_service.get_by_group_chat_id(&gid.to_string()).await {
+                                                    Ok(group_members) => {
+                                                        let new_count = group_members.len() as i32;
+                                                        set_members_inner.set(new_count);
+                                                    }
+                                                    Err(e) => {
+                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
+                                                            log::info!("No longer member of group {}, stopping member count updates", gid);
+                                                            set_members_inner.set(0);
+                                                        } else {
+                                                            log::error!("Error refreshing group members for group {}: {:?}", gid, e);
+                                                        }
+                                                    }
                                                 }
                                             });
                                         }
@@ -610,7 +672,6 @@ pub fn ChatView(
                         set_user_scrolled_once_cl.set(true);
                         set_scrolled_initial_cl2.set(true);
                     }
-                    leptos::logging::log!("[SCROLL DEBUG] Scroll event triggered");
                     
                     // Ottenere l'ID utente corrente per escludere i propri messaggi
                     let current_user_id = {
@@ -622,7 +683,6 @@ pub fn ChatView(
                     let doc = web_sys::window().unwrap().document().unwrap();
                     let current_messages = messages.get_untracked();
                     let msg_ids: Vec<i32> = current_messages.iter().map(|m| m.id).collect();
-                    leptos::logging::log!("[SCROLL DEBUG] Checking {} messages for visibility", msg_ids.len());
 
                     for msg_id in msg_ids {
                         // Trovare il messaggio per controllare il sender_id
@@ -631,7 +691,6 @@ pub fn ChatView(
                             // Saltare i messaggi inviati dall'utente corrente
                             if let Some(user_id) = current_user_id {
                                 if msg.sender_id == user_id {
-                                    leptos::logging::log!("[SCROLL DEBUG] Skipping own message {}", msg_id);
                                     continue;
                                 }
                             }
@@ -639,7 +698,6 @@ pub fn ChatView(
                         
                         if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", msg_id)) {
                             if is_element_in_viewport(&container_clone, &elem) {
-                                leptos::logging::log!("[SCROLL DEBUG] Message {} is visible in viewport", msg_id);
                                 let mut should_update = false;
                                 let initial_ids_map = unread_message_ids.get_untracked();
                                 if let Some(initial_ids) = initial_ids_map.get(&group_id_for_update) {
@@ -660,7 +718,6 @@ pub fn ChatView(
                                 }
 
                                 if should_update {
-                                    leptos::logging::log!("[SCROLL DEBUG] Message {} should be marked as read", msg_id);
                                     {
                                         let mut buf = pending_for_closure.borrow_mut();
                                         if !buf.contains(&msg_id) {
@@ -1098,12 +1155,14 @@ pub fn ChatView(
         let set_leave_error = set_leave_error.clone();
         let set_leave_loading = set_leave_loading.clone();
         let group_data = group_data.clone();
-        let navigate = use_navigate();
+        let navigate = navigate.clone();
         let toast = use_toast();
-        let groups_ctx = use_groups_context();
+        let groups_ctx = groups_ctx.clone();
+        let set_local_leave = set_leave_initiated_locally.clone();
         Rc::new(move || {
             set_leave_loading.set(true);
             set_leave_error.set(None);
+            set_local_leave.set(true); // Mark that leave was initiated locally
             let navigate = navigate.clone();
             let toast = toast.clone();
             let refresh_groups = groups_ctx.groups_hook.refresh_groups.clone();
@@ -1320,13 +1379,6 @@ pub fn ChatView(
                     let storage_service = StorageService::new();
                     let user_profile = storage_service.get_user_profile();
                     
-                    // Debug: check user profile
-                    if let Some(ref profile) = user_profile {
-                        leptos::logging::log!("[USER_PROFILE DEBUG] Current user ID: {}", profile.id);
-                    } else {
-                        leptos::logging::log!("[USER_PROFILE DEBUG] No user profile found in storage!");
-                    }
-
                     let mut children = Vec::new();
                     let mut prev_date: Option<chrono::NaiveDate> = None;
                     let today = chrono::Utc::now().date_naive();
@@ -1451,7 +1503,7 @@ pub fn ChatView(
                 }}
                 <Show when=move || messages.get().is_empty()>
                     <div class="text-center text-gray-500 dark:text-gray-200 text-sm italic py-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 mx-auto max-w-[80%] shadow-sm">
-                        Nessun messaggio ancora. Inizia la conversazione!
+                        "Nessun messaggio ancora." {" "} "Inizia la conversazione!"
                     </div>
                 </Show>
 

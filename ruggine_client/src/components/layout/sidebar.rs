@@ -24,6 +24,9 @@ pub fn Sidebar(
     // Use unread counts context
     let unread_counts = use_unread_counts_context();
 
+    // Access websocket context if available so sidebar can react to membership changes
+    let ws_ctx = use_context::<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>();
+
     // Lightweight memo for possible future debug; not rendered by default.
     let _debug_unread = create_memo(move |_| unread_counts.get().clone());
 
@@ -119,6 +122,43 @@ pub fn Sidebar(
         }
     });
 
+    // React to membership WS events coming from any other client/device
+    // When a NewGroupMembership or LeftGroupMembership arrives, refresh groups and invitations
+    create_effect(move |prev_len: Option<usize>| {
+        // use_context returns Option<Option<UseGroupMessageWs>> here; handle both layers
+        let mut current_len = prev_len.unwrap_or(0);
+        if let Some(Some(ws_hook)) = ws_ctx.clone() {
+            let msgs = ws_hook.messages.get();
+            current_len = msgs.len();
+            if let Some(prev) = prev_len {
+                if current_len > prev {
+                    for msg in msgs.iter().skip(prev) {
+                        if let crate::types::message_ws::WebSocketMessage::Event { event, .. } = msg {
+                            if let crate::types::message_ws::ServerEvent::Groups(group_event) = event {
+                                match group_event {
+                                    crate::types::message_ws::GroupEvent::NewGroupMembership { .. }
+                                    | crate::types::message_ws::GroupEvent::LeftGroupMembership { .. } => {
+                                        // Trigger groups list refresh
+                                        groups_hook.refresh_groups.dispatch(());
+                                        // Also refresh the global invitations context so the pending counter updates
+                                        spawn_local(async move {
+                                            let _ = crate::context::invitations_context::refresh_invitations().await;
+                                        });
+                                        // OnlineUsersCounter listens to WS itself; no direct call needed here
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // no previous length: don't process historical messages
+            }
+        }
+        current_len
+    });
+
     let handle_create_click = move |_| {
         on_create_group_click.call(());
     };
@@ -128,6 +168,9 @@ pub fn Sidebar(
         
         // Controlla se abbiamo un token valido prima di aprire la modale
         if let Some(token_response) = storage_service.get_token() {
+            // Reset the pending invitations counter when the modal is opened
+            pending_invites_count.set(0);
+
             set_show_invites_modal.set(true);
             set_is_loading_invites.set(true);
             // Pre-fill modal with current context invitations so WS-updates are visible immediately

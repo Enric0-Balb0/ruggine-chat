@@ -31,9 +31,9 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     // Instance identifier to help debug duplicate connections
     let instance_id = uuid::Uuid::new_v4().to_string();
     leptos::logging::log!("[WS INST] Created UseGroupMessageWs instance {} (reused)", instance_id);
-    // Register callback and keep its id so we can remove it when this hook is dropped.
+    // Register per-hook callback for pushing messages into the local buffer and
+    // keep its id so we can remove it when this hook is dropped.
     let callback_id = ws_service.borrow_mut().add_on_message({
-        let _ws_service = ws_service.clone();
         move |msg: WebSocketMessage| {
             // Log the parsed message JSON for debugging (helps correlate with raw frames)
             match serde_json::to_string(&msg) {
@@ -45,37 +45,44 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
             set_messages_shared.update(|msgs| {
                 msgs.push(msg.clone());
             });
+        }
+    });
 
-            // If this is a Group NewMessage event, increment the global unread_counts
-                    if let WebSocketMessage::Event { event, .. } = &msg {
-                        // Log presence events for debugging
-                        if let ServerEvent::Groups(GroupEvent::Joined { user_id }) = event {
-                            leptos::logging::log!("[WS DEBUG] Joined event received for user {}", user_id);
-                        } else if let ServerEvent::Groups(GroupEvent::Left { user_id }) = event {
-                            leptos::logging::log!("[WS DEBUG] Left event received for user {}", user_id);
-                        }
-                        if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
-                            // avoid increment for messages sent by current user
-                            let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
-                            if Some(*sender_id) != current_user_id {
-                                // Update in-place to avoid clobbering concurrent updates from other tasks
-                                unread_counts.update(|map| {
-                                    increment_unread_map(map, *group_id, Some(*sender_id), current_user_id);
-                                });
-                            }
-                        }
-                        // Handle new invitation events
-                        if let ServerEvent::Groups(GroupEvent::NewInvitation { invitation_id }) = event {
-                            leptos::logging::log!("[WS DEBUG] NewInvitation event received for invitation {}", invitation_id);
-                            // Update invitations context
-                            spawn_local({
-                                let invitation_id = *invitation_id;
-                                async move {
-                                    crate::context::invitations_context::add_new_invitation(invitation_id).await;
-                                }
-                            });
-                        }
+    // Attempt to register a single global unread/invitation handler. Only the
+    // first caller will succeed; subsequent callers will get None and skip
+    // registering the global handler to avoid duplicate increments.
+    let unread_handler_ws = ws_service.clone();
+    let maybe_unread_id = ws_service.borrow_mut().add_unread_incrementer({
+        move |msg: WebSocketMessage| {
+            if let WebSocketMessage::Event { event, .. } = &msg {
+                // Log presence events for debugging
+                if let ServerEvent::Groups(GroupEvent::Joined { user_id }) = event {
+                    leptos::logging::log!("[WS DEBUG] Joined event received for user {}", user_id);
+                } else if let ServerEvent::Groups(GroupEvent::Left { user_id }) = event {
+                    leptos::logging::log!("[WS DEBUG] Left event received for user {}", user_id);
+                }
+                if let ServerEvent::Groups(GroupEvent::NewMessage { message_id: _, group_id, sender_id, sender_username: _, content: _, sent_at: _ }) = event {
+                    // avoid increment for messages sent by current user
+                    let current_user_id = StorageService::new().get_user_profile().map(|u| u.id);
+                    if Some(*sender_id) != current_user_id {
+                        // Update in-place to avoid clobbering concurrent updates from other tasks
+                        unread_counts.update(|map| {
+                            increment_unread_map(map, *group_id, Some(*sender_id), current_user_id);
+                        });
                     }
+                }
+                // Handle new invitation events
+                if let ServerEvent::Groups(GroupEvent::NewInvitation { invitation_id }) = event {
+                    leptos::logging::log!("[WS DEBUG] NewInvitation event received for invitation {}", invitation_id);
+                    // Update invitations context
+                    spawn_local({
+                        let invitation_id = *invitation_id;
+                        async move {
+                            crate::context::invitations_context::add_new_invitation(invitation_id).await;
+                        }
+                    });
+                }
+            }
         }
     });
 

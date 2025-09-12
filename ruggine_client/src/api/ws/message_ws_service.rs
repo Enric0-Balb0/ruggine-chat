@@ -20,6 +20,10 @@ pub struct MessageWsService {
     // This allows multiple consumers (multiple UseGroupMessageWs instances) to
     // register handlers without overwriting each other.
     on_message: Rc<RefCell<Vec<Option<Box<dyn Fn(WebSocketMessage) + 'static>>>>>,
+    // Track a single global handler responsible for updating global contexts
+    // such as unread counters or invitations to prevent duplicate updates when
+    // multiple components attach to the same underlying socket.
+    unread_incrementer_id: Rc<RefCell<Option<usize>>>,
 }
 
 impl MessageWsService {
@@ -28,6 +32,7 @@ impl MessageWsService {
             ws: None,
             status: Rc::new(RefCell::new(Some(status))),
             on_message: Rc::new(RefCell::new(Vec::new())),
+            unread_incrementer_id: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -59,10 +64,36 @@ impl MessageWsService {
         v.len() - 1
     }
 
+    /// Try to register a single global handler responsible for updating global
+    /// contexts (unread counters, invitations, etc.). Only the first caller
+    /// will actually register and receive an id; subsequent calls will return
+    /// None so they can avoid duplicating global state updates.
+    pub fn add_unread_incrementer<F>(&mut self, callback: F) -> Option<usize>
+    where
+        F: Fn(WebSocketMessage) + 'static,
+    {
+        let mut id_slot = self.unread_incrementer_id.borrow_mut();
+        if id_slot.is_some() {
+            return None;
+        }
+        let mut v = self.on_message.borrow_mut();
+        v.push(Some(Box::new(callback)));
+        let id = v.len() - 1;
+        *id_slot = Some(id);
+        Some(id)
+    }
+
     /// Remove a previously-registered callback by id. Safe to call multiple times.
     pub fn remove_on_message(&mut self, id: usize) {
         if let Some(slot) = self.on_message.borrow_mut().get_mut(id) {
             *slot = None;
+        }
+        // If the removed id corresponded to the global unread/inviter handler
+        // clear the marker so a future consumer can register it again.
+        if let Some(current) = *self.unread_incrementer_id.borrow() {
+            if current == id {
+                *self.unread_incrementer_id.borrow_mut() = None;
+            }
         }
     }
 
@@ -185,6 +216,8 @@ impl MessageWsService {
     // Clear the stored status signal reference so closures won't try to update
     // it after the leptos scope has been disposed.
     self.status.borrow_mut().take();
+    // Clear the global unread incrementer marker as well
+    self.unread_incrementer_id.borrow_mut().take();
     }
 
     pub fn status(&self) -> WsStatus {
