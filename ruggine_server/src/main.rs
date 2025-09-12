@@ -31,15 +31,15 @@ mod websocket;
 
 #[tokio::main]
 async fn main() {
+    parameter::init();
+
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+        .unwrap_or_else(|_| EnvFilter::new("info,sqlx=off"));
 
     fmt::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stdout)
         .init();
-    
-    parameter::init();
 
     let database_url = parameter::get("DATABASE_URL");
     let connection = database::Database::init(database_url)

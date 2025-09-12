@@ -38,6 +38,7 @@ pub async fn leave_group(
             websocket_service.clone(),
             state.ws_manager.clone().unwrap().clone(),
             group_membership.group_chat_id,
+            current_user.id,
             current_user.username.clone(),
         ).await;
     } else {

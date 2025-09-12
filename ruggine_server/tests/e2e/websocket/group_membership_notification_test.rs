@@ -269,6 +269,71 @@ mod group_membership_websocket_notification_e2e_tests {
     }
 
     #[tokio_shared_rt::test(shared)]
+    async fn test_left_group_membership_notification_received_by_leaving_user() {
+        // Arrange: Create two users, both members of the same group
+        let (user1, _password1, token1) =
+            create_login_and_get_token("e2e_left_self_notification_user1".to_string()).await;
+        let (user2, _password2, token2) =
+            create_login_and_get_token("e2e_left_self_notification_user2".to_string()).await;
+
+        // Create a group owned by user1
+        let group = create_test_group_chat_with_invitation_and_membership("e2e_left_self_notification_group", user1.id).await;
+        
+        // Add user2 to the group
+        let membership2 = add_test_user_to_a_group(user2.id, &group).await;
+
+        // Start test server
+        let (addr, shutdown) = start_test_server().await;
+
+        // Connect user2 to websocket and join the group (the user who will leave)
+        let (mut ws2, _) = connect_chat_websocket_with_auth(addr, &token2)
+            .await
+            .expect("Failed to connect user2 to websocket");
+
+        let join_id2 = Uuid::new_v4().to_string();
+        let join_msg2 = WebSocketMessage::Request {
+            request_id: join_id2.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _response2 = send_websocket_message_and_get_response(&mut ws2, join_msg2)
+            .await
+            .expect("User2 failed to join group");
+
+        // Act: User2 leaves the group via HTTP API
+        let leave_response = leave_group_via_api(addr, &token2, membership2.id)
+            .await
+            .expect("Failed to leave group");
+
+        // Verify the leave was successful
+        assert_eq!(leave_response["data"]["membership_status"], "left");
+
+        // Assert: User2 should receive a notification about leaving (since they're still connected)
+        let notification = receive_websocket_message_with_timeout(&mut ws2, Duration::from_secs(5))
+            .await
+            .expect("Should receive notification")
+            .expect("Should have a message");
+
+        match notification {
+            WebSocketMessage::Event { event, .. } => {
+                match event {
+                    ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
+                        assert_eq!(group_id, group.id, "Should notify about the correct group");
+                        assert_eq!(left_membership_username, user2.username, "Should contain the leaving member's username");
+                    }
+                    _ => panic!("Expected LeftGroupMembership event, got: {:?}", event),
+                }
+            }
+            _ => panic!("Expected Event message, got: {:?}", notification),
+        }
+
+        // Cleanup
+        cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await; // user2 already left
+        cleanup_group_chat(group.id).await;
+        cleanup_test_users(vec![user1.id, user2.id]).await;
+        shutdown.send(()).unwrap();
+    }
+
+    #[tokio_shared_rt::test(shared)]
     async fn test_new_group_membership_notification_multiple_connected_users() {
         // Arrange: Create three users, user1 and user3 are already in the group
         let (user1, _password1, token1) =
@@ -598,6 +663,139 @@ mod group_membership_websocket_notification_e2e_tests {
 
         // Cleanup
         cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await;
+        cleanup_group_chat(group.id).await;
+        cleanup_test_users(vec![user1.id, user2.id]).await;
+        shutdown.send(()).unwrap();
+    }
+
+    #[tokio_shared_rt::test(shared)]
+    async fn test_left_group_membership_notification_with_multiple_user_connections() {
+        // Arrange: Create two users where user2 has multiple websocket connections
+        let (user1, _password1, token1) =
+            create_login_and_get_token("e2e_multi_conn_left_user1".to_string()).await;
+        let (user2, _password2, token2) =
+            create_login_and_get_token("e2e_multi_conn_left_user2".to_string()).await;
+
+        // Create a group owned by user1
+        let group = create_test_group_chat_with_invitation_and_membership("e2e_multi_conn_left_group", user1.id).await;
+        
+        // Add user2 to the group
+        let membership2 = add_test_user_to_a_group(user2.id, &group).await;
+
+        // Start test server
+        let (addr, shutdown) = start_test_server().await;
+
+        // Connect user1 to websocket and join the group
+        let (mut ws1, _) = connect_chat_websocket_with_auth(addr, &token1)
+            .await
+            .expect("Failed to connect user1 to websocket");
+
+        let join_id1 = Uuid::new_v4().to_string();
+        let join_msg1 = WebSocketMessage::Request {
+            request_id: join_id1.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _response1 = send_websocket_message_and_get_response(&mut ws1, join_msg1)
+            .await
+            .expect("User1 failed to join group");
+
+        // Connect user2 with first connection
+        let (mut ws2_conn1, _) = connect_chat_websocket_with_auth(addr, &token2)
+            .await
+            .expect("Failed to connect user2 first connection to websocket");
+
+        let join_id2_1 = Uuid::new_v4().to_string();
+        let join_msg2_1 = WebSocketMessage::Request {
+            request_id: join_id2_1.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _response2_1 = send_websocket_message_and_get_response(&mut ws2_conn1, join_msg2_1)
+            .await
+            .expect("User2 first connection failed to join group");
+
+        // Connect user2 with second connection  
+        let (mut ws2_conn2, _) = connect_chat_websocket_with_auth(addr, &token2)
+            .await
+            .expect("Failed to connect user2 second connection to websocket");
+
+        let join_id2_2 = Uuid::new_v4().to_string();
+        let join_msg2_2 = WebSocketMessage::Request {
+            request_id: join_id2_2.clone(),
+            action: ClientAction::Groups(GroupAction::Join {}),
+        };
+        let _response2_2 = send_websocket_message_and_get_response(&mut ws2_conn2, join_msg2_2)
+            .await
+            .expect("User2 second connection failed to join group");
+
+        // Clear any pending join notifications
+        let _ = receive_websocket_message_with_timeout(&mut ws1, Duration::from_millis(500)).await;
+
+        // Act: User2 leaves the group via HTTP API
+        let leave_response = leave_group_via_api(addr, &token2, membership2.id)
+            .await
+            .expect("Failed to leave group");
+
+        // Verify the leave was successful
+        assert_eq!(leave_response["data"]["membership_status"], "left");
+
+        // Assert: User1 should receive a LeftGroupMembership notification
+        let notification1 = receive_websocket_message_with_timeout(&mut ws1, Duration::from_secs(5))
+            .await
+            .expect("Should receive notification")
+            .expect("Should have a message");
+
+        match notification1 {
+            WebSocketMessage::Event { event, .. } => {
+                match event {
+                    ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
+                        assert_eq!(group_id, group.id, "Should notify about the correct group");
+                        assert_eq!(left_membership_username, user2.username, "Should contain the leaving member's username");
+                    }
+                    _ => panic!("Expected LeftGroupMembership event for user1, got: {:?}", event),
+                }
+            }
+            _ => panic!("Expected Event message for user1, got: {:?}", notification1),
+        }
+
+        // Assert: Both of user2's connections should receive the notification
+        let notification2_conn1 = receive_websocket_message_with_timeout(&mut ws2_conn1, Duration::from_secs(5))
+            .await
+            .expect("Should receive notification")
+            .expect("Should have a message");
+
+        match notification2_conn1 {
+            WebSocketMessage::Event { event, .. } => {
+                match event {
+                    ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
+                        assert_eq!(group_id, group.id, "Should notify about the correct group");
+                        assert_eq!(left_membership_username, user2.username, "Should contain the leaving member's username");
+                    }
+                    _ => panic!("Expected LeftGroupMembership event for user2 conn1, got: {:?}", event),
+                }
+            }
+            _ => panic!("Expected Event message for user2 conn1, got: {:?}", notification2_conn1),
+        }
+
+        let notification2_conn2 = receive_websocket_message_with_timeout(&mut ws2_conn2, Duration::from_secs(5))
+            .await
+            .expect("Should receive notification")
+            .expect("Should have a message");
+
+        match notification2_conn2 {
+            WebSocketMessage::Event { event, .. } => {
+                match event {
+                    ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
+                        assert_eq!(group_id, group.id, "Should notify about the correct group");
+                        assert_eq!(left_membership_username, user2.username, "Should contain the leaving member's username");
+                    }
+                    _ => panic!("Expected LeftGroupMembership event for user2 conn2, got: {:?}", event),
+                }
+            }
+            _ => panic!("Expected Event message for user2 conn2, got: {:?}", notification2_conn2),
+        }
+
+        // Cleanup
+        cleanup_test_users_from_a_group_chat(vec![user1.id, user2.id], group.id).await; // user2 already left
         cleanup_group_chat(group.id).await;
         cleanup_test_users(vec![user1.id, user2.id]).await;
         shutdown.send(()).unwrap();

@@ -387,12 +387,16 @@ pub async fn handle_new_invitation(
         timestamp: Utc::now(),
     };
 
+    info!("Broadcasting new invitation {} to {} connections", invitation_id, connection_ids.len());
+
     for conn_id in connection_ids {
         if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id, e);
             continue;
         }
     }
+
+    info!("Broadcasted new invitation {} to all connections", invitation_id);
 }
 
 pub async fn handle_new_group_chat(
@@ -448,28 +452,49 @@ pub async fn handle_new_group_membership(
         timestamp: Utc::now(),
     };
 
+    info!("Broadcasting new membership in group {} to {} connections", group_id, connection_ids.len());
+
     for conn_id in connection_ids {
         if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id.1, e);
             continue;
         }
     }
+
+    info!("Broadcasted new membership in group {} to all connections", group_id);
 }
 
 pub async fn handle_left_group_membership(
     group_service: Arc<dyn WebSocketGroupServiceTrait>,
     manager: Arc<dyn WebSocketManagerTrait>,
     group_id: i32,
+    left_user_id: i32,
     left_membership_username: String,
 ) {
     // Search for active connections in the group
-    let connection_ids = match group_service.connections_to_broadcast_by_group_id(group_id).await {
-        Ok(res) => res,
+    let mut connection_ids = match group_service.connections_to_broadcast_by_group_id(group_id).await {
+        Ok(res) => res.into_iter().map(|conn| conn.1).collect::<Vec<String>>(),
         Err(e) => {
             warn!("Errore broadcast group {}: {:?}", group_id, e);
             return;
         }
     };
+
+    // Also search for active connections of the user who left
+    let user_connection_ids = match group_service.connections_to_broadcast_by_user_id(left_user_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Error finding connections for left user id {}: {:?}", left_user_id, e);
+            Vec::new() // Continue with empty vec if error
+        }
+    };
+
+    // Merge the connection lists (avoid duplicates)
+    for user_conn_id in user_connection_ids {
+        if !connection_ids.contains(&user_conn_id) {
+            connection_ids.push(user_conn_id);
+        }
+    }
 
     let notification = WebSocketMessage::Event {
         event: ServerEvent::Groups(GroupEvent::LeftGroupMembership {
@@ -479,10 +504,14 @@ pub async fn handle_left_group_membership(
         timestamp: Utc::now(),
     };
 
+    info!("Broadcasting left membership in group {} to {} connections", group_id, connection_ids.len());
+
     for conn_id in connection_ids {
-        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
-            warn!("Failed to send to connection {}: {}", conn_id.1, e);
+        if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id, e);
             continue;
         }
     }
+
+    info!("Broadcasted left membership in group {} to all connections", group_id);
 }
