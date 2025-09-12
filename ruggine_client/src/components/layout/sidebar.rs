@@ -136,7 +136,8 @@ pub fn Sidebar(
                         if let crate::types::message_ws::WebSocketMessage::Event { event, .. } = msg {
                             if let crate::types::message_ws::ServerEvent::Groups(group_event) = event {
                                 match group_event {
-                                    crate::types::message_ws::GroupEvent::NewGroupMembership { .. }
+                                    crate::types::message_ws::GroupEvent::NewGroupChat { .. }
+                                    | crate::types::message_ws::GroupEvent::NewGroupMembership { .. }
                                     | crate::types::message_ws::GroupEvent::LeftGroupMembership { .. } => {
                                         // Trigger groups list refresh
                                         groups_hook.refresh_groups.dispatch(());
