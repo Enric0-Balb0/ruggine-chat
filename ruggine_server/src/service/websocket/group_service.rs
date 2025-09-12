@@ -73,7 +73,7 @@ impl WebSocketGroupServiceTrait for WebSocketGroupService {
     }
 
     /// Invia un messaggio a tutti i membri di un gruppo
-    async fn connections_to_broadcast_new_message(
+    async fn connections_to_broadcast_by_group_id(
         &self,
         group_id: i32,
     ) -> Result<Vec<(i32, String)>, WebSocketError> {
@@ -392,7 +392,7 @@ mod tests {
         // user2 is not subscribed
 
         // Act
-        let result = service.connections_to_broadcast_new_message(group_id).await;
+        let result = service.connections_to_broadcast_by_group_id(group_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -434,7 +434,7 @@ mod tests {
         let _ = service.subscribe(user2_id, "conn_2c").await;
 
         // Act
-        let result = service.connections_to_broadcast_new_message(group_id).await;
+        let result = service.connections_to_broadcast_by_group_id(group_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -474,7 +474,7 @@ mod tests {
         // Don't subscribe any users
 
         // Act
-        let result = service.connections_to_broadcast_new_message(group_id).await;
+        let result = service.connections_to_broadcast_by_group_id(group_id).await;
 
         // Assert
         assert!(result.is_ok());
@@ -503,7 +503,7 @@ mod tests {
         let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
-        let result = service.connections_to_broadcast_new_message(group_id).await;
+        let result = service.connections_to_broadcast_by_group_id(group_id).await;
 
         // Assert
         assert!(result.is_err());
@@ -532,7 +532,7 @@ mod tests {
         let service = create_test_service_with_mock(mock_service.0, mock_service.1);
 
         // Act
-        let result = service.connections_to_broadcast_new_message(group_id).await;
+        let result = service.connections_to_broadcast_by_group_id(group_id).await;
 
         // Assert
         assert!(result.is_ok());

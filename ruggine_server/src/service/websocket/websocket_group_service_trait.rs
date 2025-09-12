@@ -15,7 +15,7 @@ pub trait WebSocketGroupServiceTrait: Send + Sync {
     async fn cleanup_connection(&self, connection_id: &str);
     
     /// Invia un messaggio a tutti i membri di un gruppo
-    async fn connections_to_broadcast_new_message(&self, group_id: i32) -> Result<Vec<(i32, String)>, WebSocketError>;
+    async fn connections_to_broadcast_by_group_id(&self, group_id: i32) -> Result<Vec<(i32, String)>, WebSocketError>;
 
     async fn connections_to_broadcast_by_user_id(&self, to_user_id: i32) -> Result<Vec<String>, WebSocketError>;
 

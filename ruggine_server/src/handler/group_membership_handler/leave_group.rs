@@ -4,6 +4,7 @@ use crate::response::api_response::ApiSuccessResponse;
 use crate::state::group_membership_state::GroupMembershipState;
 use crate::entity::user::User;
 use axum::{extract::State, Extension, Json};
+use tracing::warn;
 use crate::service::group_membership_service::GroupMembershipServiceTrait;
 use crate::error::request_error::ValidatedRequest;
 
@@ -29,6 +30,19 @@ pub async fn leave_group(
     State(state): State<GroupMembershipState>,
     ValidatedRequest(payload): ValidatedRequest<LeaveGroupMembershipDto>,
 ) -> Result<Json<ApiSuccessResponse<GroupMembershipReadDto>>, ApiError> {
-    let group_membership = state.group_membership_service.leave_group(payload, current_user.id).await?;
+    let group_membership = state.group_membership_service.leave_group(payload.clone(), current_user.id).await?;
+
+    // Invia notifica WebSocket ai membri del gruppo se il servizio è disponibile
+    if let Some(websocket_service) = &state.websocket_group_service {
+        crate::handler::websocket::chat_handler::handle_left_group_membership(
+            websocket_service.clone(),
+            state.ws_manager.clone().unwrap().clone(),
+            group_membership.group_chat_id,
+            current_user.username.clone(),
+        ).await;
+    } else {
+        warn!("WebSocket group service not available for sending notifications");
+    }
+
     Ok(Json(ApiSuccessResponse::send(group_membership)))
 }

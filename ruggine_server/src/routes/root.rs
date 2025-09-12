@@ -22,7 +22,8 @@ pub fn routes(db_conn: Arc<Database>) -> Router {
     let websocket_state = WebSocketState::new(Arc::new(token_state.clone()), &db_conn);
     let group_chat_state = GroupChatState::new(&db_conn)
         .with_websocket_service(websocket_state.manager.clone(), websocket_state.group_service.clone());
-    let group_membership_state = GroupMembershipState::new(&db_conn);
+    let group_membership_state = GroupMembershipState::new(&db_conn)
+        .with_websocket_service(websocket_state.manager.clone(), websocket_state.group_service.clone());
     let cpu_usage_log_state = CpuUsageLogState::new(&db_conn);
 
     let invitation_state = InvitationState::new(&db_conn)

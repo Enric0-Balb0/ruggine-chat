@@ -336,7 +336,7 @@ pub async fn handle_new_group_message(
     sender_user_username: String,
 ) {
     // Search for active connections in the group
-    let connection_ids = match group_service.connections_to_broadcast_new_message(group_id).await {
+    let connection_ids = match group_service.connections_to_broadcast_by_group_id(group_id).await {
         Ok(res) => res,
         Err(e) => {
             warn!("Errore broadcast group {}: {:?}", group_id, e);
@@ -420,6 +420,68 @@ pub async fn handle_new_group_chat(
     for conn_id in connection_ids {
         if let Err(e) = manager.send_to_connection(&conn_id, notification.clone()).await {
             warn!("Failed to send to connection {}: {}", conn_id, e);
+            continue;
+        }
+    }
+}
+
+pub async fn handle_new_group_membership(
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    group_id: i32,
+    new_membership_username: String,
+) {
+    // Search for active connections in the group
+    let connection_ids = match group_service.connections_to_broadcast_by_group_id(group_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Errore broadcast group {}: {:?}", group_id, e);
+            return;
+        }
+    };
+
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::NewGroupMembership {
+            group_id,
+            new_membership_username,
+        }),
+        timestamp: Utc::now(),
+    };
+
+    for conn_id in connection_ids {
+        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id.1, e);
+            continue;
+        }
+    }
+}
+
+pub async fn handle_left_group_membership(
+    group_service: Arc<dyn WebSocketGroupServiceTrait>,
+    manager: Arc<dyn WebSocketManagerTrait>,
+    group_id: i32,
+    left_membership_username: String,
+) {
+    // Search for active connections in the group
+    let connection_ids = match group_service.connections_to_broadcast_by_group_id(group_id).await {
+        Ok(res) => res,
+        Err(e) => {
+            warn!("Errore broadcast group {}: {:?}", group_id, e);
+            return;
+        }
+    };
+
+    let notification = WebSocketMessage::Event {
+        event: ServerEvent::Groups(GroupEvent::LeftGroupMembership {
+            group_id,
+            left_membership_username,
+        }),
+        timestamp: Utc::now(),
+    };
+
+    for conn_id in connection_ids {
+        if let Err(e) = manager.send_to_connection(&conn_id.1, notification.clone()).await {
+            warn!("Failed to send to connection {}: {}", conn_id.1, e);
             continue;
         }
     }

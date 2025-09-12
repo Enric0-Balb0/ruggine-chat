@@ -23,10 +23,10 @@ COPY Cargo.toml Cargo.lock ./
 # Copia il codice sorgente
 COPY src/ ./src/
 
-# Abilita build statica e ignora warning
-ENV RUSTFLAGS="-C target-feature=+crt-static -Awarnings"
+# Abilita build statica e ottimizzazioni per velocità
+ENV RUSTFLAGS="-C target-feature=+crt-static -C target-cpu=native -Awarnings"
 
-# Compila in release
+# Compila in release con ottimizzazioni massime
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 # =========================

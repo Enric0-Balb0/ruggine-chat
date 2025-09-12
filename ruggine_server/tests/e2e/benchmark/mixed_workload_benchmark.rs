@@ -143,7 +143,7 @@ mod mixed_workload_benchmark_tests {
 
         // Parametri del benchmark
         // ---------------- Parametri generali ----------------
-        const NUM_GROUPS: usize = 1000; // Numero di gruppi da creare
+        const NUM_GROUPS: usize = 1200; // Numero di gruppi da creare
         const TEST_DURATION_SECS: u64 = 130;
 
         // ---------------- Utenti per gruppo ----------------
