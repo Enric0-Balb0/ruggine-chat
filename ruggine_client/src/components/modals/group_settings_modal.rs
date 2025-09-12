@@ -123,59 +123,62 @@ pub fn GroupDetailsModal(
                         let temp_cache = create_rw_signal(std::collections::HashMap::<i32, UserProfile>::new());
                         fetch_missing_users(missing_ids.clone(), temp_cache.clone(), user_service.clone());
 
-                        // Reactive update: watch for changes in the temp cache and update members immediately
-                        let set_members_signal_clone = set_members_signal.clone();
-                        let members_signal_clone = members_signal.clone();
-                        let missing_count = missing_ids.len();
-                        
-                        create_effect(move |_| {
-                            let cache_snapshot = temp_cache.get();
-                            
-                            // Update UI progressively as each user is loaded (don't wait for all)
-                            if !cache_snapshot.is_empty() {
-                                let current_members = members_signal_clone.get();
-                                let mut updated_members = current_members.clone();
-                                let mut updated = false;
-                                
-                                // Debug: log cache contents and current members
-                                leptos::logging::log!("[GROUP DETAILS] Cache progress: {}/{} users loaded", 
-                                    cache_snapshot.len(), missing_count);
-                                leptos::logging::log!("[GROUP DETAILS] Current members count: {}", current_members.len());
-                                
-                                for (i, gm) in updated_members.iter_mut().enumerate() {
-                                    leptos::logging::log!("[GROUP DETAILS] Member {}: ID={}, first_name='{}', username='{}'", 
-                                        i, gm.user_profile.id, gm.user_profile.first_name, gm.user_profile.username);
-                                    
-                                    if let Some(profile) = cache_snapshot.get(&gm.user_profile.id) {
-                                        // Only update if this user wasn't already updated (check if it's still a placeholder)
-                                        if gm.user_profile.first_name.is_empty() || gm.user_profile.username.is_empty() {
-                                            leptos::logging::log!("[GROUP DETAILS] Updating member {} with profile: {} {} (username: {})", 
-                                                gm.user_profile.id, profile.first_name, profile.last_name, profile.username);
-                                            // Preserve the runtime presence flag if it was already set
-                                            let prev_online = gm.user_profile.is_online;
-                                            let mut merged = profile.clone();
-                                            merged.is_online = prev_online || merged.is_online;
-                                            gm.user_profile = merged;
-                                            updated = true;
-                                        } else {
-                                            leptos::logging::log!("[GROUP DETAILS] Member {} already updated, skipping", gm.user_profile.id);
-                                        }
-                                    } else {
-                                        leptos::logging::log!("[GROUP DETAILS] No cached profile found for member {}", gm.user_profile.id);
-                                    }
-                                }
-                                
-                                if updated {
-                                    leptos::logging::log!("[GROUP DETAILS] Setting updated members to signal");
-                                    set_members_signal_clone.set(updated_members);
-                                } else {
-                                    leptos::logging::log!("[GROUP DETAILS] No updates needed");
-                                }
-                            }
-                        });
+                        // Progressive update: poll the temporary cache and update members while the modal is open.
+                        // Avoid creating reactive effects inside async tasks (which can outlive the component scope)
+                        // so we use a cancellable polling loop tied to `is_open`.
+                        {
+                            let set_members_signal_clone = set_members_signal.clone();
+                            let members_signal_clone = members_signal.clone();
+                            let temp_cache = temp_cache.clone();
+                            let missing_ids = missing_ids.clone();
+                            let is_open_for_poll = is_open.clone();
 
-                        // Fetch connected online user ids and mark members accordingly
-                        if let Some(online_ids) = membership_service.find_connected_users_and_online()
+                            spawn_local(async move {
+                                // Poll until we've populated all missing ids or the modal was closed
+                                loop {
+                                    // Stop if modal closed
+                                    if !is_open_for_poll.get_untracked() {
+                                        break;
+                                    }
+
+                                    let cache_snapshot = temp_cache.get_untracked();
+                                    if !cache_snapshot.is_empty() {
+                                        let current_members = members_signal_clone.get_untracked();
+                                        let mut updated_members = current_members.clone();
+                                        let mut updated = false;
+
+                                        for gm in updated_members.iter_mut() {
+                                            if let Some(profile) = cache_snapshot.get(&gm.user_profile.id) {
+                                                // Update only if placeholder still present
+                                                if gm.user_profile.first_name.is_empty() || gm.user_profile.username.is_empty() {
+                                                    let prev_online = gm.user_profile.is_online;
+                                                    let mut merged = profile.clone();
+                                                    merged.is_online = prev_online || merged.is_online;
+                                                    gm.user_profile = merged;
+                                                    updated = true;
+                                                }
+                                            }
+                                        }
+
+                                        if updated {
+                                            set_members_signal_clone.set(updated_members);
+                                        }
+
+                                        // If we've loaded all missing ids, exit the loop
+                                        let all_loaded = missing_ids.iter().all(|id| cache_snapshot.contains_key(id));
+                                        if all_loaded {
+                                            break;
+                                        }
+                                    }
+
+                                    // Small delay to avoid busy-looping
+                                    gloo_timers::future::TimeoutFuture::new(100).await;
+                                }
+                            });
+                        }
+
+                        // Fetch connected online user ids for this group and mark members accordingly
+                        if let Some(online_ids) = membership_service.find_online_users_in_group(group_id)
                             .with_auto_retry("load online users").await {
                             // Debug: log the online ids and group member ids to detect mismatches
                             leptos::logging::log!("[GROUP DETAILS] connected online ids => {:?}", online_ids);
@@ -216,6 +219,11 @@ pub fn GroupDetailsModal(
 
                 spawn_local(async move {
                     loop {
+                        // Stop if modal closed to avoid updating disposed signals
+                        if !is_open.get_untracked() {
+                            break;
+                        }
+
                         // ws_ctx_opt: Option<Option<UseGroupMessageWs>>
                         if let Some(Some(ws)) = ws_ctx_opt.as_ref() {
                             // read the current messages buffer (clone) and inspect the last one
@@ -253,7 +261,7 @@ pub fn GroupDetailsModal(
                                 }
                             }
                         }
-                        
+
                         // Wait before checking again
                         gloo_timers::future::TimeoutFuture::new(100).await;
                     }

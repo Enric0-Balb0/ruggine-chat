@@ -1,6 +1,6 @@
 use leptos::*;
 use wasm_bindgen::JsCast;
-use crate::components::{GroupItem, CreateGroupButton, ShowInvitesButton};
+use crate::components::{GroupItem, CreateGroupButton, ShowInvitesButton, OnlineUsersCounter};
 use crate::components::modals::ShowInvitesModal;
 use crate::api::services::invitation::InvitationService;
 use crate::types::Invitation;
@@ -78,7 +78,11 @@ pub fn Sidebar(
 
     // Stato per apertura modal inviti
     let (show_invites_modal, set_show_invites_modal) = create_signal(false);
+    // Local invites state (used by the modal props) — keep in sync with global context
     let (invites, set_invites) = create_signal(Vec::<Invitation>::new());
+    let invitations_ctx = crate::context::invitations_context::use_invitations_context();
+    // Use the global invitations pending count for the badge
+    let pending_invites_count = crate::context::invitations_context::use_pending_invitations_count_context();
     let (is_loading_invites, set_is_loading_invites) = create_signal(false);
 
     // Auto-refresh degli inviti ogni 30 secondi per aggiornare il counter
@@ -106,52 +110,12 @@ pub fn Sidebar(
         });
     };
 
-    // Store interval ID per poterlo pulire
-    let (interval_id, set_interval_id) = create_signal::<Option<i32>>(None);
-
-    // Effettua il primo caricamento degli inviti al mount
+    // Effettua il primo caricamento degli inviti al mount (one-shot)
     create_effect(move |_| {
         // Solo se abbiamo un token
         let storage_service = crate::utils::storage::StorageService::new();
         if storage_service.get_token().is_some() {
             auto_refresh_invites();
-        }
-    });
-
-    // Setup auto-refresh ogni 10 secondi
-    create_effect(move |_| {
-        let storage_service = crate::utils::storage::StorageService::new();
-        
-        if let Some(window) = web_sys::window() {
-            // Pulisci il precedente interval se esiste
-            if let Some(old_id) = interval_id.get() {
-                window.clear_interval_with_handle(old_id);
-            }
-            
-            // Solo se abbiamo un token, crea un nuovo interval
-            if storage_service.get_token().is_some() {
-                let refresh_fn = auto_refresh_invites.clone();
-                let new_interval_id = window.set_interval_with_callback_and_timeout_and_arguments_0(
-                    &wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-                        refresh_fn();
-                    }) as Box<dyn Fn()>).into_js_value().unchecked_into(),
-                    10000 // 10 secondi
-                ).unwrap_or(-1);
-                
-                set_interval_id.set(Some(new_interval_id));
-            } else {
-                // Nessun token, assicurati che l'interval sia pulito
-                set_interval_id.set(None);
-            }
-        }
-    });
-
-    // Cleanup interval quando il componente viene smontato
-    on_cleanup(move || {
-        if let Some(window) = web_sys::window() {
-            if let Some(id) = interval_id.get_untracked() {
-                window.clear_interval_with_handle(id);
-            }
         }
     });
 
@@ -166,6 +130,8 @@ pub fn Sidebar(
         if let Some(token_response) = storage_service.get_token() {
             set_show_invites_modal.set(true);
             set_is_loading_invites.set(true);
+            // Pre-fill modal with current context invitations so WS-updates are visible immediately
+            set_invites.set(invitations_ctx.get());
             
             // Fetch inviti async
             spawn_local(async move {
@@ -264,11 +230,15 @@ pub fn Sidebar(
             {/* Sezione fissa in fondo: Inviti e Crea gruppo */}
             {move || {
                 view! {
-                    <div class="p-4 border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col gap-2">
-                        {/* Bottone Crea gruppo */}
-                        <CreateGroupButton on_create_click=handle_create_click />
-                        {/* Bottone Inviti */}
-                        <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={invites.get().iter().filter(|i| i.status.to_string() == "pending").count()} />
+                    <div class="border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col">
+                        <div class="p-4 flex flex-col gap-2">
+                            {/* Bottone Crea gruppo */}
+                            <CreateGroupButton on_create_click=handle_create_click />
+                            {/* Bottone Inviti */}
+                            <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={pending_invites_count.get()} />
+                        </div>
+                        {/* Contatore utenti online */}
+                        <OnlineUsersCounter />
                     </div>
                 }.into_view()
             }}

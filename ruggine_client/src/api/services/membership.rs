@@ -114,6 +114,27 @@ impl GroupMembershipService {
             }
         }
     }
+
+    /// Get connected users currently online for a specific group (returns vector of user ids)
+    /// Returns empty vector if user is not online or request fails
+    pub async fn find_online_users_in_group(&self, group_chat_id: i32) -> Result<Vec<i32>, AuthError> {
+        let endpoint = ApiEndpoints::group_membership_online_users_in_group(&group_chat_id.to_string());
+        match self.http_client
+            .get::<ApiSuccessResponseVecUserId>(&endpoint)
+            .await {
+            Ok(response) => Ok(response.data),
+            Err(http_error) => {
+                // Handle 403 Forbidden (user not online) gracefully
+                match &http_error {
+                    crate::api::http_error::HttpError::Http { status, .. } if *status == 403 => {
+                        log::warn!("User is not online or not member of group, returning empty online users list");
+                        Ok(vec![]) // Return empty list instead of error
+                    },
+                    _ => Err(AuthError::from(http_error))
+                }
+            }
+        }
+    }
 }
 
 impl Default for GroupMembershipService {

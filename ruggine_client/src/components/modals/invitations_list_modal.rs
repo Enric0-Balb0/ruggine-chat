@@ -146,7 +146,7 @@ pub fn ShowInvitesModal(
         });
     };
 
-    // Set up polling to refresh invites when modal is open
+    // Set up loading to refresh invites when modal is open
     {
         let load_fn = load_received_invites.clone();
         create_effect(move |_| {
@@ -155,15 +155,8 @@ pub fn ShowInvitesModal(
                 // Load immediately when modal opens
                 load_fn();
                 
-                // Then start polling every 10 seconds
-                let load_fn_poll = load_fn.clone();
-                spawn_local(async move {
-                    loop {
-                        crate::utils::sleep_ms(10000).await; // Wait 10 seconds
-                        leptos::logging::log!("ShowInvitesModal: Polling for invitation updates");
-                        load_fn_poll();
-                    }
-                });
+                // Note: Polling removed - invitations are now updated via WebSocket events
+                // The invitations context is automatically updated when NewInvitation events are received
             }
         });
     }
@@ -188,7 +181,6 @@ pub fn ShowInvitesModal(
     };
 
     // Funzione per accettare un invito
-    let set_invites_signal = set_invites.clone();
     let toast = use_toast();
     // Track pending invite actions to disable buttons per-invite
     let (pending_invites, set_pending_invites) = create_signal(std::collections::HashSet::<i32>::new());
@@ -200,8 +192,10 @@ pub fn ShowInvitesModal(
     let on_accept_cb_clone = on_accept.clone();
     let on_reject_cb_clone = on_reject.clone();
     let ws_ctx_for_accept = ws_ctx.clone();
+    // clone the loader so we can refresh modal lists after actions
+    let load_invites_for_accept = load_received_invites.clone();
+    let load_invites_for_reject = load_received_invites.clone();
     let handle_accept_invite = Callback::new(move |invitation_id: i32| {
-        let set_invites_signal = set_invites_signal.clone();
         let toast = toast_for_accept.clone();
         let set_pending = set_pending_for_accept.clone();
         let on_accept_cb = on_accept_cb_clone.clone();
@@ -221,38 +215,10 @@ pub fn ShowInvitesModal(
             };
             if let Some(_res) = invitation_service.update_invitation_status(&req)
                 .with_auto_retry("accept invitation").await {
-                // Aggiorna la lista inviti dopo l'accettazione
-                if let Some(new_list) = invitation_service.get_user_invitations()
-                    .with_auto_retry("reload invitations").await {
-                    // clone before moving into set to allow creating filtered local list
-                    let cloned = new_list.clone();
-                    set_invites_signal.set(new_list);
-                    // refresh both pending and all invites lists
-                    let current_user_id = crate::utils::storage::StorageService::new()
-                        .get_user_profile()
-                        .map(|u| u.id);
-                    
-                    let all_filtered = cloned.clone().into_iter().filter(|inv| {
-                        if let Some(user_id) = current_user_id {
-                            inv.to_user_id == user_id && inv.from_user_id != inv.to_user_id
-                        } else {
-                            false
-                        }
-                    }).collect::<Vec<_>>();
-                    
-                    let pending_filtered = cloned.into_iter().filter(|inv| {
-                        if let Some(user_id) = current_user_id {
-                            inv.to_user_id == user_id && 
-                            inv.from_user_id != inv.to_user_id && 
-                            inv.status == crate::types::invitation::InvitationStatus::Pending
-                        } else {
-                            false
-                        }
-                    }).collect::<Vec<_>>();
-                    
-                    set_local_invites.set(pending_filtered);
-                    set_all_invites.set(all_filtered);
-                }
+                // Update global invitations context after accepting invitation
+                let _ = crate::context::invitations_context::refresh_invitations().await;
+                // Refresh the modal's local lists so the accepted invitation moves to history
+                load_invites_for_accept();
                 // Toast di successo
                 toast.success("Invito accettato! Ora fai parte del gruppo.");
                 
@@ -285,9 +251,7 @@ pub fn ShowInvitesModal(
     });
 
     // Funzione per rifiutare un invito (gestita internamente qui)
-    let set_invites_signal_rej = set_invites.clone();
     let handle_reject_invite_internal = Callback::new(move |invitation_id: i32| {
-        let set_invites_signal = set_invites_signal_rej.clone();
         let toast = toast_for_reject.clone();
         let set_pending = set_pending_for_reject.clone();
         let on_reject_cb = on_reject_cb_clone.clone();
@@ -305,36 +269,10 @@ pub fn ShowInvitesModal(
             };
             if let Some(_res) = invitation_service.update_invitation_status(&req)
                 .with_auto_retry("reject invitation").await {
-                if let Some(new_list) = invitation_service.get_user_invitations()
-                    .with_auto_retry("reload invitations").await {
-                    let cloned = new_list.clone();
-                    set_invites_signal.set(new_list);
-                    // refresh both pending and all invites lists
-                    let current_user_id = crate::utils::storage::StorageService::new()
-                        .get_user_profile()
-                        .map(|u| u.id);
-                    
-                    let all_filtered = cloned.clone().into_iter().filter(|inv| {
-                        if let Some(user_id) = current_user_id {
-                            inv.to_user_id == user_id && inv.from_user_id != inv.to_user_id
-                        } else {
-                            false
-                        }
-                    }).collect::<Vec<_>>();
-                    
-                    let pending_filtered = cloned.into_iter().filter(|inv| {
-                        if let Some(user_id) = current_user_id {
-                            inv.to_user_id == user_id && 
-                            inv.from_user_id != inv.to_user_id && 
-                            inv.status == crate::types::invitation::InvitationStatus::Pending
-                        } else {
-                            false
-                        }
-                    }).collect::<Vec<_>>();
-                    
-                    set_local_invites.set(pending_filtered);
-                    set_all_invites.set(all_filtered);
-                }
+                // Update global invitations context after rejecting invitation
+                let _ = crate::context::invitations_context::refresh_invitations().await;
+                // Refresh the modal's local lists so the rejected invitation moves to history
+                load_invites_for_reject();
                 toast.success("Invito rifiutato.");
                 // Call external callback if present (for side-effects like refresh)
                 if let Some(cb) = on_reject_cb.as_ref() {

@@ -96,7 +96,7 @@ pub fn ShowInvitesButton(
                 <span class="text-sm font-bold">{"📮"}</span>
             </div>
             <span class="text-sm font-medium flex-1 text-left">
-                "Inviti"
+                "Inviti Ricevuti"
             </span>
             {if pending_count > 0 {
                 view! {

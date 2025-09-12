@@ -334,35 +334,11 @@ npm run watch-css
 npm run build-css
 ```
 
-## 🔗 Server Integration
-
-### API Compatibility
-- **Server URL**: `http://localhost:8002` (configurable)
-- **Authentication**: JWT-based with automatic refresh
-- **Type Synchronization**: 11 type files synced with server OpenAPI
-- **Error Handling**: Consistent error responses
-
 ### Required Server Features
 - ruggine_server v1.0+
 - PostgreSQL database
 - WebSocket support for real-time features
 - JWT authentication endpoints
-
-## 🔐 Security Features
-
-- **JWT Token Management**: Secure storage and automatic refresh
-- **Input Validation**: Client-side validation with server verification
-- **XSS Protection**: Leptos built-in protections
-- **CSRF Prevention**: Token-based authentication
-- **Route Guards**: Authentication-protected routes
-
-## 📊 Performance Features
-
-- **WASM Compilation**: Near-native browser performance
-- **Reactive Updates**: Efficient DOM updates via Leptos signals
-- **Code Splitting**: Lazy loading of components
-- **HTTP Caching**: Intelligent API response caching
-- **WebSocket Optimization**: Efficient real-time communication
 
 ## 🐛 Troubleshooting
 
@@ -377,22 +353,3 @@ npm run build-css
 # Enable debug logging
 RUST_LOG=debug trunk serve
 
-# Check WebSocket connections
-# Open browser dev tools → Network → WS tab
-```
-
-## 🤝 Contributing
-
-1. **Code Style**: Follow Rust conventions and project patterns
-2. **Testing**: Add tests for new features (maintain 100% test pass rate)
-3. **Type Safety**: Maintain server-client type synchronization
-4. **Documentation**: Update README for architectural changes
-5. **Performance**: Consider WASM bundle size and runtime performance
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**A modern chat application built with ❤️ in Rust**

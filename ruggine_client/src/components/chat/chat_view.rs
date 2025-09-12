@@ -16,6 +16,7 @@ use crate::hooks::use_group_message_ws::use_group_message_ws;
 use crate::api::client::ApiClient;
 use crate::config::constants::AppConstants;
 use crate::hooks::use_group_initial_messages::use_group_initial_messages;
+use crate::utils::error_recovery::NetworkOperation;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::components::chat::chat_message::{ChatMessage, MessageStatus};
 use crate::types::message::Message;
@@ -60,12 +61,27 @@ pub fn ChatView(
     let (initial_messages, initial_loading, _initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
 
-    // Create a single WebSocket hook for both chat messages and presence tracking
+    // Create or reuse a single WebSocket hook for both chat messages and presence tracking.
+    // Prefer a hook provided via context (app-level) to ensure we subscribe to the same
+    // message buffer that is already receiving messages; fallback to creating a new
+    // hook using the stored token if none is available in context.
     let storage = StorageService::new();
-    let unified_ws_hook = if let Some(token_response) = storage.get_token() {
-        Some(use_group_message_ws(token_response.token))
-    } else {
-        None
+    // use_context returns Option<T>, and T here is Option<UseGroupMessageWs>, so we may
+    // get Some(Some(hook)). Handle both layers safely.
+    let unified_ws_hook: Option<UseGroupMessageWs> = match ws_ctx.clone() {
+        Some(Some(ctx_hook)) => {
+            leptos::logging::log!("[PRESENCE] Using UseGroupMessageWs from context (shared)");
+            Some(ctx_hook)
+        }
+        _ => {
+            if let Some(token_response) = storage.get_token() {
+                leptos::logging::log!("[PRESENCE] No context WS hook found, creating local UseGroupMessageWs");
+                Some(use_group_message_ws(token_response.token))
+            } else {
+                leptos::logging::log!("[PRESENCE] No WS token available; presence tracking disabled");
+                None
+            }
+        }
     };
 
     // Use the unified hook for chat messages
@@ -79,108 +95,75 @@ pub fn ChatView(
     let (ws_online_user_ids, set_ws_online_user_ids) = create_signal(HashSet::<i32>::new());
     let (initial_online_user_ids, set_initial_online_user_ids) = create_signal(HashSet::<i32>::new());
 
-    // Process WebSocket events for presence tracking
-    // Use the same unified WebSocket hook for presence tracking
-    {
-        let set_ws_online_user_ids = set_ws_online_user_ids.clone();
-        let (should_continue_presence, set_should_continue_presence) = create_signal(true);
-        // Atomic flag to coordinate loop termination without touching signals after disposal
-        let atomic_continue_presence = Arc::new(AtomicBool::new(true));
-        
-        // Setup cleanup for presence tracking signal
-        let set_should_continue_presence_cleanup = set_should_continue_presence.clone();
-        let atomic_for_cleanup = atomic_continue_presence.clone();
-        on_cleanup(move || {
-            // first set atomic flag to false so background tasks stop without touching signals
-            atomic_for_cleanup.store(false, Ordering::Relaxed);
-            if let Err(_) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                set_should_continue_presence_cleanup.set(false);
-            })) {
-                leptos::logging::log!("[PRESENCE TRACKING] Cleanup: presence signal already disposed");
-            }
-        });
-        
-        if let Some(ws_hook) = unified_ws_hook.clone() {
-            let atomic_loop = atomic_continue_presence.clone();
-            spawn_local(async move {
-                let mut last_processed_count = 0usize;
+    // Member count signal (authoritative refresh will be triggered by WS events)
+    let (current_member_count, set_current_member_count) = create_signal(
+        group_data.group_details
+            .as_ref()
+            .and_then(|g| g.member_count)
+            .unwrap_or(1)
+    );
 
-                    // Use atomic flag only for loop control to avoid touching signals that may be disposed
-                    while atomic_loop.load(Ordering::Relaxed) {
-                    // Safely get WebSocket messages with proper error handling
-                    let msgs = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        ws_hook.messages.get_untracked()
-                    })) {
-                        Ok(msgs) => msgs,
-                        Err(_) => {
-                            leptos::logging::log!("[PRESENCE TRACKING] Messages signal disposed, stopping presence tracking");
-                            break;
-                        }
-                    };
-                    
-                    // Process only new messages since last iteration
-                    if msgs.len() > last_processed_count {
-                        for msg in msgs.iter().skip(last_processed_count) {
+    // Process WebSocket events for presence tracking in a reactive way (no polling loop)
+    {
+        let ws_hook = unified_ws_hook.clone();
+        let set_initial = set_initial_online_user_ids.clone();
+        let set_current_member_count = set_current_member_count.clone();
+        create_effect(move |prev_len: Option<usize>| {
+            if let Some(hook) = ws_hook.as_ref() {
+                let msgs = hook.messages.get();
+                let current_len = msgs.len();
+                if let Some(prev) = prev_len {
+                    if current_len > prev {
+                        // process only new messages
+                        for msg in msgs.iter().skip(prev) {
                             if let WebSocketMessage::Event { event, .. } = msg {
                                 if let ServerEvent::Groups(group_event) = event {
                                     match group_event {
-                                        GroupEvent::Joined { user_id } => {
-                                            leptos::logging::log!("[PRESENCE] User {} joined, adding to online set", user_id);
-                                            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                                set_ws_online_user_ids.update(|set| {
-                                                    set.insert(*user_id);
-                                                });
-                                            })) {
-                                                Ok(_) => {},
-                                                Err(_) => {
-                                                    leptos::logging::log!("[PRESENCE] Online users signal disposed, stopping tracking");
-                                                    // ensure loop stops even if signals are disposed
-                                                    atomic_loop.store(false, Ordering::Relaxed);
-                                                    // Safely set should_continue to false if possible
-                                                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                                        set_should_continue_presence.set(false);
-                                                    }));
-                                                    return;
+                                        GroupEvent::Joined { .. } | GroupEvent::Left { .. } => {
+                                            // For presence changes, refresh authoritative lists once
+                                            let set_initial_inner = set_initial.clone();
+                                            let set_members_inner = set_current_member_count.clone();
+                                            let gid = group_id_for_update;
+                                            spawn_local(async move {
+                                                use crate::api::client::ApiClient;
+                                                use crate::api::services::membership::GroupMembershipService;
+                                                use crate::config::constants::AppConstants;
+                                                use crate::utils::storage::StorageService;
+
+                                                let storage = StorageService::new();
+                                                let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                                                if let Some(token_response) = storage.get_token() {
+                                                    http.set_auth_token(Some(token_response.token));
                                                 }
-                                            }
-                                        }
-                                        GroupEvent::Left { user_id } => {
-                                            leptos::logging::log!("[PRESENCE] User {} left, removing from online set", user_id);
-                                            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                                set_ws_online_user_ids.update(|set| {
-                                                    set.remove(user_id);
-                                                });
-                                                })) {
-                                                Ok(_) => {},
-                                                Err(_) => {
-                                                    leptos::logging::log!("[PRESENCE] Online users signal disposed, stopping tracking");
-                                                    atomic_loop.store(false, Ordering::Relaxed);
-                                                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                                        set_should_continue_presence.set(false);
-                                                    }));
-                                                    return;
+                                                let membership_service = GroupMembershipService::new(http, storage);
+
+                                                // Refresh online users for this group
+                                                if let Some(ids) = membership_service.find_online_users_in_group(gid)
+                                                    .with_auto_retry("refresh online users").await {
+                                                    let new_set: std::collections::HashSet<i32> = ids.into_iter().collect();
+                                                    set_initial_inner.set(new_set);
                                                 }
-                                            }
+
+                                                // Refresh member count for this group
+                                                if let Some(group_members) = membership_service.get_by_group_chat_id(&gid.to_string())
+                                                    .with_auto_retry("refresh group members").await {
+                                                    let new_count = group_members.len() as i32;
+                                                    set_members_inner.set(new_count);
+                                                }
+                                            });
                                         }
-                                        GroupEvent::NewMessage { .. } => {
-                                            // Chat messages are handled separately, ignore here
-                                        }
+                                        _ => {}
                                     }
                                 }
                             }
                         }
-                        
-                        last_processed_count = msgs.len();
                     }
-                    
-                    // Check for new messages every 100ms
-                    gloo_timers::future::TimeoutFuture::new(100).await;
                 }
-                leptos::logging::log!("[PRESENCE] Presence tracking loop ended");
-            });
-        }
-        
-        // Note: cleanup is already handled by atomic flag in the main on_cleanup above
+                current_len
+            } else {
+                prev_len.unwrap_or(0)
+            }
+        });
     }
 
     {
@@ -196,7 +179,7 @@ pub fn ChatView(
             }
             let membership_service = GroupMembershipService::new(http, storage);
             
-            if let Some(ids) = membership_service.find_connected_users_and_online()
+            if let Some(ids) = membership_service.find_online_users_in_group(group_id_for_update)
                 .with_auto_retry("load online users").await {
                 let set: HashSet<i32> = ids.into_iter().collect();
                 set_initial.set(set);
@@ -223,143 +206,7 @@ pub fn ChatView(
         count
     });
 
-    // Reactive member count with polling to track group membership changes
-    let (current_member_count, set_current_member_count) = create_signal(
-        group_data.group_details
-            .as_ref()
-            .and_then(|g| g.member_count)
-            .unwrap_or(1)
-    );
     
-    // Poll for member count updates every 10 seconds
-    {
-        let group_id = group_data.membership.group_chat_id;
-        let set_current_member_count = set_current_member_count.clone();
-        let (should_continue_polling, set_should_continue_polling) = create_signal(true);
-        
-        // Setup cleanup for polling signal
-        let set_should_continue_polling_cleanup = set_should_continue_polling.clone();
-        // Atomic flag to coordinate polling loop termination safely
-        let atomic_continue_polling = Arc::new(AtomicBool::new(true));
-        let atomic_for_polling_cleanup = atomic_continue_polling.clone();
-        on_cleanup(move || {
-            // prefer atomic stop first
-            atomic_for_polling_cleanup.store(false, Ordering::Relaxed);
-            if let Err(_) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                set_should_continue_polling_cleanup.set(false);
-            })) {
-                leptos::logging::log!("[MEMBER COUNT POLL] Cleanup: polling signal already disposed");
-            }
-        });
-        
-        // Initial setup and periodic polling
-        leptos::spawn_local(async move {
-            use crate::utils::storage::StorageService;
-            use crate::utils::error_recovery::NetworkOperation;
-            
-            // Do an immediate poll first
-            let storage = StorageService::new();
-            let http = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
-            if let Some(token_response) = storage.get_token() {
-                http.set_auth_token(Some(token_response.token));
-            }
-            let membership_service = crate::api::services::membership::GroupMembershipService::new(http.clone(), storage.clone());
-            
-            let group_id_str = group_id.to_string();
-            if let Some(group_members) = membership_service.get_by_group_chat_id(&group_id_str)
-                .with_auto_retry("initial poll group member count").await {
-                
-                let new_count = group_members.len() as i32;
-                // Safely get current count
-                let current_count = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    current_member_count.get_untracked()
-                })) {
-                    Ok(count) => count,
-                    Err(_) => {
-                        leptos::logging::log!("[MEMBER COUNT POLL] Member count signal disposed during initial poll");
-                        return;
-                    }
-                };
-                
-                if new_count != current_count {
-                    leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
-                        group_id, current_count, new_count);
-                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        set_current_member_count.set(new_count);
-                    })) {
-                        Ok(_) => {},
-                        Err(_) => {
-                            leptos::logging::log!("[MEMBER COUNT POLL] Cannot set member count, signal disposed");
-                            return;
-                        }
-                    }
-                }
-            } else {
-                leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch initial group members for {}", group_id);
-            }
-            
-            let atomic_loop_polling = atomic_continue_polling.clone();
-            // rely primarily on atomic flag for loop control; internal checks will safely read signals
-            while atomic_loop_polling.load(Ordering::Relaxed) {
-                // Wait 5 seconds between polls
-                crate::utils::sleep_ms(5000).await;
-                
-                // Check atomic flag only - don't read signals that may be disposed during logout
-                if !atomic_loop_polling.load(Ordering::Relaxed) {
-                    break;
-                }
-                
-                // Create membership service to get actual group members
-                let storage_service = crate::utils::storage::StorageService::new();
-                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                if let Some(token_response) = storage_service.get_token() {
-                    http_client.set_auth_token(Some(token_response.token));
-                }
-                let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
-                
-                // Fetch group members to get actual count
-                let group_id_str = group_id.to_string();
-                if let Some(group_members) = membership_service.get_by_group_chat_id(&group_id_str)
-                    .with_auto_retry("poll group member count").await {
-                    
-                    let new_count = group_members.len() as i32;
-                    // Safely get current count
-                    let current_count = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        current_member_count.get_untracked()
-                    })) {
-                        Ok(count) => count,
-                        Err(_) => {
-                            leptos::logging::log!("[MEMBER COUNT POLL] Member count signal disposed during polling");
-                            // Set atomic flag to stop loop
-                            atomic_loop_polling.store(false, Ordering::Relaxed);
-                            break;
-                        }
-                    };
-                    
-                    if new_count != current_count {
-                        leptos::logging::log!("[MEMBER COUNT POLL] Group {} member count changed: {} -> {}", 
-                            group_id, current_count, new_count);
-                        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            set_current_member_count.set(new_count);
-                        })) {
-                            Ok(_) => {},
-                            Err(_) => {
-                                leptos::logging::log!("[MEMBER COUNT POLL] Cannot set member count, signal disposed");
-                                // Set atomic flag to stop loop
-                                atomic_loop_polling.store(false, Ordering::Relaxed);
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    leptos::logging::log!("[MEMBER COUNT POLL] Failed to fetch group members for {}", group_id);
-                }
-            }
-            leptos::logging::log!("[MEMBER COUNT POLL] Member count polling ended for group {}", group_id);
-        });
-        
-        // Note: cleanup is already handled by atomic flag in the main on_cleanup above
-    }
     
     let member_count = create_memo(move |_| current_member_count.get());
 
