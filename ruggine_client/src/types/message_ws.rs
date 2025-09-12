@@ -81,6 +81,8 @@ pub enum GroupEvent {
     },
     NewInvitation { invitation_id: i32 },
     NewGroupChat { group_chat_id: i32 },
+    NewGroupMembership { group_id: i32, new_membership_username: String },
+    LeftGroupMembership { group_id: i32, left_membership_username: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

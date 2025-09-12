@@ -93,6 +93,12 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                                     match g {
                                         GroupEvent::Joined { user_id } => leptos::logging::log!("[ONLINE COUNTER] saw Joined event for {}", user_id),
                                         GroupEvent::Left { user_id } => leptos::logging::log!("[ONLINE COUNTER] saw Left event for {}", user_id),
+                                        GroupEvent::NewGroupMembership { group_id, new_membership_username } => {
+                                            leptos::logging::log!("[ONLINE COUNTER] saw NewGroupMembership event: {} joined group {}", new_membership_username, group_id);
+                                        },
+                                        GroupEvent::LeftGroupMembership { group_id, left_membership_username } => {
+                                            leptos::logging::log!("[ONLINE COUNTER] saw LeftGroupMembership event: {} left group {}", left_membership_username, group_id);
+                                        },
                                         _ => {}
                                     }
                                 }
@@ -208,6 +214,56 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                                                 log::info!("User {} left, new count: {}", user_id, new_count);
                                             }
                                         });
+                                    }
+                                }
+                                ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, new_membership_username }) => {
+                                    // New membership might affect online count, refresh from API
+                                    if mounted_for_msgs.load(Ordering::SeqCst) {
+                                        log::info!("New member {} joined group {}, refreshing online count", new_membership_username, group_id);
+                                        
+                                        let storage_service = crate::utils::storage::StorageService::new();
+                                        if let Some(token_response) = storage_service.get_token() {
+                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                                            http_client.set_auth_token(Some(token_response.token));
+                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
+                                            
+                                            spawn_local(async move {
+                                                match membership_service.find_connected_users_and_online().await {
+                                                    Ok(users) => {
+                                                        set_online_count.set(Some(users.len() as i32));
+                                                        log::info!("Refreshed online count after new membership: {}", users.len());
+                                                    }
+                                                    Err(e) => {
+                                                        log::error!("Failed to refresh online count after new membership: {:?}", e);
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    }
+                                }
+                                ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
+                                    // Member left might affect online count, refresh from API
+                                    if mounted_for_msgs.load(Ordering::SeqCst) {
+                                        log::info!("Member {} left group {}, refreshing online count", left_membership_username, group_id);
+                                        
+                                        let storage_service = crate::utils::storage::StorageService::new();
+                                        if let Some(token_response) = storage_service.get_token() {
+                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                                            http_client.set_auth_token(Some(token_response.token));
+                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
+                                            
+                                            spawn_local(async move {
+                                                match membership_service.find_connected_users_and_online().await {
+                                                    Ok(users) => {
+                                                        set_online_count.set(Some(users.len() as i32));
+                                                        log::info!("Refreshed online count after member left: {}", users.len());
+                                                    }
+                                                    Err(e) => {
+                                                        log::error!("Failed to refresh online count after member left: {:?}", e);
+                                                    }
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                                 _ => {}

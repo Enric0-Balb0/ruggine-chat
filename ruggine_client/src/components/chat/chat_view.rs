@@ -119,7 +119,8 @@ pub fn ChatView(
                             if let WebSocketMessage::Event { event, .. } = msg {
                                 if let ServerEvent::Groups(group_event) = event {
                                     match group_event {
-                                        GroupEvent::Joined { .. } | GroupEvent::Left { .. } => {
+                                        GroupEvent::Joined { .. } | GroupEvent::Left { .. } | 
+                                        GroupEvent::NewGroupMembership { .. } | GroupEvent::LeftGroupMembership { .. } => {
                                             // For presence changes, refresh authoritative lists once
                                             let set_initial_inner = set_initial.clone();
                                             let set_members_inner = set_current_member_count.clone();

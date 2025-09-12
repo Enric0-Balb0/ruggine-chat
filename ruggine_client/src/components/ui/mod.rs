@@ -21,3 +21,7 @@ pub use unread_badge::UnreadBadge;
 // Online users counter component
 pub mod online_users_counter;
 pub use online_users_counter::OnlineUsersCounter;
+
+// Group membership WebSocket handler
+pub mod group_membership_ws_handler;
+pub use group_membership_ws_handler::*;
