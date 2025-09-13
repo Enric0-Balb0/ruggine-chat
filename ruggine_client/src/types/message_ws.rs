@@ -83,6 +83,7 @@ pub enum GroupEvent {
     NewGroupChat { group_chat_id: i32 },
     NewGroupMembership { group_id: i32, new_membership_username: String },
     LeftGroupMembership { group_id: i32, left_membership_username: String },
+    NewReadTextMessage { group_id: i32, text_message_id: i32, user_id: i32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

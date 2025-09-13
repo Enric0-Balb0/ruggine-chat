@@ -4,6 +4,7 @@ use crate::types::WebSocketMessage;
 use crate::types::message_ws::WsStatus;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::types::message_ws::{ServerEvent, GroupEvent};
+use crate::utils::storage::StorageService;
 
 #[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
@@ -234,16 +235,35 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
 
 fn handle_unread_events(msg: &WebSocketMessage, unread_counts: &leptos::RwSignal<std::collections::HashMap<i32, u32>>) {
     match msg {
-        WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewMessage { group_id, .. }), .. } => {
-            // Increment unread count for this group
-            unread_counts.update(|map| {
-                *map.entry(*group_id).or_insert(0) += 1;
-            });
+        WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewMessage { group_id, sender_id, .. }), .. } => {
+            // Do NOT increment unread count for messages sent by the current user
+            let storage = StorageService::new();
+            let should_increment = match storage.get_user_profile() {
+                Some(profile) => profile.id != *sender_id,
+                None => true,
+            };
+
+            if should_increment {
+                // Increment unread count for this group
+                unread_counts.update(|map| {
+                    *map.entry(*group_id).or_insert(0) += 1;
+                });
+            }
         }
         WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, .. }), .. } => {
             // User added to a new group, ensure group exists in the map
             unread_counts.update(|map| {
                 map.entry(*group_id).or_insert(0);
+            });
+        }
+        WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewReadTextMessage { group_id, text_message_id: _, user_id: _ }), .. } => {
+            // Message was read on another device, decrement unread count for this group
+            unread_counts.update(|map| {
+                if let Some(count) = map.get_mut(group_id) {
+                    if *count > 0 {
+                        *count -= 1;
+                    }
+                }
             });
         }
         _ => {}
