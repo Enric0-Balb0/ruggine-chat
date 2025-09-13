@@ -2,21 +2,21 @@ use leptos::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::api::services::membership::GroupMembershipService;
-use crate::types::message_ws::{ServerEvent, GroupEvent, WebSocketMessage};
+use crate::types::message_ws::{ServerEvent, GroupEvent, WebSocketMessage, WsStatus};
 use crate::hooks::use_group_message_ws::UseGroupMessageWs;
+use crate::context::auth_context::use_auth_context;
 use crate::utils::storage::StorageService;
+use crate::api::ws::global_ws;
 
 /// Counter component for displaying online users count following UI mock style
+/// Solo si aggiorna all'inizio e per eventi Joined/Left
 #[component]
 pub fn OnlineUsersCounter() -> impl IntoView {
     let (online_count, set_online_count) = create_signal::<Option<i32>>(None);
-    let (initial_load_done, set_initial_load_done) = create_signal(false);
-
-    // Get WebSocket context to listen for join/leave events
-    let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
-
-    // Defer authoritative initial load until the WS is open.
-    // Show a spinner while waiting.
+    
+    // Get WebSocket context (provided in `App` via `provide_context`)
+    // `App` provides a `ReadSignal<Option<UseGroupMessageWs>>` as the context value.
+    let ws_ctx_signal = use_context::<ReadSignal<Option<UseGroupMessageWs>>>().expect("WebSocket context should be provided");
 
     // Mounted flag to avoid touching signals after the component is disposed
     let mounted = Arc::new(AtomicBool::new(true));
@@ -25,257 +25,225 @@ pub fn OnlineUsersCounter() -> impl IntoView {
         mounted_for_cleanup.store(false, Ordering::SeqCst);
     });
 
-    // No join requests are sent from this component. It only observes the
-    // shared WebSocket status to decide when to perform the authoritative
-    // API load for online users.
+    // Local flag for this component instance - not static/global
+    let has_done_initial_fetch = Arc::new(AtomicBool::new(false));
 
-    // Ensure the authoritative initial load runs once after WS is Open or after a timeout.
-    // We use a dedicated async watcher to avoid reactive-scope disposal issues.
+    // 1. CARICAMENTO INIZIALE: Solo una volta quando il componente è creato - NO EFFECTS!
+    leptos::logging::log!("[ONLINE COUNTER] Component mounted, starting initial load");
+    
     {
-        let initial_done_read = initial_load_done.clone();
-        let set_initial_done = set_initial_load_done.clone();
-        let set_online = set_online_count.clone();
-        let mounted_watcher = mounted.clone();
-        let ws_ctx_clone = ws_ctx_opt.clone();
+        // Set initial fallback count immediately and wait for WebSocket events to trigger the first authoritative fetch
+        let mounted_clone = mounted.clone();
+        let set_count = set_online_count.clone();
 
         spawn_local(async move {
-            // Wait up to 2s for WS to become Open, polling every 100ms
-            let mut waited = 0u32;
-            while waited < 2000 {
-                if !mounted_watcher.load(Ordering::SeqCst) {
-                    return; // component unmounted
-                }
-                if let Some(Some(ws)) = &ws_ctx_clone {
-                    if ws.status.get_untracked() == crate::types::message_ws::WsStatus::Open {
-                        break;
-                    }
-                }
-                gloo_timers::future::TimeoutFuture::new(100).await;
-                waited += 100;
-            }
-
-            // If initialization already done, nothing to do
-            if initial_done_read.get_untracked() {
-                return;
-            }
-
-            // Mark as done to avoid races
-            set_initial_done.set(true);
-
-            let storage_service = StorageService::new();
-            if let Some(token_response) = storage_service.get_token() {
-                let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                http_client.set_auth_token(Some(token_response.token));
-                let membership_service = GroupMembershipService::new(http_client, storage_service.clone());
-
-                // Debug: confirm token available (do not print the token itself)
-                leptos::logging::log!("[ONLINE COUNTER] Token present, delaying 500ms then calling find_connected_users_and_online()");
-                // Delay a bit to give server time to finalize any join processing
-                gloo_timers::future::TimeoutFuture::new(500).await;
-
-                match membership_service.find_connected_users_and_online().await {
-                    Ok(online_user_ids) => {
-                        let total_count = online_user_ids.len() as i32 + 1;
-                        if mounted_watcher.load(Ordering::SeqCst) {
-                            set_online.set(Some(total_count));
-                        }
-                        log::info!("Initial online users count: {}", total_count);
-                    }
-                    Err(e) => {
-                        log::warn!("Failed to load initial online users count: {:?}", e);
-                        if mounted_watcher.load(Ordering::SeqCst) {
-                            set_online.set(Some(1));
-                        }
-                    }
-                }
-            } else {
-                log::warn!("No token available for online users count");
-                if mounted_watcher.load(Ordering::SeqCst) {
-                    set_online.set(Some(0));
-                }
+            // Set conservative fallback count immediately - no HTTP call until WS join confirmed
+            if mounted_clone.load(Ordering::SeqCst) {
+                set_count.set(Some(1)); // Conservative: assume local user is online
+                leptos::logging::log!("[ONLINE COUNTER] Set initial fallback count: 1 (waiting for WS join)");
             }
         });
     }
 
-    // Listen for WebSocket join/leave events to update counter in real-time
-    let ws_ctx_for_msgs = ws_ctx_opt.clone();
-    let mounted_for_msgs = mounted.clone();
-    create_effect(move |prev_message_count: Option<usize>| {
-        if let Some(Some(ws)) = &ws_ctx_for_msgs {
-            let messages = ws.messages.get();
-            let current_count = messages.len();
+    // 2. AGGIORNAMENTI REAL-TIME: per eventi Joined/Left e per NewGroupMembership/LeftGroupMembership
+    // E per il primo join response (initial authoritative fetch)
+    let last_event_signal = create_rw_signal::<Option<String>>(None);
+    
+    // Make effect reactive to authentication token so it runs when the user logs in
+    // and the WS context becomes available. We read the WS context inside the effect
+    // and then read `ws.messages.get()` so the effect also re-triggers on incoming WS messages.
+    let auth_ctx = use_auth_context();
+    let token_signal = auth_ctx.token.read_only();
 
-            // Only process new messages to avoid re-processing
-            if let Some(prev_count) = prev_message_count {
-                if current_count > prev_count {
-                    // Process only new messages
-                    for message in messages.iter().skip(prev_count) {
-                        if let WebSocketMessage::Event { event, .. } = message {
-                            match event {
-                                ServerEvent::Groups(GroupEvent::Joined { user_id }) => {
-                                    // Increment counter when someone joins
-                                    if mounted_for_msgs.load(Ordering::SeqCst) {
-                                        let storage_service = crate::utils::storage::StorageService::new();
-                                        if let Some(token_response) = storage_service.get_token() {
-                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                                            http_client.set_auth_token(Some(token_response.token));
-                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
-                                            let mounted_clone = mounted_for_msgs.clone();
-                                            
-                                            spawn_local(async move {
-                                                match membership_service.find_connected_users_and_online().await {
-                                                    Ok(users) => {
-                                                        if mounted_clone.load(Ordering::SeqCst) {
-                                                            set_online_count.set(Some(users.len() as i32));
-                                                            log::info!("Refreshed online count after member joined connection: {}", users.len());
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // If we get 404, it means we're no longer in the group
-                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
-                                                            log::info!("No longer member of group, setting online count to 0");
-                                                            if mounted_clone.load(Ordering::SeqCst) {
-                                                                set_online_count.set(Some(0));
-                                                            }
-                                                        } else {
-                                                            log::error!("Failed to refresh online count after member joined connection: {:?}", e);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
+    let mounted_for_events = mounted.clone();
+    let has_done_initial_fetch_for_events = has_done_initial_fetch.clone();
+
+    create_effect(move |_| {
+        // Depend on token so this effect runs when login happens
+        let token_opt = token_signal.get();
+        leptos::logging::log!("[ONLINE COUNTER] Effect triggered; token_is_some={}", token_opt.is_some());
+
+        // If not logged in yet, no ws context will be available
+        if token_opt.is_none() {
+            return;
+        }
+
+        // Get the current WebSocket context from the signal
+        let ws_ctx_local = ws_ctx_signal.get();
+        leptos::logging::log!("[ONLINE COUNTER] WS context available={}", ws_ctx_local.is_some());
+
+        if let Some(ws) = ws_ctx_local {
+            // Read messages to establish a reactive dependency on incoming messages
+            let messages = ws.messages.get();
+            leptos::logging::log!("[ONLINE COUNTER] Effect triggered, checking {} messages", messages.len());
+
+            // Read join_confirmed signal to trigger the first authoritative fetch deterministically
+            let join_confirmed = ws.join_confirmed.get();
+            let last_join_req = ws.last_join_request_id.get();
+            let status = ws.status.get();
+            
+            // Also check global join state to handle cross-instance join tracking
+            let token_str = token_opt.clone().unwrap_or_default();
+            let global_join_confirmed = global_ws::is_join_confirmed(&token_str);
+            let global_last_join_req = global_ws::get_last_join_request_id(&token_str);
+            
+            leptos::logging::log!("[ONLINE COUNTER] Effect triggered, local join_confirmed={}, global join_confirmed={}, local last_join_req={:?}, global last_join_req={:?}, status={:?}", 
+                join_confirmed, global_join_confirmed, last_join_req, global_last_join_req, status);
+
+            // Use global join state if available, otherwise fall back to local
+            let effective_join_confirmed = global_join_confirmed || join_confirmed;
+            let effective_last_req = global_last_join_req.clone().or(last_join_req.clone());
+
+            // Only act if we have an actual tracked join request, the socket is Open and the join was confirmed.
+            // Also check that we have messages (which suggests WS activity after mount).
+            // Additionally, ensure the join confirmation is for a current session (not stale).
+            let is_fresh_join = if global_join_confirmed && global_last_join_req.is_some() {
+                // If using global tracking, ensure it's confirmed
+                true
+            } else if join_confirmed && last_join_req.is_some() {
+                // If using local tracking, ensure it matches some recent activity
+                !messages.is_empty()
+            } else {
+                false
+            };
+
+            if effective_join_confirmed && effective_last_req.is_some() && status == WsStatus::Open && !has_done_initial_fetch_for_events.load(Ordering::SeqCst) && is_fresh_join {
+                has_done_initial_fetch_for_events.store(true, Ordering::SeqCst);
+                leptos::logging::log!("[ONLINE COUNTER] join_confirmed observed with fresh join, performing initial authoritative fetch");
+
+                let mounted_clone = mounted_for_events.clone();
+                let set_count = set_online_count.clone();
+
+                spawn_local(async move {
+                    // Small pause to allow backend to fully register the WS join even
+                    // after the socket answered ok. This mitigates a narrow race
+                    // where the server ack arrives before internal registration is done.
+                    crate::utils::timers::sleep_ms(200).await;
+                    let storage_service = StorageService::new();
+                    if let Some(token_response) = storage_service.get_token() {
+                        let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                        http_client.set_auth_token(Some(token_response.token));
+                        let membership_service = GroupMembershipService::new(http_client, storage_service);
+
+                        // Retry loop to tolerate a short race where the server hasn't yet registered
+                        // the websocket join and returns 403. We only retry on 403/Forbidden.
+                        let mut attempts = 0u8;
+                        let max_attempts = 5u8;
+                        loop {
+                            match membership_service.find_connected_users_and_online().await {
+                                Ok(online_user_ids) => {
+                                    let total_count = online_user_ids.len() as i32 + 1;
+                                    if mounted_clone.load(Ordering::SeqCst) {
+                                        set_count.set(Some(total_count));
+                                        leptos::logging::log!("[ONLINE COUNTER] Initial authoritative count loaded: {}", total_count);
                                     }
+                                    break;
                                 }
-                                ServerEvent::Groups(GroupEvent::Left { user_id }) => {
-                                    // Decrement counter when someone leaves
-                                    if mounted_for_msgs.load(Ordering::SeqCst) {
-                                        let storage_service = crate::utils::storage::StorageService::new();
-                                        if let Some(token_response) = storage_service.get_token() {
-                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                                            http_client.set_auth_token(Some(token_response.token));
-                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
-                                            let mounted_clone = mounted_for_msgs.clone();
-                                            
-                                            spawn_local(async move {
-                                                match membership_service.find_connected_users_and_online().await {
-                                                    Ok(users) => {
-                                                        if mounted_clone.load(Ordering::SeqCst) {
-                                                            set_online_count.set(Some(users.len() as i32));
-                                                            log::info!("Refreshed online count after member left connection: {}", users.len());
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // If we get 404, it means we're no longer in the group
-                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
-                                                            log::info!("No longer member of group, setting online count to 0");
-                                                            if mounted_clone.load(Ordering::SeqCst) {
-                                                                set_online_count.set(Some(0));
-                                                            }
-                                                        } else {
-                                                            log::error!("Failed to refresh online count after member left connection: {:?}", e);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
+                                Err(e) => {
+                                    let err_str = e.to_string();
+                                    leptos::logging::log!("[ONLINE COUNTER] Failed to load initial authoritative count (attempt {}): {:?}", attempts, err_str);
+                                    if attempts < max_attempts && (err_str.contains("403") || err_str.contains("Forbidden")) {
+                                        attempts += 1;
+                                        crate::utils::timers::sleep_ms(200).await;
+                                        continue;
                                     }
+                                    leptos::logging::log!("[ONLINE COUNTER] Giving up after {} attempts: {:?}", attempts, err_str);
+                                    break;
                                 }
-                                ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, new_membership_username }) => {
-                                    // New membership might affect online count, refresh from API
-                                    if mounted_for_msgs.load(Ordering::SeqCst) {
-                                        log::info!("New member {} joined group {}, refreshing online count", new_membership_username, group_id);
-                                        
-                                        let storage_service = crate::utils::storage::StorageService::new();
-                                        if let Some(token_response) = storage_service.get_token() {
-                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                                            http_client.set_auth_token(Some(token_response.token));
-                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
-                                            let mounted_clone = mounted_for_msgs.clone();
-                                            
-                                            spawn_local(async move {
-                                                match membership_service.find_connected_users_and_online().await {
-                                                    Ok(users) => {
-                                                        if mounted_clone.load(Ordering::SeqCst) {
-                                                            set_online_count.set(Some(users.len() as i32));
-                                                            log::info!("Refreshed online count after new membership: {}", users.len());
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // If we get 404, it means we're no longer in the group
-                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
-                                                            log::info!("No longer member of group, setting online count to 0");
-                                                            if mounted_clone.load(Ordering::SeqCst) {
-                                                                set_online_count.set(Some(0));
-                                                            }
-                                                        } else {
-                                                            log::error!("Failed to refresh online count after new membership: {:?}", e);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    }
-                                }
-                                ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username }) => {
-                                    // Check if the current user left the group
-                                    let storage_service = crate::utils::storage::StorageService::new();
-                                    if let Some(user_profile) = storage_service.get_user_profile() {
-                                        let current_username = user_profile.email.split('@').next().unwrap_or("");
-                                        if current_username == left_membership_username || user_profile.email == *left_membership_username {
-                                            // Current user left the group, stop updating online count
-                                            log::info!("Current user {} left group {}, stopping online count updates", left_membership_username, group_id);
-                                            if mounted_for_msgs.load(Ordering::SeqCst) {
-                                                set_online_count.set(Some(0));
-                                            }
-                                            return current_count;
-                                        }
-                                    }
-                                    
-                                    // Member left might affect online count, refresh from API
-                                    if mounted_for_msgs.load(Ordering::SeqCst) {
-                                        log::info!("Member {} left group {}, refreshing online count", left_membership_username, group_id);
-                                        
-                                        let storage_service = crate::utils::storage::StorageService::new();
-                                        if let Some(token_response) = storage_service.get_token() {
-                                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
-                                            http_client.set_auth_token(Some(token_response.token));
-                                            let membership_service = crate::api::services::membership::GroupMembershipService::new(http_client, storage_service);
-                                            let mounted_clone = mounted_for_msgs.clone();
-                                            
-                                            spawn_local(async move {
-                                                match membership_service.find_connected_users_and_online().await {
-                                                    Ok(users) => {
-                                                        if mounted_clone.load(Ordering::SeqCst) {
-                                                            set_online_count.set(Some(users.len() as i32));
-                                                            log::info!("Refreshed online count after member left group: {}", users.len());
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // If we get 404, it means we're no longer in the group
-                                                        if e.to_string().contains("404") || e.to_string().contains("Group membership not found") {
-                                                            log::info!("No longer member of group, setting online count to 0");
-                                                            if mounted_clone.load(Ordering::SeqCst) {
-                                                                set_online_count.set(Some(0));
-                                                            }
-                                                        } else {
-                                                            log::error!("Failed to refresh online count after member left group: {:?}", e);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    }
-                                }
-                                _ => {}
                             }
                         }
+                    }
+                });
+            }
+
+            // Cerca l'ultimo evento rilevante (Joined/Left o membership change)
+            let mut latest_event_id: Option<String> = None;
+            for message_ref in messages.iter().rev() {
+                // Clone to match by-value
+                let message = message_ref.clone();
+                if let WebSocketMessage::Event { event, timestamp } = message {
+                    match event {
+                        ServerEvent::Groups(GroupEvent::Joined { user_id }) => {
+                            latest_event_id = Some(format!("joined_{}_{}", user_id, timestamp));
+                            break;
+                        }
+                        ServerEvent::Groups(GroupEvent::Left { user_id }) => {
+                            latest_event_id = Some(format!("left_{}_{}", user_id, timestamp));
+                            break;
+                        }
+                        // When a membership is created (someone accepted an invite)
+                        ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, new_membership_username: _ }) => {
+                            latest_event_id = Some(format!("new_membership_{}_{}", group_id, timestamp));
+                            break;
+                        }
+                        // When a membership is removed/left
+                        ServerEvent::Groups(GroupEvent::LeftGroupMembership { group_id, left_membership_username: _ }) => {
+                            latest_event_id = Some(format!("left_membership_{}_{}", group_id, timestamp));
+                            break;
+                        }
+                        // When a new group chat is created
+                        ServerEvent::Groups(GroupEvent::NewGroupChat { group_chat_id }) => {
+                            latest_event_id = Some(format!("new_group_chat_{}_{}", group_chat_id, timestamp));
+                            break;
+                        }
+                        _ => continue,
                     }
                 }
             }
 
-            current_count
-        } else {
-            prev_message_count.unwrap_or(0)
+            // Se abbiamo un nuovo evento rilevante, aggiorniamo il counter
+            if let Some(event_id) = latest_event_id {
+                if Some(event_id.clone()) != last_event_signal.get() {
+                    last_event_signal.set(Some(event_id.clone()));
+                    
+                    leptos::logging::log!("[ONLINE COUNTER] Connection event detected: {}", event_id);
+                    
+                    let mounted_clone = mounted_for_events.clone();
+                    let set_count = set_online_count.clone();
+                    
+                    spawn_local(async move {
+                        let storage_service = StorageService::new();
+                        if let Some(token_response) = storage_service.get_token() {
+                            let http_client = crate::api::client::ApiClient::new(crate::config::constants::AppConstants::DEFAULT_SERVER_URL);
+                            http_client.set_auth_token(Some(token_response.token));
+                            let membership_service = GroupMembershipService::new(http_client, storage_service);
+
+                            // Retry loop as above for transient 403 during server join registration
+                            let mut attempts = 0u8;
+                            let max_attempts = 5u8;
+                            loop {
+                                match membership_service.find_connected_users_and_online().await {
+                                    Ok(online_user_ids) => {
+                                        let total_count = online_user_ids.len() as i32 + 1;
+                                        if mounted_clone.load(Ordering::SeqCst) {
+                                            set_count.set(Some(total_count));
+                                            leptos::logging::log!("[ONLINE COUNTER] Count updated after connection event: {}", total_count);
+                                        }
+                                        break;
+                                    }
+                                    Err(e) => {
+                                        let err_str = e.to_string();
+                                        leptos::logging::log!("[ONLINE COUNTER] Failed to update count (attempt {}): {:?}", attempts, err_str);
+                                        if attempts < max_attempts && (err_str.contains("403") || err_str.contains("Forbidden")) {
+                                            attempts += 1;
+                                            crate::utils::timers::sleep_ms(200).await;
+                                            continue;
+                                        }
+                                        // Special-case: if the group/membership is truly missing, show 0
+                                        if err_str.contains("404") || err_str.contains("Group membership not found") {
+                                            if mounted_clone.load(Ordering::SeqCst) {
+                                                set_count.set(Some(0));
+                                            }
+                                        }
+                                        leptos::logging::log!("[ONLINE COUNTER] Giving up after {} attempts: {:?}", attempts, err_str);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
         }
     });
 

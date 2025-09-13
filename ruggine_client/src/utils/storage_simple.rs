@@ -1,4 +1,5 @@
-use crate::config::storage::StorageKeys;
+use serde::{Deserialize, Serialize};
+use crate::config::storage::{StorageKeys, StorageConfig};
 use crate::types::{TokenResponse, UserProfile};
 use crate::error::StorageError;
 

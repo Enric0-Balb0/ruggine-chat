@@ -4,6 +4,7 @@ use crate::types::WebSocketMessage;
 use crate::types::message_ws::WsStatus;
 use crate::context::unread_counts_context::use_unread_counts_context;
 use crate::types::message_ws::{ServerEvent, GroupEvent};
+use crate::utils::storage::StorageService;
 
 #[derive(Clone, PartialEq)]
 pub struct UseGroupMessageWs {
@@ -101,16 +102,10 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                 }
             });
             
-            // Update the stored service and callback
+            // Update the stored service and status
             set_ws_service.set(Some(ws_svc));
+            set_global_status.set(global_stat.get_untracked());
             set_callback_id.set(Some(new_callback_id));
-            
-            // Create a new effect to monitor the global status signal changes
-            let set_global_status_inner = set_global_status.clone();
-            create_effect(move |_| {
-                let current_status = global_stat.get();
-                set_global_status_inner.set(current_status);
-            });
             
             leptos::logging::log!("[WS INST] Connected to WebSocket service for token");
         });
@@ -129,17 +124,17 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
 
     // Effect for sending messages
     {
+        let ws_service = ws_service.clone();
         let set_send_message = set_send_message.clone();
         let set_last_join_request_id = set_last_join_request_id.clone();
         let set_join_confirmed_effect = set_join_confirmed.clone();
         let global_status = global_status.clone();
-        let token_for_send = token.clone();
         
         create_effect(move |_| {
             if let Some(msg) = send_message.get() {
+                let ws_service = ws_service.clone();
                 let set_send_message = set_send_message.clone();
                 let global_status = global_status.clone();
-                let token_for_async = token_for_send.clone();
                 
                 spawn_local(async move {
                     // If this is a Join request, clear any previous confirmation and wait for the socket to be Open
@@ -157,10 +152,9 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                                     // mark the tracked id and send
                                     set_last_join_request_id.set(Some(request_id.clone()));
                                     leptos::logging::log!("[WS INST] Sending join request id {} after socket Open", request_id);
-                                    
-                                    // Always get the current service from global registry instead of using cached local reference
-                                    let (service, _) = global_ws::get_or_create(&token_for_async);
-                                    service.borrow().send(&msg);
+                                    if let Some(service) = ws_service.get_untracked() {
+                                        service.borrow().send(&msg);
+                                    }
                                     sent = true;
                                     break;
                                 }
@@ -174,13 +168,15 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                             }
                         } else {
                             // Non-join requests: try to send immediately (best-effort)
-                            let (service, _) = global_ws::get_or_create(&token_for_async);
-                            service.borrow().send(&msg);
+                            if let Some(service) = ws_service.get_untracked() {
+                                service.borrow().send(&msg);
+                            }
                         }
                     } else {
                         // Not a request (e.g., event) - send as-is
-                        let (service, _) = global_ws::get_or_create(&token_for_async);
-                        service.borrow().send(&msg);
+                        if let Some(service) = ws_service.get_untracked() {
+                            service.borrow().send(&msg);
+                        }
                     }
                     set_send_message.set(None);
                 });
@@ -227,30 +223,28 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
     }
 
     UseGroupMessageWs {
-        status: global_status,
+        status: global_status.read_only(),
         send_message: set_send_message,
-        messages: messages,
-        join_confirmed: join_confirmed,
-        last_join_request_id: last_join_request_id,
+        messages: messages.read_only(),
+        join_confirmed: join_confirmed.read_only(),
+        last_join_request_id: last_join_request_id.read_only(),
         reset_tracking: set_reset_tracking_flag,
         disconnect: set_disconnect,
     }
 }
 
-fn handle_unread_events(msg: &WebSocketMessage, unread_counts: &leptos::RwSignal<std::collections::HashMap<i32, u32>>) {
-    match msg {
-        WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewMessage { group_id, .. }), .. } => {
-            // Increment unread count for this group
-            unread_counts.update(|map| {
-                *map.entry(*group_id).or_insert(0) += 1;
-            });
+fn handle_unread_events(msg: &WebSocketMessage, unread_counts: &Option<crate::context::unread_counts_context::UnreadCountsContext>) {
+    if let Some(handler) = unread_counts {
+        match msg {
+            WebSocketMessage::Event { data: ServerEvent::Groups(GroupEvent::Message { group_id, message: _ }) } => {
+                // Only increment if the message is in a group that exists in the current context
+                handler.update_group_unread(group_id, 1);
+            }
+            WebSocketMessage::Event { data: ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, membership: _ }) } => {
+                // User added to a new group, don't increment but ensure group exists in the map
+                handler.ensure_group_exists(group_id);
+            }
+            _ => {}
         }
-        WebSocketMessage::Event { event: ServerEvent::Groups(GroupEvent::NewGroupMembership { group_id, .. }), .. } => {
-            // User added to a new group, ensure group exists in the map
-            unread_counts.update(|map| {
-                map.entry(*group_id).or_insert(0);
-            });
-        }
-        _ => {}
     }
 }

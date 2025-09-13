@@ -45,7 +45,8 @@ pub fn ChatView(
 ) -> impl IntoView {
     use leptos::use_context;
     use crate::hooks::use_group_message_ws::UseGroupMessageWs;
-    let ws_ctx = use_context::<Option<UseGroupMessageWs>>();
+    let ws_ctx_signal = use_context::<ReadSignal<Option<UseGroupMessageWs>>>()
+        .expect("WebSocket context should be provided");
     let (local_messages, set_local_messages) = create_signal(Vec::<Message>::new());
     let set_local_messages_rc = Rc::new(set_local_messages);
     let unread_counts = use_unread_counts_context();
@@ -58,19 +59,14 @@ pub fn ChatView(
     let (initial_messages, initial_loading, _initial_error, load_more, loading_more, has_more) = use_group_initial_messages(group_data.membership.group_chat_id, 50);
     let user_cache = use_group_user_cache(group_data.membership.group_chat_id);
 
-    // Create or reuse a single WebSocket hook for both chat messages and presence tracking.
-    // Prefer a hook provided via context (app-level) to ensure we subscribe to the same
-    // message buffer that is already receiving messages; fallback to creating a new
-    // hook using the stored token if none is available in context.
+
     let storage = StorageService::new();
-    // use_context returns Option<T>, and T here is Option<UseGroupMessageWs>, so we may
-    // get Some(Some(hook)). Handle both layers safely.
-    let unified_ws_hook: Option<UseGroupMessageWs> = match ws_ctx.clone() {
-        Some(Some(ctx_hook)) => {
+    let unified_ws_hook: Option<UseGroupMessageWs> = match ws_ctx_signal.get() {
+        Some(ctx_hook) => {
             leptos::logging::log!("[PRESENCE] Using UseGroupMessageWs from context (shared)");
             Some(ctx_hook)
         }
-        _ => {
+        None => {
             if let Some(token_response) = storage.get_token() {
                 leptos::logging::log!("[PRESENCE] No context WS hook found, creating local UseGroupMessageWs");
                 Some(use_group_message_ws(token_response.token))
@@ -110,7 +106,6 @@ pub fn ChatView(
     let navigate = use_navigate();
     let groups_ctx = use_groups_context();
 
-    // Effect to handle navigation when current user leaves group (only for remote leave events)
     {
         let navigate = navigate.clone();
         let groups_ctx = groups_ctx.clone();
@@ -124,7 +119,6 @@ pub fn ChatView(
         });
     }
 
-    // Process WebSocket events for presence tracking in a reactive way (no polling loop)
     {
         let ws_hook = unified_ws_hook.clone();
         let set_initial = set_initial_online_user_ids.clone();
@@ -145,6 +139,7 @@ pub fn ChatView(
                                         GroupEvent::Joined { .. } | GroupEvent::Left { .. } | 
                                         GroupEvent::NewGroupMembership { .. } | GroupEvent::LeftGroupMembership { .. } => {
                                             // For presence changes, refresh authoritative lists once
+                                            log::info!("[CHAT VIEW] Handling membership change event for group {}", group_id_for_update);
                                             let set_initial_inner = set_initial.clone();
                                             let set_members_inner = set_current_member_count.clone();
                                             let gid = group_id_for_update;
@@ -199,9 +194,11 @@ pub fn ChatView(
                                                 }
 
                                                 // Refresh member count for this group
+                                                log::info!("[CHAT VIEW] Refreshing member count for group {}", gid);
                                                 match membership_service.get_by_group_chat_id(&gid.to_string()).await {
                                                     Ok(group_members) => {
                                                         let new_count = group_members.len() as i32;
+                                                        log::info!("[CHAT VIEW] Updated member count for group {} to {}", gid, new_count);
                                                         set_members_inner.set(new_count);
                                                     }
                                                     Err(e) => {
@@ -321,18 +318,23 @@ pub fn ChatView(
             let anchor_scroll_locked_for_send_inner = anchor_scroll_locked_for_send.clone();
             // Capture the current container (if any) now so the delayed closure does not
             // access the reactive NodeRef signal after the component may have been disposed.
-            let captured_container_for_scroll = messages_container_ref_for_scroll.get();
+            let captured_container_for_scroll = messages_container_ref_for_scroll.get_untracked();
+            // Capture current scroll lock and user scroll state to avoid accessing signals in timeout
+            let is_scroll_locked = anchor_scroll_locked_for_send_inner.get();
+            let has_user_scrolled = user_scrolled_once.get();
             set_timeout(move || {
                 let doc = match web_sys::window() {
                     Some(w) => match w.document() { Some(d) => d, None => return },
                     None => return,
                 };
                 if let Some(elem) = doc.get_element_by_id(&format!("msg-{}", last_id)) {
-                    if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
+                    // Use captured values instead of accessing signals
+                    if !is_scroll_locked && !has_user_scrolled {
                         let _ = elem.scroll_into_view_with_bool(true);
                     }
                 } else if let Some(container) = captured_container_for_scroll.clone() {
-                    if !anchor_scroll_locked_for_send_inner.get() && !user_scrolled_once.get() {
+                    // Use captured values instead of accessing signals
+                    if !is_scroll_locked && !has_user_scrolled {
                         container.set_scroll_top(container.scroll_height());
                     }
                 }
@@ -352,7 +354,7 @@ pub fn ChatView(
             // Auto-scroll to bottom after sending a message
             let messages_container_ref_scroll = messages_container_ref_for_send.clone();
             // Capture the container now to avoid accessing the NodeRef inside the async task
-            let captured_container_for_send = messages_container_ref_for_send.get();
+            let captured_container_for_send = messages_container_ref_for_send.get_untracked();
             leptos::spawn_local(async move {
                 // Small delay to ensure DOM is updated
                 crate::utils::timers::sleep_ms(10).await;
@@ -478,12 +480,17 @@ pub fn ChatView(
 
                         let attempts_clone = attempts.clone();
                         let anchor_scroll_locked_for_retry = anchor_lock_for_closure.clone();
+                        // Capture the current container (if any) now so the delayed closures
+                        // do not access the reactive NodeRef signal after the component may
+                        // have been disposed.
+                        let captured_container_for_retry = messages_container_ref_clone.get();
+
                         set_timeout(move || {
                             let mut loop_continue = false;
                             let current_msgs = messages_clone.get_untracked();
                             if let Some(found) = current_msgs.iter().find(|m| unread_ids_clone.contains(&m.id)) {
                                 set_anchor_clone.set(Some(found.id));
-                                if let Some(container) = messages_container_ref_clone.get() {
+                                if let Some(container) = captured_container_for_retry.clone() {
                                     let doc = match web_sys::window() {
                                         Some(w) => match w.document() { Some(d) => d, None => return },
                                         None => return,
@@ -884,7 +891,7 @@ pub fn ChatView(
             let current_messages = messages_for_auto_read.get();
             
             // Only process if we have a container and messages
-            if let Some(container) = messages_container_ref_for_auto_read.get() {
+                                if let Some(container) = messages_container_ref_for_auto_read.get() {
                 if !current_messages.is_empty() {
                     
                     // Use a short timeout to ensure DOM is updated
@@ -1098,15 +1105,20 @@ pub fn ChatView(
         let current_state = dropdown_state.get();
         if matches!(current_state, DropdownState::Open | DropdownState::Opening) {
             let handle_click_outside = move |event: web_sys::Event| {
-                if let Some(dropdown_element) = dropdown_ref.get_untracked() {
+                // Safe access to dropdown_ref - get the element at closure creation time
+                let dropdown_element = dropdown_ref.get_untracked();
+                if let Some(dropdown_element) = dropdown_element {
                     if let Some(target) = event.target() {
                         if let Ok(element) = target.dyn_into::<web_sys::Element>() {
                             if !dropdown_element.contains(Some(&element)) {
-                                set_dropdown_state.set(DropdownState::Closing);
-                                set_timeout(
-                                    move || set_dropdown_state.set(DropdownState::Closed),
-                                    std::time::Duration::from_millis(150)
-                                );
+                                // Use untrack to avoid reactive access in event handler
+                                untrack(|| {
+                                    set_dropdown_state.set(DropdownState::Closing);
+                                    set_timeout(
+                                        move || set_dropdown_state.set(DropdownState::Closed),
+                                        std::time::Duration::from_millis(150)
+                                    );
+                                });
                             }
                         }
                     }
@@ -1524,11 +1536,13 @@ pub fn ChatView(
             <div class="shrink-0 bg-inherit z-10 relative">
                 {move || {
                     use leptos::use_context;
-                    let ws_ctx = use_context::<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>();
+                    let ws_ctx_signal = use_context::<ReadSignal<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>>()
+                        .expect("WebSocket context should be provided");
+                    let ws_ctx = ws_ctx_signal.get();
                     view! {
                         <div class="relative w-full">
                             <MessageInputArea
-                                ws_ctx=ws_ctx.flatten()
+                                ws_ctx=ws_ctx
                                 group_id=group_data.membership.group_chat_id
                                 on_message_sent=add_message.clone()
                             />

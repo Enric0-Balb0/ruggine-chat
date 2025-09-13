@@ -25,7 +25,8 @@ pub fn Sidebar(
     let unread_counts = use_unread_counts_context();
 
     // Access websocket context if available so sidebar can react to membership changes
-    let ws_ctx = use_context::<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>();
+    let ws_ctx_signal = use_context::<ReadSignal<Option<crate::hooks::use_group_message_ws::UseGroupMessageWs>>>()
+        .expect("WebSocket context should be provided");
 
     // Lightweight memo for possible future debug; not rendered by default.
     let _debug_unread = create_memo(move |_| unread_counts.get().clone());
@@ -125,9 +126,10 @@ pub fn Sidebar(
     // React to membership WS events coming from any other client/device
     // When a NewGroupMembership or LeftGroupMembership arrives, refresh groups and invitations
     create_effect(move |prev_len: Option<usize>| {
-        // use_context returns Option<Option<UseGroupMessageWs>> here; handle both layers
+        // Get the current WebSocket context from the signal
+        let ws_ctx_current = ws_ctx_signal.get();
         let mut current_len = prev_len.unwrap_or(0);
-        if let Some(Some(ws_hook)) = ws_ctx.clone() {
+        if let Some(ws_hook) = ws_ctx_current {
             let msgs = ws_hook.messages.get();
             current_len = msgs.len();
             if let Some(prev) = prev_len {
@@ -146,6 +148,13 @@ pub fn Sidebar(
                                             let _ = crate::context::invitations_context::refresh_invitations().await;
                                         });
                                         // OnlineUsersCounter listens to WS itself; no direct call needed here
+                                    }
+                                    crate::types::message_ws::GroupEvent::NewInvitation { invitation_id } => {
+                                        // When a new invitation is received, refresh the invitations context to update the counter
+                                        leptos::logging::log!("[SIDEBAR] NewInvitation event received for invitation {}", invitation_id);
+                                        spawn_local(async move {
+                                            let _ = crate::context::invitations_context::refresh_invitations().await;
+                                        });
                                     }
                                     _ => {}
                                 }
@@ -272,20 +281,18 @@ pub fn Sidebar(
             </div>
 
             {/* Sezione fissa in fondo: Inviti e Crea gruppo */}
-            {move || {
-                view! {
-                    <div class="border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col">
-                        <div class="p-4 flex flex-col gap-2">
-                            {/* Bottone Crea gruppo */}
-                            <CreateGroupButton on_create_click=handle_create_click />
-                            {/* Bottone Inviti */}
-                            <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={pending_invites_count.get()} />
-                        </div>
-                        {/* Contatore utenti online */}
-                        <OnlineUsersCounter />
-                    </div>
-                }.into_view()
-            }}
+            <div class="border-t border-border dark:border-border-dark bg-bg-sidebar dark:bg-bg-sidebar-dark flex flex-col">
+                <div class="p-4 flex flex-col gap-2">
+                    {/* Bottone Crea gruppo */}
+                    <CreateGroupButton on_create_click=handle_create_click />
+                    {/* Bottone Inviti - solo questo è reattivo */}
+                    {move || view! {
+                        <ShowInvitesButton on_show_invites_click=handle_show_invites_click pending_count={pending_invites_count.get()} />
+                    }}
+                </div>
+                {/* Contatore utenti online - FUORI dalla closure reattiva */}
+                <OnlineUsersCounter />
+            </div>
 
             {/* Modal Inviti */}
             <ShowInvitesModal

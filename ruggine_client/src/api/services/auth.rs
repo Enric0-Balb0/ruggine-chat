@@ -67,8 +67,12 @@ impl AuthService {
     /// Check if token needs refresh (within threshold before expiry)
     pub fn needs_token_refresh(&self) -> bool {
         if let Some(token) = self.storage_service.get_token() {
-            // Use the same adaptive logic as should_refresh_token
-            crate::hooks::should_refresh_token(&token)
+            // Check if token expires within the next hour (3600 seconds)
+            let current_time = chrono::Utc::now().timestamp();
+            let expiry_time = token.exp;
+            let threshold = 3600; // 1 hour
+            
+            (expiry_time - current_time) <= threshold
         } else {
             false
         }
@@ -87,16 +91,26 @@ impl AuthService {
     /// Login user with email and password
     pub async fn login(&self, email: String, password: String) -> Result<UserProfile, AuthError> {
         self.validate_login_input(&email, &password)?;
+        
+        // Clear any existing token
         self.http_client.set_auth_token(None);
+        
+        // Disable automatic redirect on 401 for login requests
+        self.http_client.set_skip_unauthorized_redirect(true);
 
         let request = LoginRequest {
             email: email.trim().to_lowercase(),
             password: password.trim().to_string(),
         };
 
-        let token_response: ApiSuccessResponseTokenReadDto = self.http_client
+        let login_result = self.http_client
             .post(ApiEndpoints::AUTH_LOGIN, &request)
-            .await
+            .await;
+        
+        // Re-enable automatic redirect after login attempt
+        self.http_client.set_skip_unauthorized_redirect(false);
+        
+        let token_response: ApiSuccessResponseTokenReadDto = login_result
             .map_err(AuthError::from)?;
 
         // Convert token but don't store it yet - let the caller decide how to store it

@@ -8,11 +8,6 @@ impl StorageKeys {
     pub const LOGIN_ATTEMPTS: &'static str = "ruggine_login_attempts";
     pub const LAST_LOGIN: &'static str = "ruggine_last_login";
     
-    // Remember Me functionality
-    pub const REMEMBER_ME_ENABLED: &'static str = "ruggine_remember_me";
-    pub const REMEMBER_ME_CREDENTIALS: &'static str = "ruggine_remember_credentials";
-    pub const REMEMBER_ME_EXPIRY: &'static str = "ruggine_remember_expiry";
-    
     // Chat storage
     pub const MESSAGES_PREFIX: &'static str = "ruggine_messages_";
     pub const GROUPS: &'static str = "ruggine_groups";
@@ -64,10 +59,6 @@ impl StorageConfig {
     /// Cache expiration times (in minutes)
     pub const CACHE_EXPIRY_MINUTES: u64 = 60;
     pub const OFFLINE_CACHE_EXPIRY_MINUTES: u64 = 1440; // 24 hours
-    
-    /// Remember Me settings
-    pub const REMEMBER_ME_DURATION_DAYS: u64 = 30; // 30 giorni
-    pub const AUTO_REFRESH_BEFORE_EXPIRY_HOURS: u64 = 2; // Refresh 2h prima della scadenza
     
     /// Cleanup intervals
     pub const CLEANUP_INTERVAL_MINUTES: u64 = 30;

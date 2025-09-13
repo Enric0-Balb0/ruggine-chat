@@ -24,6 +24,8 @@ pub struct MessageWsService {
     // such as unread counters or invitations to prevent duplicate updates when
     // multiple components attach to the same underlying socket.
     unread_incrementer_id: Rc<RefCell<Option<usize>>>,
+    // Queue messages sent before the socket is fully initialized/open; flushed on onopen
+    send_queue: Rc<RefCell<Vec<WebSocketMessage>>>,
 }
 
 impl MessageWsService {
@@ -33,6 +35,7 @@ impl MessageWsService {
             status: Rc::new(RefCell::new(Some(status))),
             on_message: Rc::new(RefCell::new(Vec::new())),
             unread_incrementer_id: Rc::new(RefCell::new(None)),
+            send_queue: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -110,12 +113,31 @@ impl MessageWsService {
 
         // Setup basic WebSocket events
         let status_rc = self.status.clone();
+        let queue_rc = self.send_queue.clone();
+        let ws_clone_for_open = ws.clone();
         let url_clone = url.to_string();
         let svc_ptr_clone = svc_ptr.clone();
         let onopen = Closure::wrap(Box::new(move |_e: Event| {
             log!("[SOCKET] Connected to {} (svc={})", url_clone, svc_ptr_clone);
             if let Some(s) = status_rc.borrow().as_ref() {
                 s.set(WsStatus::Open);
+                log!("[SOCKET] Status set to Open (svc={})", svc_ptr_clone);
+            }
+            // Flush any queued messages now that the socket is open
+            let mut q = queue_rc.borrow_mut();
+            log!("[SOCKET] Checking message queue: {} items (svc={})", q.len(), svc_ptr_clone);
+            if !q.is_empty() {
+                for msg in q.drain(..) {
+                    if let Ok(data) = serde_json::to_string(&msg) {
+                        match ws_clone_for_open.send_with_str(&data) {
+                            Ok(_) => log!("[SOCKET] Flushed queued message (svc={}): {}", svc_ptr_clone, data),
+                            Err(e) => log!("[SOCKET] Error flushing queued message: {:?}", e),
+                        }
+                    }
+                }
+                log!("[SOCKET] All queued messages flushed (svc={})", svc_ptr_clone);
+            } else {
+                log!("[SOCKET] No queued messages to flush (svc={})", svc_ptr_clone);
             }
         }) as Box<dyn FnMut(_)>);
         ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));
@@ -181,22 +203,35 @@ impl MessageWsService {
     self.ws = Some(ws);
     }
 
-    // Send a serialized message only if the connection is Open
+    // Send a serialized message; if not ready, queue it and it will be flushed on open
     pub fn send(&self, msg: &WebSocketMessage) {
         let current_status = self.status();
+        let svc_ptr = format!("{:p}", self as *const _);
+        let ws_ready = self.ws.is_some();
+        let ws_state = if let Some(ws) = &self.ws {
+            format!("ready_state={}", ws.ready_state())
+        } else {
+            "None".to_string()
+        };
+        log!("[SOCKET] send() called (svc={}, ws_ready={}, ws_state={}, status={:?})", svc_ptr, ws_ready, ws_state, current_status);
+        
         if let Some(ws) = &self.ws {
             if current_status == WsStatus::Open {
                 let data = serde_json::to_string(msg).expect("serialize ws msg");
-                log!("[SOCKET] Sending message (svc={}): {}", format!("{:p}", self as *const _), data);
+                log!("[SOCKET] Sending message (svc={}): {}", svc_ptr, data);
                 match ws.send_with_str(&data) {
                     Ok(_) => log!("[SOCKET] Message sent successfully"),
                     Err(e) => log!("[SOCKET] Error sending message: {:?}", e),
                 }
             } else {
-                log!("[SOCKET] Tried to send message but socket is not open");
+                // Queue the message to be sent when the socket opens
+                self.send_queue.borrow_mut().push(msg.clone());
+                log!("[SOCKET] Queued message until open (status={:?})", current_status);
             }
         } else {
-            log!("[SOCKET] Tried to send message but socket is not initialized");
+            // Queue the message to be sent when the socket initializes/opens
+            self.send_queue.borrow_mut().push(msg.clone());
+            log!("[SOCKET] Queued message until socket is initialized");
         }
     }
 
@@ -218,6 +253,8 @@ impl MessageWsService {
     self.status.borrow_mut().take();
     // Clear the global unread incrementer marker as well
     self.unread_incrementer_id.borrow_mut().take();
+    // Clear any queued messages
+    self.send_queue.borrow_mut().clear();
     }
 
     pub fn status(&self) -> WsStatus {

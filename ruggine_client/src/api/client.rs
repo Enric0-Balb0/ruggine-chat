@@ -14,6 +14,7 @@ pub struct ApiClient {
     base_url: String,
     auth_token: Arc<Mutex<Option<String>>>,
     storage_service: StorageService,
+    skip_unauthorized_redirect: Arc<Mutex<bool>>,
 }
 
 impl ApiClient {
@@ -28,6 +29,7 @@ impl ApiClient {
             base_url: base_url.into(),
             auth_token: Arc::new(Mutex::new(None)),
             storage_service: StorageService::new(),
+            skip_unauthorized_redirect: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -51,7 +53,15 @@ impl ApiClient {
         self.auth_token.lock().ok().and_then(|guard| guard.clone())
     }
 
-    /// Costruisce l'URL completo per un endpoint
+    /// Disabilita temporaneamente il redirect automatico per 401
+    /// Utile per chiamate di login dove vogliamo gestire manualmente l'errore
+    pub fn set_skip_unauthorized_redirect(&self, skip: bool) {
+        if let Ok(mut flag) = self.skip_unauthorized_redirect.lock() {
+            *flag = skip;
+        }
+    }
+
+    /// Construisce l'URL completo per un endpoint
     fn build_url(&self, endpoint: &str) -> String {
         format!("{}/api{}", self.base_url.trim_end_matches('/'), endpoint)
     }
@@ -99,7 +109,15 @@ impl ApiClient {
         } else {
             // Gestione speciale per 401 Unauthorized
             if status.as_u16() == 401 {
-                self.handle_unauthorized().await;
+                // Solo se non è disabilitato il redirect automatico
+                let should_redirect = self.skip_unauthorized_redirect
+                    .lock()
+                    .map(|flag| !*flag)
+                    .unwrap_or(true);
+                
+                if should_redirect {
+                    self.handle_unauthorized().await;
+                }
             }
             
             // Prova a parsare come errore strutturato

@@ -60,8 +60,9 @@ pub fn GroupDetailsModal(
     let user_service = UserService::new(http_client.clone(), storage_service.clone());
     let group_service = crate::api::services::GroupChatService::new(http_client, storage_service.clone());
     // Optional WebSocket context (provided by AppLayout). This returns
-    // Option<UseGroupMessageWs> wrapped in Option from use_context.
-    let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
+    // ReadSignal<Option<UseGroupMessageWs>> from use_context.
+    let ws_ctx_signal = use_context::<ReadSignal<Option<UseGroupMessageWs>>>()
+        .expect("WebSocket context should be provided");
 
     create_effect(move |_| {
         if is_open.get() {
@@ -213,7 +214,7 @@ pub fn GroupDetailsModal(
 
             // Listen to WebSocket messages (if available) and update member online state in real-time
             {
-                let ws_ctx_opt = ws_ctx_opt.clone();
+                let ws_ctx_signal = ws_ctx_signal.clone();
                 let set_members_signal = set_members_signal.clone();
                 let members_signal = members_signal.clone();
 
@@ -224,8 +225,8 @@ pub fn GroupDetailsModal(
                             break;
                         }
 
-                        // ws_ctx_opt: Option<Option<UseGroupMessageWs>>
-                        if let Some(Some(ws)) = ws_ctx_opt.as_ref() {
+                        // Get current WebSocket context
+                        if let Some(ws) = ws_ctx_signal.get_untracked() {
                             // read the current messages buffer (clone) and inspect the last one
                             let msgs = ws.messages.get_untracked();
                             if let Some(last_msg) = msgs.last().cloned() {

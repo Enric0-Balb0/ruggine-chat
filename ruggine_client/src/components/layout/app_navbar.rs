@@ -18,17 +18,23 @@ pub fn AppNavbar() -> impl IntoView {
     // Toast for user feedback
     let toast = use_toast();
     let navigate = use_navigate();
-    let ws_ctx_opt = use_context::<Option<UseGroupMessageWs>>();
+    let ws_ctx_signal = use_context::<ReadSignal<Option<UseGroupMessageWs>>>()
+        .expect("WebSocket context should be provided");
 
     // Usa il context di autenticazione per ottenere il profilo utente reattivo
     let auth_ctx = crate::context::auth_context::use_auth_context();
     
-    // Debug logging per verificare il profilo utente e stato Remember Me
+    // Debug logging per verificare il profilo utente e lo stato del localStorage
     let storage_debug = StorageService::new();
-    let remember_me_active = storage_debug.is_remember_me_active();
     let has_token = storage_debug.get_token().is_some();
+    let has_profile_in_storage = storage_debug.get_user_profile().is_some();
     
-    log::info!("AppNavbar: Remember Me attivo = {}, Token presente = {}", remember_me_active, has_token);
+    log::info!("AppNavbar: Token presente = {}, Profilo in localStorage = {}", has_token, has_profile_in_storage);
+    
+    // Se abbiamo token ma non profilo nel context, proviamo a ricaricarlo
+    if has_token && !has_profile_in_storage {
+        log::warn!("AppNavbar: Token presente ma profilo mancante nel localStorage - possibile problema di sincronizzazione");
+    }
     
     // Crea un memo per il profilo utente che reagisce ai cambiamenti
     let user_profile = create_memo(move |_| {
@@ -39,21 +45,49 @@ pub fn AppNavbar() -> impl IntoView {
                 profile.first_name, profile.last_name, profile.email);
         } else {
             log::warn!("AppNavbar: Nessun profilo utente trovato nel context");
-            
-            // Verifica cosa abbiamo in localStorage
-            if remember_me_active {
-                log::info!("AppNavbar: Remember Me è attivo ma profilo mancante - possibile problema di auto-login");
-                if let Some((email, _)) = storage_debug.get_remember_me_credentials() {
-                    log::info!("AppNavbar: Credenziali Remember Me trovate per email: {}", email);
-                } else {
-                    log::warn!("AppNavbar: Credenziali Remember Me mancanti");
-                }
-            } else {
-                log::info!("AppNavbar: Remember Me non attivo, utente deve fare login manuale");
-            }
+            log::info!("AppNavbar: Utente deve fare login manuale");
         }
         
         profile
+    });
+
+    // Effetto per tentare di ricaricare il profilo se abbiamo token ma non profilo
+    create_effect(move |_| {
+        let token = auth_ctx.token.get();
+        let profile = auth_ctx.user_profile.get();
+        
+        // Se abbiamo token ma non profilo, proviamo a ricaricarlo dal server
+        if token.is_some() && profile.is_none() {
+            log::info!("AppNavbar: Token presente ma profilo mancante, tentativo di ricaricarlo dal server");
+            
+            spawn_local(async move {
+                use crate::api::services::UserService;
+                use crate::api::client::ApiClient;
+                use crate::config::constants::AppConstants;
+                use crate::utils::StorageService;
+                
+                let storage = StorageService::new();
+                let client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
+                let user_service = UserService::new(client, storage.clone());
+                
+                match user_service.get_current_profile().await {
+                    Ok(profile) => {
+                        log::info!("AppNavbar: Profilo ricaricato con successo dal server: {} {}", 
+                            profile.first_name, profile.last_name);
+                        
+                        // Salva il profilo nel localStorage e aggiorna il context
+                        if let Err(e) = storage.store_user_profile(&profile) {
+                            log::error!("AppNavbar: Errore nel salvare il profilo ricaricato: {:?}", e);
+                        } else {
+                            auth_ctx.user_profile.set(Some(profile));
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("AppNavbar: Errore nel ricaricare il profilo dal server: {:?}", e);
+                    }
+                }
+            });
+        }
     });
     
     let is_admin = move || user_profile.get().as_ref().map(|u| u.is_admin()).unwrap_or(false);
@@ -84,19 +118,19 @@ pub fn AppNavbar() -> impl IntoView {
     let toast = toast.clone();
     let navigate = navigate.clone();
     let set_is_menu_open = set_is_menu_open;
-    let ws_ctx_opt = ws_ctx_opt.clone();
+    let ws_ctx_signal = ws_ctx_signal.clone();
     let auth_ctx = auth_ctx.clone();
         
     Callback::new(move |_: leptos::ev::MouseEvent| {
             set_is_menu_open.set(false);
             let toast = toast.clone();
             let navigate = navigate.clone();
-            let ws_to_use = ws_ctx_opt.clone();
+            let ws_to_use = ws_ctx_signal.get();
             let auth_ctx = auth_ctx.clone();
 
             spawn_local(async move {
                 // Send leave message first if WebSocket is available
-                if let Some(Some(ws)) = ws_to_use.clone() {
+                if let Some(ref ws) = ws_to_use {
                     ws.send_message.set(Some(WebSocketMessage::Request {
                         request_id: uuid::Uuid::new_v4().to_string(),
                         action: ClientAction::Groups(GroupAction::Leave {}),
@@ -132,7 +166,7 @@ pub fn AppNavbar() -> impl IntoView {
                 }
 
                 // Disconnect WebSocket only once, at the end
-                if let Some(Some(ws)) = ws_to_use.clone() {
+                if let Some(ref ws) = ws_to_use {
                     // Try to disconnect, but catch any panics if signal is disposed
                     let _ = std::panic::catch_unwind(|| {
                         ws.disconnect.set(true);

@@ -460,7 +460,6 @@ mod auth_service_unit_tests {
         
         // Clear any existing data
         let _ = storage_service.clear_session();
-        let _ = storage_service.clear_remember_me();
         
         // Test login without automatic profile saving
         let result = tokio_test::block_on(async {
@@ -499,78 +498,6 @@ mod auth_service_unit_tests {
         // that profiles should only be saved when explicitly requested
         let user_result = auth_service.get_current_user();
         assert!(user_result.is_none(), "Profile should not be available without explicit fetch/save");
-    }
-
-    #[test] 
-    fn test_dual_storage_system_compatibility() {
-        let _lock = TEST_MUTEX.lock().unwrap();
-        let auth_service = setup_auth_service();
-        let storage_service = auth_service.get_storage_service();
-        
-        // Clear storage first
-        let _ = storage_service.clear_session();
-        let _ = storage_service.clear_remember_me();
-        
-        let mock_token = crate::common::TestFactory::mock_token_response();
-        let mock_profile = crate::common::TestFactory::mock_user_profile();
-        
-        // Test storage with Remember Me enabled (should use localStorage)
-        let result1 = storage_service.store_token_with_remember_me(&mock_token, true);
-        assert!(result1.is_ok(), "Should store token with Remember Me");
-        
-        let result2 = storage_service.store_user_profile_with_remember_me(&mock_profile, true);
-        assert!(result2.is_ok(), "Should store profile with Remember Me");
-        
-        // Verify data is accessible
-        assert!(storage_service.get_token().is_some(), "Token should be retrievable");
-        assert!(storage_service.get_user_profile().is_some(), "Profile should be retrievable");
-        
-        // Test storage without Remember Me (should use sessionStorage)
-        let _ = storage_service.clear_session();
-        
-        let result3 = storage_service.store_token_with_remember_me(&mock_token, false);
-        assert!(result3.is_ok(), "Should store token without Remember Me");
-        
-        let result4 = storage_service.store_user_profile_with_remember_me(&mock_profile, false);
-        assert!(result4.is_ok(), "Should store profile without Remember Me");
-        
-        // Verify data is still accessible
-        assert!(storage_service.get_token().is_some(), "Token should be retrievable from sessionStorage");
-        assert!(storage_service.get_user_profile().is_some(), "Profile should be retrievable from sessionStorage");
-    }
-
-    #[test]
-    fn test_remember_me_credentials_management() {
-        let _lock = TEST_MUTEX.lock().unwrap();
-        let auth_service = setup_auth_service();
-        let storage_service = auth_service.get_storage_service();
-        
-        // Clear any existing Remember Me data
-        let _ = storage_service.clear_remember_me();
-        
-        let email = "test@example.com";
-        let password = "password123";
-        
-        // Test setting Remember Me credentials
-        let result = storage_service.set_remember_me(email, password, true);
-        assert!(result.is_ok(), "Should set Remember Me credentials");
-        
-        // Test checking if Remember Me is active
-        assert!(storage_service.is_remember_me_active(), "Remember Me should be active");
-        
-        // Test retrieving credentials
-        let credentials = storage_service.get_remember_me_credentials();
-        assert!(credentials.is_some(), "Should retrieve Remember Me credentials");
-        
-        let (retrieved_email, retrieved_password) = credentials.unwrap();
-        assert_eq!(retrieved_email, email, "Email should match");
-        assert_eq!(retrieved_password, password, "Password should match");
-        
-        // Test clearing Remember Me
-        let clear_result = storage_service.clear_remember_me();
-        assert!(clear_result.is_ok(), "Should clear Remember Me");
-        assert!(!storage_service.is_remember_me_active(), "Remember Me should be inactive after clear");
-        assert!(storage_service.get_remember_me_credentials().is_none(), "Credentials should be cleared");
     }
 
     #[test]
@@ -614,7 +541,6 @@ mod auth_service_unit_tests {
         
         // Clear storage
         let _ = storage_service.clear_session();
-        let _ = storage_service.clear_remember_me();
         
         // Test authentication with Remember Me enabled
         let mock_token = crate::common::TestFactory::mock_token_response();
@@ -641,9 +567,6 @@ mod auth_service_unit_tests {
         // Should still be authenticated (data in localStorage)
         assert!(auth_service.is_authenticated(), "Should remain authenticated after session clear with Remember Me");
         
-        // Clear Remember Me
-        let _ = storage_service.clear_remember_me();
-        
         // Should no longer be authenticated
         assert!(!auth_service.is_authenticated(), "Should not be authenticated after clearing Remember Me");
         assert!(auth_service.get_current_user().is_none(), "Should not have current user after clearing");
@@ -658,14 +581,13 @@ mod auth_service_unit_tests {
         
         // Clear storage
         let _ = storage_service.clear_session();
-        let _ = storage_service.clear_remember_me();
         
         let mock_token = crate::common::TestFactory::mock_token_response();
         let mock_profile = crate::common::TestFactory::mock_user_profile();
         
-        // Store without Remember Me (sessionStorage)
-        let _ = storage_service.store_token_with_remember_me(&mock_token, false);
-        let _ = storage_service.store_user_profile_with_remember_me(&mock_profile, false);
+        // Store using standard methods (sessionStorage)
+        let _ = storage_service.store_token(&mock_token);
+        let _ = storage_service.store_user_profile(&mock_profile);
         
         // Should be authenticated
         assert!(auth_service.is_authenticated(), "Should be authenticated with valid token in sessionStorage");

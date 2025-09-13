@@ -90,18 +90,10 @@ pub fn ShowInvitesModal(
             if let Some(all_invites) = invitation_service.get_user_invitations()
                 .with_auto_retry("load user invitations").await {
                 // diagnostic logs: see how many invites returned and which user id we read from storage
-                leptos::logging::log!("ShowInvitesModal: fetched invites count = {}", all_invites.len());
                 
                 let current_user_id = crate::utils::storage::StorageService::new()
                     .get_user_profile()
                     .map(|u| u.id);
-                leptos::logging::log!("ShowInvitesModal: current_user_id from storage = {:?}", current_user_id);
-                
-                // Debug: log all invites before filtering
-                for inv in &all_invites {
-                    leptos::logging::log!("ShowInvitesModal: invite {} - from_user_id: {}, to_user_id: {}, status: {}", 
-                        inv.id, inv.from_user_id, inv.to_user_id, inv.status);
-                }
                 
                 // Filter pending invites
                 let pending_filtered = all_invites.clone().into_iter()
@@ -133,7 +125,6 @@ pub fn ShowInvitesModal(
                 
                 let pending_len = pending_filtered.len();
                 let all_len = all_filtered.len();
-                leptos::logging::log!("ShowInvitesModal: pending_invites length = {}, all_invites length = {}", pending_len, all_len);
                 
                 set_local_invites.set(pending_filtered);
                 set_all_invites.set(all_filtered);
@@ -152,8 +143,6 @@ pub fn ShowInvitesModal(
                 // Load immediately when modal opens
                 load_fn();
                 
-                // Note: Polling removed - invitations are now updated via WebSocket events
-                // The invitations context is automatically updated when NewInvitation events are received
             }
         });
     }
@@ -161,7 +150,8 @@ pub fn ShowInvitesModal(
     let groups_ctx = use_groups_context();
     
     // Try to get WebSocket context - may not be available
-    let ws_ctx = use_context::<Option<UseGroupMessageWs>>();
+    let ws_ctx_signal = use_context::<ReadSignal<Option<UseGroupMessageWs>>>()
+        .expect("WebSocket context should be provided");
     let handle_close = move |_| {
         // Refetch gruppi quando si chiude il modal
         groups_ctx.groups_hook.refresh_groups.dispatch(());

@@ -7,7 +7,6 @@ use crate::components::ToastProvider;
 use crate::context::auth_context::{provide_auth_context, use_auth_context};
 use crate::context::unread_counts_context::provide_unread_counts_context;
 use crate::context::invitations_context::provide_invitations_context;
-use crate::hooks::{RememberMeRefreshProvider, use_remember_me_init};
 use crate::hooks::use_app_group_ws::use_app_group_ws;
 
 #[component]
@@ -19,9 +18,7 @@ pub fn App() -> impl IntoView {
     view! {
         <ThemeProvider>
             <ToastProvider>
-                <RememberMeRefreshProvider>
-                    <AppContent />
-                </RememberMeRefreshProvider>
+                <AppContent />
             </ToastProvider>
         </ThemeProvider>
     }
@@ -32,13 +29,10 @@ pub fn AppContent() -> impl IntoView {
     let _theme_ctx = use_theme();
     let auth_ctx = use_auth_context();
     let token = auth_ctx.token.read_only();
-    
-    // Inizializza Remember Me all'avvio dell'app
-    use_remember_me_init();
 
     // Inizializza il WebSocket globalmente per tutta l'app (una sola volta)
     let ws_ctx = use_app_group_ws(token);
-    provide_context(ws_ctx.clone());
+    provide_context(ws_ctx);
 
     // Populate invitations context once when we have a token so pending_count is correct
     create_effect(move |_| {

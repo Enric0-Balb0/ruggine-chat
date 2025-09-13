@@ -21,14 +21,14 @@
 }
   @layer components {
     .chat-bg-light {
-      background-image: url('public/images/chat-bg-white.png') !important;
+  background-image: url('/public/images/chat-bg-white.png') !important;
       background-size: cover !important;
       background-position: center !important;
       background-repeat: no-repeat !important;
       background-color: transparent !important;
     }
     .chat-bg-dark {
-      background-image: url('public/images/chat-bg-black.png') !important;
+  background-image: url('/public/images/chat-bg-black.png') !important;
       background-size: cover !important;
       background-position: center !important;
       background-repeat: no-repeat !important;
