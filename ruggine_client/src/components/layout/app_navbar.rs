@@ -29,7 +29,6 @@ pub fn AppNavbar() -> impl IntoView {
     let has_token = storage_debug.get_token().is_some();
     let has_profile_in_storage = storage_debug.get_user_profile().is_some();
     
-    log::info!("AppNavbar: Token presente = {}, Profilo in localStorage = {}", has_token, has_profile_in_storage);
     
     // Se abbiamo token ma non profilo nel context, proviamo a ricaricarlo
     if has_token && !has_profile_in_storage {
@@ -45,7 +44,6 @@ pub fn AppNavbar() -> impl IntoView {
                 profile.first_name, profile.last_name, profile.email);
         } else {
             log::warn!("AppNavbar: Nessun profilo utente trovato nel context");
-            log::info!("AppNavbar: Utente deve fare login manuale");
         }
         
         profile
@@ -58,7 +56,6 @@ pub fn AppNavbar() -> impl IntoView {
         
         // Se abbiamo token ma non profilo, proviamo a ricaricarlo dal server
         if token.is_some() && profile.is_none() {
-            log::info!("AppNavbar: Token presente ma profilo mancante, tentativo di ricaricarlo dal server");
             
             spawn_local(async move {
                 use crate::api::services::UserService;
@@ -72,8 +69,6 @@ pub fn AppNavbar() -> impl IntoView {
                 
                 match user_service.get_current_profile().await {
                     Ok(profile) => {
-                        log::info!("AppNavbar: Profilo ricaricato con successo dal server: {} {}", 
-                            profile.first_name, profile.last_name);
                         
                         // Salva il profilo nel localStorage e aggiorna il context
                         if let Err(e) = storage.store_user_profile(&profile) {

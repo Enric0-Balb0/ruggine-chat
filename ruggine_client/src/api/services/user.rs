@@ -90,12 +90,10 @@ impl UserService {
                         }
                     } else {
                         // No "data" field - could be direct response format
-                        web_sys::console::log_1(&"No 'data' field found, trying direct parsing".into());
                         
                         // Try to parse the response directly as UserReadDto
                         match serde_json::from_value::<UserReadDto>(response_value.clone()) {
                             Ok(user_data) => {
-                                web_sys::console::log_1(&format!("Direct parsing successful: {:?}", user_data).into());
                                 Ok(Some(UserSearchResult {
                                     id: user_data.id.to_string(),
                                     username: user_data.username,
@@ -176,7 +174,6 @@ impl UserService {
                         }
                     } else {
                         // No "data" field - try direct parsing
-                        web_sys::console::log_1(&"No 'data' field found for user ID, trying direct parsing".into());
                         
                         match serde_json::from_value::<UserReadDto>(response_value.clone()) {
                             Ok(user_data) => {
@@ -190,7 +187,6 @@ impl UserService {
                                 }))
                             },
                             Err(e) => {
-                                web_sys::console::log_1(&format!("Direct parsing failed for ID: {:?}", e).into());
                                 Err(AuthError::Http(crate::api::http_error::HttpError::Deserialization(
                                     format!("Response missing 'data' field and direct parsing failed: {}", e)
                                 )))

@@ -59,12 +59,10 @@ pub async fn refresh_invitations() -> Option<Vec<Invitation>> {
     let ctx = match use_context::<InvitationsContext>() {
         Some(c) => c,
         None => {
-            leptos::logging::warn!("[INVITATIONS] InvitationsContext not found in refresh_invitations");
             return None;
         }
     };
 
-    leptos::logging::log!("[INVITATIONS] refresh_invitations called");
 
     // Build client
     let http_client = ApiClient::new(AppConstants::DEFAULT_SERVER_URL);
@@ -80,11 +78,9 @@ pub async fn refresh_invitations() -> Option<Vec<Invitation>> {
         
         // Update the context
         let count = invitations.len();
-        leptos::logging::log!("[INVITATIONS] refresh_invitations fetched {} invitations", count);
         ctx.invitations.set(invitations.clone());
         Some(invitations)
     } else {
-        leptos::logging::warn!("[INVITATIONS] refresh_invitations failed to fetch invitations");
         None
     }
 }
@@ -116,7 +112,6 @@ pub async fn add_new_invitation(invitation_id: i32) {
     // Fetch the specific invitation by ID
     match invitation_service.get_invitation_by_id(&invitation_id.to_string()).await {
         Ok(invitation) => {
-            leptos::logging::log!("[INVITATIONS] Adding new invitation {} to context", invitation_id);
             ctx.invitations.update(|invites| {
                 // Check if invitation already exists (avoid duplicates)
                 if !invites.iter().any(|i| i.id == invitation.id) {

@@ -1144,6 +1144,9 @@ pub fn ChatView(
     
     let group_name = group_data.group_name();
     let group_data_clone = group_data.clone();
+    // Determine whether the logged-in user is admin for this group without moving the
+    // `group_data` or its fields into closures.
+    let is_admin = (&group_data.membership).is_admin();
     
     let handle_header_action = move |action: ChatHeaderAction| {
         let captured_dropdown_setter = set_dropdown_state.clone();
@@ -1363,13 +1366,15 @@ pub fn ChatView(
                     }
                     style="will-change: opacity, transform;"
                 >
-                    <div 
-                        class="px-4 py-2 text-sm text-gray-700 dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 border-b border-gray-100 dark:border-border-dark"
-                        on:click=move |_| handle_header_action(ChatHeaderAction::InviteMembers)
-                    >
-                        <LucideIcon name="user-plus" size=16 />
-                        <span>"Invita membri"</span>
-                    </div>
+                    <Show when=move || is_admin>
+                        <div 
+                            class="px-4 py-2 text-sm text-gray-700 dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 border-b border-gray-100 dark:border-border-dark"
+                            on:click=move |_| handle_header_action(ChatHeaderAction::InviteMembers)
+                        >
+                            <LucideIcon name="user-plus" size=16 />
+                            <span>"Invita membri"</span>
+                        </div>
+                    </Show>
                     <div 
                         class="px-4 py-2 text-sm text-gray-700 dark:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 border-b border-gray-100 dark:border-border-dark"
                         on:click=move |_| handle_header_action(ChatHeaderAction::GroupDetails)
@@ -1581,7 +1586,7 @@ pub fn ChatView(
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
                 <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md">
                     <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Sei sicuro di voler abbandonare il gruppo?</h3>
-                    <p class="mb-4 text-gray-700 dark:text-gray-300">Questa azione è irreversibile.</p>
+                    <p class="mb-4 text-gray-700 dark:text-gray-300">Non potrai rientrare senza un invito.</p>
                     <Show when=move || leave_error.get().is_some()>
                         <div class="mb-2 text-red-600 dark:text-red-400 text-sm">{move || leave_error.get().unwrap_or_default()}</div>
                     </Show>

@@ -84,13 +84,11 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                             // Check against global join tracking first
                             if global_ws::confirm_join(&token_for_callback, request_id) {
                                 set_join_confirmed_cb.set(true);
-                                leptos::logging::log!("[WS INST] Join confirmed globally for request {}", request_id);
                             }
                             // Also check against this hook's local tracking for backwards compatibility
                             if let Some(local_req_id) = last_join_request_id_cb.get_untracked() {
                                 if local_req_id == *request_id {
                                     set_join_confirmed_cb.set(true);
-                                    leptos::logging::log!("[WS INST] Join confirmed locally for request {}", request_id);
                                 }
                             }
                         }
@@ -112,7 +110,6 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                 set_global_status_inner.set(current_status);
             });
             
-            leptos::logging::log!("[WS INST] Connected to WebSocket service for token");
         });
     }
 
@@ -168,7 +165,6 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                                 gloo_timers::future::TimeoutFuture::new(100).await;
                             }
                             if !sent {
-                                leptos::logging::log!("[WS INST] Failed to send join request {}: socket never opened", request_id);
                                 // clear tracked id to avoid false positives
                                 set_last_join_request_id.set(None);
                             }
@@ -205,7 +201,6 @@ pub fn use_group_message_ws(token: String) -> UseGroupMessageWs {
                 global_ws::reset_join_tracking(&token_for_reset);
                 // reset the flag
                 set_reset_tracking_flag.set(false);
-                leptos::logging::log!("[WS INST] Reset join tracking and local buffer");
             }
         });
     }

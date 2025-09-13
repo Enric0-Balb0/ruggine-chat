@@ -86,7 +86,7 @@ impl ToastMessage {
             id: uuid::Uuid::new_v4().to_string(),
             message,
             toast_type: ToastType::Success,
-            duration: 4000, // 4 seconds
+            duration: 2000, // 2 seconds
         }
     }
 
@@ -95,7 +95,7 @@ impl ToastMessage {
             id: uuid::Uuid::new_v4().to_string(),
             message,
             toast_type: ToastType::Error,
-            duration: 6000, // 6 seconds for errors
+            duration: 3000, // 3 seconds for errors
         }
     }
 
@@ -104,7 +104,7 @@ impl ToastMessage {
             id: uuid::Uuid::new_v4().to_string(),
             message,
             toast_type: ToastType::Warning,
-            duration: 5000, // 5 seconds
+            duration: 2000, // 2 seconds
         }
     }
 
@@ -113,7 +113,7 @@ impl ToastMessage {
             id: uuid::Uuid::new_v4().to_string(),
             message,
             toast_type: ToastType::Info,
-            duration: 4000, // 4 seconds
+            duration: 2000, // 2 seconds
         }
     }
 }

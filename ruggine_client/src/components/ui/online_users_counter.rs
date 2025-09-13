@@ -29,7 +29,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
     let has_done_initial_fetch = Arc::new(AtomicBool::new(false));
 
     // 1. CARICAMENTO INIZIALE: Solo una volta quando il componente è creato - NO EFFECTS!
-    leptos::logging::log!("[ONLINE COUNTER] Component mounted, starting initial load");
     
     {
         // Set initial fallback count immediately and wait for WebSocket events to trigger the first authoritative fetch
@@ -40,7 +39,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
             // Set conservative fallback count immediately - no HTTP call until WS join confirmed
             if mounted_clone.load(Ordering::SeqCst) {
                 set_count.set(Some(1)); // Conservative: assume local user is online
-                leptos::logging::log!("[ONLINE COUNTER] Set initial fallback count: 1 (waiting for WS join)");
             }
         });
     }
@@ -61,7 +59,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
     create_effect(move |_| {
         // Depend on token so this effect runs when login happens
         let token_opt = token_signal.get();
-        leptos::logging::log!("[ONLINE COUNTER] Effect triggered; token_is_some={}", token_opt.is_some());
 
         // If not logged in yet, no ws context will be available
         if token_opt.is_none() {
@@ -70,12 +67,10 @@ pub fn OnlineUsersCounter() -> impl IntoView {
 
         // Get the current WebSocket context from the signal
         let ws_ctx_local = ws_ctx_signal.get();
-        leptos::logging::log!("[ONLINE COUNTER] WS context available={}", ws_ctx_local.is_some());
 
         if let Some(ws) = ws_ctx_local {
             // Read messages to establish a reactive dependency on incoming messages
             let messages = ws.messages.get();
-            leptos::logging::log!("[ONLINE COUNTER] Effect triggered, checking {} messages", messages.len());
 
             // Read join_confirmed signal to trigger the first authoritative fetch deterministically
             let join_confirmed = ws.join_confirmed.get();
@@ -87,9 +82,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
             let global_join_confirmed = global_ws::is_join_confirmed(&token_str);
             let global_last_join_req = global_ws::get_last_join_request_id(&token_str);
             
-            leptos::logging::log!("[ONLINE COUNTER] Effect triggered, local join_confirmed={}, global join_confirmed={}, local last_join_req={:?}, global last_join_req={:?}, status={:?}", 
-                join_confirmed, global_join_confirmed, last_join_req, global_last_join_req, status);
-
             // Use global join state if available, otherwise fall back to local
             let effective_join_confirmed = global_join_confirmed || join_confirmed;
             let effective_last_req = global_last_join_req.clone().or(last_join_req.clone());
@@ -109,7 +101,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
 
             if effective_join_confirmed && effective_last_req.is_some() && status == WsStatus::Open && !has_done_initial_fetch_for_events.load(Ordering::SeqCst) && is_fresh_join {
                 has_done_initial_fetch_for_events.store(true, Ordering::SeqCst);
-                leptos::logging::log!("[ONLINE COUNTER] join_confirmed observed with fresh join, performing initial authoritative fetch");
 
                 let mounted_clone = mounted_for_events.clone();
                 let set_count = set_online_count.clone();
@@ -135,19 +126,16 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                                     let total_count = online_user_ids.len() as i32 + 1;
                                     if mounted_clone.load(Ordering::SeqCst) {
                                         set_count.set(Some(total_count));
-                                        leptos::logging::log!("[ONLINE COUNTER] Initial authoritative count loaded: {}", total_count);
                                     }
                                     break;
                                 }
                                 Err(e) => {
                                     let err_str = e.to_string();
-                                    leptos::logging::log!("[ONLINE COUNTER] Failed to load initial authoritative count (attempt {}): {:?}", attempts, err_str);
                                     if attempts < max_attempts && (err_str.contains("403") || err_str.contains("Forbidden")) {
                                         attempts += 1;
                                         crate::utils::timers::sleep_ms(200).await;
                                         continue;
                                     }
-                                    leptos::logging::log!("[ONLINE COUNTER] Giving up after {} attempts: {:?}", attempts, err_str);
                                     break;
                                 }
                             }
@@ -196,7 +184,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                 if Some(event_id.clone()) != last_event_signal.get() {
                     last_event_signal.set(Some(event_id.clone()));
                     
-                    leptos::logging::log!("[ONLINE COUNTER] Connection event detected: {}", event_id);
                     
                     let mounted_clone = mounted_for_events.clone();
                     let set_count = set_online_count.clone();
@@ -217,13 +204,11 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                                         let total_count = online_user_ids.len() as i32 + 1;
                                         if mounted_clone.load(Ordering::SeqCst) {
                                             set_count.set(Some(total_count));
-                                            leptos::logging::log!("[ONLINE COUNTER] Count updated after connection event: {}", total_count);
                                         }
                                         break;
                                     }
                                     Err(e) => {
                                         let err_str = e.to_string();
-                                        leptos::logging::log!("[ONLINE COUNTER] Failed to update count (attempt {}): {:?}", attempts, err_str);
                                         if attempts < max_attempts && (err_str.contains("403") || err_str.contains("Forbidden")) {
                                             attempts += 1;
                                             crate::utils::timers::sleep_ms(200).await;
@@ -235,7 +220,6 @@ pub fn OnlineUsersCounter() -> impl IntoView {
                                                 set_count.set(Some(0));
                                             }
                                         }
-                                        leptos::logging::log!("[ONLINE COUNTER] Giving up after {} attempts: {:?}", attempts, err_str);
                                         break;
                                     }
                                 }

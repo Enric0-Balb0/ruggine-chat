@@ -49,15 +49,11 @@ pub fn fetch_missing_users(
     let user_cache = user_cache.clone();
     let user_service = user_service.clone();
     leptos::spawn_local(async move {
-        leptos::logging::log!("[FETCH_MISSING_USERS] Starting to fetch {} users", to_fetch.len());
         for sender_id in to_fetch.iter() {
             let sid = *sender_id;
-            leptos::logging::log!("[FETCH_MISSING_USERS] Fetching user {}", sid);
             
             match user_service.get_user_by_id(&sid.to_string()).await {
                 Ok(Some(user_search_result)) => {
-                    leptos::logging::log!("[FETCH_MISSING_USERS] Got user data for {}: {} {}", 
-                        sid, user_search_result.first_name, user_search_result.last_name);
                     let user_profile = UserProfile {
                         id: sid, // Usiamo l'id numerico originale
                         email: user_search_result.email,
@@ -77,7 +73,6 @@ pub fn fetch_missing_users(
                     };
                     user_cache.update(|cache| {
                         cache.insert(sid, user_profile);
-                        leptos::logging::log!("[FETCH_MISSING_USERS] Added user {} to cache", sid);
                     });
                 },
                 Ok(None) => {
@@ -92,6 +87,5 @@ pub fn fetch_missing_users(
             let mut guard = IN_FLIGHT_FETCHES.lock().unwrap();
             guard.remove(&sid);
         }
-        leptos::logging::log!("[FETCH_MISSING_USERS] Finished fetching users");
     });
 }
