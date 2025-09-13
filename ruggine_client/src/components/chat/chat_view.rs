@@ -545,6 +545,8 @@ pub fn ChatView(
                                 let attempts_clone2 = attempts_clone.clone();
                                 let messages_clone2 = messages_clone.clone();
                                 let messages_container_ref2 = messages_container_ref_clone.clone();
+                                // Capture container before timeout to avoid accessing signal after disposal
+                                let captured_container_for_timeout = messages_container_ref2.get_untracked();
                                 let scrolled_flag2 = scrolled_flag.clone();
                                 let unread_ids_clone2 = unread_ids_clone.clone();
                                 let anchor_scroll_locked_for_retry2 = anchor_lock_for_closure.clone();
@@ -552,7 +554,7 @@ pub fn ChatView(
                                     let current_msgs2 = messages_clone2.get_untracked();
                                     if let Some(found2) = current_msgs2.iter().find(|m| unread_ids_clone2.contains(&m.id)) {
                                         set_anchor_clone.set(Some(found2.id));
-                                        if let Some(container) = messages_container_ref2.get() {
+                                        if let Some(container) = captured_container_for_timeout.clone() {
                                             let doc = match web_sys::window() {
                                                 Some(w) => match w.document() { Some(d) => d, None => return },
                                                 None => return,
@@ -903,6 +905,9 @@ pub fn ChatView(
                     let unread_marked_read_clone = unread_marked_read_auto_read.clone();
                     let ws_hook_clone = unified_ws_hook_auto_read.clone();
                     
+                    // Capture signal values before the timeout to avoid disposal access
+                    let captured_unread_ids_map = unread_message_ids_clone.get_untracked();
+                    
                     set_timeout(move || {
                         // Ottenere l'ID utente corrente per escludere i propri messaggi
                         let current_user_id = {
@@ -926,8 +931,7 @@ pub fn ChatView(
                                 if is_element_in_viewport(&container_clone, &elem) {
                                     
                                     let mut should_update = false;
-                                    let initial_ids_map = unread_message_ids_clone.get_untracked();
-                                    if let Some(initial_ids) = initial_ids_map.get(&group_id_for_update) {
+                                    if let Some(initial_ids) = captured_unread_ids_map.get(&group_id_for_update) {
                                         if initial_ids.contains(&msg.id) {
                                             should_update = true;
                                         }
@@ -947,7 +951,7 @@ pub fn ChatView(
                                                 })
                                                 .collect();
                                             if ws_ids.contains(&msg.id) {
-                                                let in_initial = initial_ids_map.get(&group_id_for_update)
+                                                let in_initial = captured_unread_ids_map.get(&group_id_for_update)
                                                     .map(|v| v.contains(&msg.id)).unwrap_or(false);
                                                 if !in_initial {
                                                     should_update = true;
@@ -1104,18 +1108,21 @@ pub fn ChatView(
     create_effect(move |_| {
         let current_state = dropdown_state.get();
         if matches!(current_state, DropdownState::Open | DropdownState::Opening) {
+            // Capture the dropdown element at effect creation time to avoid accessing 
+            // the signal after component disposal
+            let captured_dropdown_element = dropdown_ref.get_untracked();
             let handle_click_outside = move |event: web_sys::Event| {
-                // Safe access to dropdown_ref - get the element at closure creation time
-                let dropdown_element = dropdown_ref.get_untracked();
-                if let Some(dropdown_element) = dropdown_element {
+                // Use captured element instead of accessing signal
+                if let Some(dropdown_element) = captured_dropdown_element.clone() {
                     if let Some(target) = event.target() {
                         if let Ok(element) = target.dyn_into::<web_sys::Element>() {
                             if !dropdown_element.contains(Some(&element)) {
                                 // Use untrack to avoid reactive access in event handler
                                 untrack(|| {
+                                    let captured_dropdown_setter = set_dropdown_state.clone();
                                     set_dropdown_state.set(DropdownState::Closing);
                                     set_timeout(
-                                        move || set_dropdown_state.set(DropdownState::Closed),
+                                        move || captured_dropdown_setter.set(DropdownState::Closed),
                                         std::time::Duration::from_millis(150)
                                     );
                                 });
@@ -1139,9 +1146,10 @@ pub fn ChatView(
     let group_data_clone = group_data.clone();
     
     let handle_header_action = move |action: ChatHeaderAction| {
+        let captured_dropdown_setter = set_dropdown_state.clone();
         set_dropdown_state.set(DropdownState::Closing);
         set_timeout(
-            move || set_dropdown_state.set(DropdownState::Closed),
+            move || captured_dropdown_setter.set(DropdownState::Closed),
             std::time::Duration::from_millis(150)
         );
         match action {
@@ -1208,16 +1216,18 @@ pub fn ChatView(
     let handle_dropdown_toggle = move |_| {
         match dropdown_state.get_untracked() {
             DropdownState::Closed => {
+                let captured_dropdown_setter = set_dropdown_state.clone();
                 set_dropdown_state.set(DropdownState::Opening);
                 set_timeout(
-                    move || set_dropdown_state.set(DropdownState::Open),
+                    move || captured_dropdown_setter.set(DropdownState::Open),
                     std::time::Duration::from_millis(200)
                 );
             }
             DropdownState::Open | DropdownState::Opening => {
+                let captured_dropdown_setter = set_dropdown_state.clone();
                 set_dropdown_state.set(DropdownState::Closing);
                 set_timeout(
-                    move || set_dropdown_state.set(DropdownState::Closed),
+                    move || captured_dropdown_setter.set(DropdownState::Closed),
                     std::time::Duration::from_millis(150)
                 );
             }
@@ -1273,10 +1283,11 @@ pub fn ChatView(
     let user_service = UserService::new(http_client_for_fetch, storage_for_fetch);
 
     let handle_scroll_to_bottom = {
-        let messages_container_ref = messages_container_ref.clone();
         let set_show_scroll_to_bottom = set_show_scroll_to_bottom.clone();
         move |_| {
-            if let Some(container) = messages_container_ref.get() {
+            // Capture the container reference safely before using it
+            let container = messages_container_ref.get_untracked();
+            if let Some(container) = container {
                 let start = container.scroll_top();
                 let end = container.scroll_height();
                 let distance = end - start;
