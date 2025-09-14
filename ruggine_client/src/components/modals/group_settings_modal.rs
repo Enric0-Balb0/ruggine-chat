@@ -463,12 +463,7 @@ pub fn GroupDetailsModal(
                                                         </div>
                                                     </div>
                                                     
-                                                    // Actions dropdown placeholder
-                                                    <div class="flex items-center gap-2">
-                                                        <button class="p-2 text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                                            <LucideIcon name="more-horizontal" size=16 />
-                                                        </button>
-                                                    </div>
+                                                    
                                                 </div>
                                             }.into_view()
                                         }).collect::<Vec<_>>()

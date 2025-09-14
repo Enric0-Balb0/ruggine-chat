@@ -9,41 +9,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Form Controls - Select and Date inputs */
-html.dark select {
-  color: #c8c6c4 !important;
-  background-color: #333333 !important;
+/* Form controls - unify dark mode appearance for inputs, selects and date controls
+   so they match the dark input styles used by Tailwind classes (dark:bg-gray-700,
+   dark:text-gray-100, dark:border-gray-600). We target both html.dark and .dark
+   to be resilient to how dark mode is applied. */
+
+/* Dark mode form control base */
+html.dark select,
+.dark select,
+html.dark input[type="date"],
+.dark input[type="date"] {
+  /* Tailwind equivalents: bg-gray-700 (#374151), text-gray-100 (#f3f4f6), border-gray-600 (#4b5563) */
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
   color-scheme: light !important;
 }
 
-html.dark select option {
-  color: #c8c6c4 !important;
-  background-color: #333333 !important;
+html.dark select option,
+.dark select option {
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
 }
 
-html.dark input[type="date"] {
-  color: #c8c6c4 !important;
-  background-color: #333333 !important;
-  color-scheme: light !important;
-}
-
+/* Make inner date text visible on webkit browsers */
 html.dark input[type="date"]::-webkit-datetime-edit,
 html.dark input[type="date"]::-webkit-datetime-edit-fields-wrapper,
 html.dark input[type="date"]::-webkit-datetime-edit-text,
 html.dark input[type="date"]::-webkit-datetime-edit-month-field,
 html.dark input[type="date"]::-webkit-datetime-edit-day-field,
-html.dark input[type="date"]::-webkit-datetime-edit-year-field {
-  color: #c8c6c4 !important;
+html.dark input[type="date"]::-webkit-datetime-edit-year-field,
+.dark input[type="date"]::-webkit-datetime-edit,
+.dark input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.dark input[type="date"]::-webkit-datetime-edit-text,
+.dark input[type="date"]::-webkit-datetime-edit-month-field,
+.dark input[type="date"]::-webkit-datetime-edit-day-field,
+.dark input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #f3f4f6 !important;
   background: transparent !important;
 }
 
-html.dark input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.8) !important;
+/* Calendar icon: ensure good contrast */
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) !important;
 }
 
 /* Placeholder Styles */
 html.dark input::placeholder,
-html.dark textarea::placeholder {
+.dark input::placeholder,
+html.dark textarea::placeholder,
+.dark textarea::placeholder {
   color: #c8c6c4 !important;
   opacity: 0.8;
 }

@@ -183,13 +183,11 @@ tests/
 │   ├── api/               # API service tests
 │   └── services/          # Service integration tests
 │
-├── unit/                  # Unit tests (organized by module)
-│   ├── services/          # Service unit tests
-│   ├── components/        # Component tests
-│   └── utils/             # Utility tests
-│
-├── e2e/                   # End-to-end tests
-└── lib.rs                 # Test entry point
+└── unit/                  # Unit tests (organized by module)
+    ├── services/          # Service unit tests
+    ├── components/        # Component tests
+    └── utils/             # Utility tests
+
 ```
 
 **Desktop Integration:**
