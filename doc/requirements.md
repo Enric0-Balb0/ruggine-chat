@@ -151,9 +151,8 @@ ruggine_developer -u-> UC1
 | NFR1  |       Efficiency       |                    The application executable size must be kept as small as possible to optimize resource usage like under 30MB                               |        FR5         |
 | NFR2  |        Security        |                          User authentication must be secure to prevent unauthorized access at 100%                                   |       FR6     |
 | NFR3  |        Security        |            Group chat access must be restricted to invited users only, ensuring privacy and data protection at 100%                      |       FR2, FR7, FR8     |
-| NFR4  |      Usability         |                 The app should provide a responsive and user-friendly interface across supported platforms and undestandble in 10 minutes                                   |       FR4|
-| NFR5  |        Reliability     |             The logging system must consistently record CPU usage every 2 minutes without data loss                                           |       FR5,    |
-| NFR6  |       Scalability      |      The system should be able to handle an increasing number of users and chat groups without performance degradation at maximum 10%                       |       FR2, FR7, FR8     |
+| NFR4  |        Reliability     |             The logging system must consistently record CPU usage every 2 minutes without data loss                                           |       FR5,    |
+| NFR5  |       Scalability      |      The system should be able to handle an increasing number of users and chat groups without performance degradation at maximum 20%                       |       FR2, FR7, FR8     |
 
 ## Business Rules and Constraints
 
@@ -862,9 +861,6 @@ class EndUser {
 
 class AdminDeveloper {
   + accessLogs()
-  + notifyCPUAbnormal()
-  + logCPUUsage()
-  + deployCrossPlatform()
 }
 
 class GroupChat {
@@ -1175,7 +1171,7 @@ This server follows a **Layered Architecture** pattern (also known as Clean Arch
 
 ### Network Requirements
 - **Client-Server**: HTTPS (port 8002) or WebSocket (port 8002)
-- **Server-Database**: MySQL (port 3306) or PostgreSQL (port 5432, secure network between containers)
+- **Server-Database**: PostgreSQL (port 5432, secure network between containers)
 - **Container Communication**: Docker network bridges for inter-container communication
 
 ### Scalability Considerations
