@@ -359,19 +359,3 @@ Il dashboard CPU Logs fornisce informazioni dettagliate sulle prestazioni del se
 
 ---
 
-## Appendice: Informazioni Tecniche
-
-### Versione Applicazione
-- **Versione Corrente**: 0.1.0
-- **Data Rilascio**: [Data corrente]
-- **Tecnologie Utilizzate**: Rust, Leptos, Tauri
-- **Licenza**: [Specificare licenza]
-
-### Note di Sicurezza
-- Tutte le comunicazioni avvengono tramite connessioni sicure
-- Le password sono crittografate e non memorizzate in chiaro
-- I dati utente sono protetti secondo le best practice di sicurezza
-
----
-
-*Questo manuale è soggetto a modifiche e aggiornamenti. Per la versione più recente, consulta la documentazione del progetto.*
