@@ -18,8 +18,8 @@
 - **Rust** 1.70+ (for development)
 - **Docker** 28.0+ and Docker Compose 2.34+
 - **PostgreSQL** 17+ (if running locally without Docker)
-- **8GB RAM** minimum
-- **10GB disk space** available
+- **12GB RAM** minimum
+- **100GB disk space** available
 
 ## 🛠 Installation & Setup
 
