@@ -84,8 +84,6 @@ erDiagram
     GROUP_CHAT }o--|| USER : "created_by"
     TEXT_MESSAGE }o--|| USER : "sender_id"
     TEXT_MESSAGE }o--|| GROUP_CHAT : "group_chat_id"
-    GROUP_MEMBERSHIP }o--|| USER : "user_id"
-    GROUP_MEMBERSHIP }o--|| GROUP_CHAT : "group_chat_id"
     GROUP_MEMBERSHIP o|--|| INVITATION : "invitation_id"
     INVITATION }o--|| USER : "from_user_id"
     INVITATION }o--|| USER : "to_user_id"
