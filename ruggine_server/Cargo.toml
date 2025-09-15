@@ -94,7 +94,6 @@ opt-level = 0
 opt-level = 3          # Massima ottimizzazione per velocità
 debug = false          # Rimuovi simboli di debug
 lto = true            # Link Time Optimization per prestazioni migliori
-codegen-units = 1     # Usa una sola unità di codegen per migliori ottimizzazioni
 
 # Ottimizza le dipendenze per velocizzare i build
 # [profile.dev.package."*"]

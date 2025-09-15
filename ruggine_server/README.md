@@ -159,13 +159,6 @@ ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
     console.log("New message:", message);
 };
-
-// Send a message
-const messageData = {
-    content: "Hello, group!",
-    group_chat_id: 1
-};
-ws.send(JSON.stringify(messageData));
 ```
 
 ### Message Types
