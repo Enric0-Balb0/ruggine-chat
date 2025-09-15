@@ -1,7 +1,7 @@
 // Group and membership-related test data factory
 
 use super::base_factory::BaseFactory;
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use ruggine_client_ui::types::{
     group::{GroupChatCreateRequest, GroupChat},
     membership::{GroupMembership, CurrentAction},

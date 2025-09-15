@@ -11,7 +11,7 @@ use ruggine_client_ui::types::group::GroupChatCreateRequest;
 mod group_service_unit_tests {
     use super::*;
     use std::sync::Mutex;
-    use crate::common::factories::*;
+    
     use crate::common::TestFactory;
 
     // Mutex to serialize tests that use shared storage

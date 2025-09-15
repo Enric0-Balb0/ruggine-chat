@@ -1,12 +1,6 @@
-// Common testing utilities for ruggine_client
-// CLIENT-FOCUSED TESTING: UI state, validation, data transformation
+// Main TestFactory for delegation to specialized factories
 
-pub mod factories;
-
-pub use factories::*;
-use std::sync::Once;
-
-static INIT_LOG: Once = Once::new();
+use super::*;
 
 /// Factory trait for testing utilities
 pub trait TestFactoryTrait {
@@ -21,7 +15,7 @@ impl TestFactory {
     pub fn mock_user_profile() -> ruggine_client_ui::types::user::UserProfile {
         UserFactory::mock_user_profile()
     }
-    
+
     pub fn admin_user_profile() -> ruggine_client_ui::types::user::UserProfile {
         UserFactory::admin_user_profile()
     }
@@ -266,7 +260,7 @@ impl TestFactory {
         use ruggine_client_ui::types::group::GroupChat;
         use ruggine_client_ui::types::invitation::{MemberRole, MembershipStatus};
         use ruggine_client_ui::types::membership::CurrentAction;
-        use chrono::DateTime;
+        use chrono::{DateTime, Utc};
         
         let unique_id = BaseFactory::get_unique_id() as i32;
         
@@ -295,7 +289,7 @@ impl TestFactory {
             is_active: true,
         };
         
-        GroupMembershipWithDetails {
+        ruggine_client_ui::hooks::GroupMembershipWithDetails {
             membership,
             group_details: Some(group_chat),
         }
@@ -314,56 +308,16 @@ impl TestFactory {
     pub fn basic_user_register_request() -> ruggine_client_ui::types::user::UserRegisterRequest {
         UserFactory::basic_user_register_request()
     }
-}
 
-/// Spawn runtime for async tests in Leptos context
-pub async fn spawn_test_runtime<F, R>(test_fn: F) -> R
-where
-    F: std::future::Future<Output = R>,
-{
-    test_fn.await
-}
+    // Group membership service methods
+    pub fn create_group_membership_service() -> ruggine_client_ui::api::services::membership::GroupMembershipService {
+        use crate::common::MOCK_SERVER_URL;
+        let http_client = ruggine_client_ui::api::client::ApiClient::new(MOCK_SERVER_URL);
+        let storage_service = ruggine_client_ui::utils::storage::StorageService::new();
+        ruggine_client_ui::api::services::membership::GroupMembershipService::new(http_client, storage_service)
+    }
 
-/// Initialize test logging for client tests
-pub fn init_test_logging() {
-    INIT_LOG.call_once(|| {
-        let _ = env_logger::builder().is_test(true).try_init();
-    });
-}
-
-// CLIENT-SIDE constants for testing
-pub const MOCK_SERVER_URL: &str = "http://localhost:3000";
-pub const MOCK_JWT_TOKEN: &str = "mock_jwt_token_12345";
-
-pub fn mock_user_profile_json() -> &'static str {
-    r#"{
-        "data": {
-            "id": 1,
-            "email": "test@example.com",
-            "first_name": "Test",
-            "last_name": "User",
-            "username": "testuser",
-            "user_status": "Active",
-            "user_type": "User",
-            "current_action": "Online",
-            "birthday": "1990-01-01",
-            "address": "123 Test St",
-            "gender": "male",
-            "created_at": "2025-01-01T00:00:00Z",
-            "updated_at": "2025-01-01T00:00:00Z",
-            "last_login": "2025-01-01T00:00:00Z"
-        },
-        "success": true
-    }"#
-}
-
-pub fn mock_token_response_json() -> &'static str {
-    r#"{
-        "data": {
-            "token": "mock_jwt_token_12345",
-            "iat": 1640995200,
-            "exp": 1641081600
-        },
-        "success": true
-    }"#
+    pub fn create_default_group_membership_service() -> ruggine_client_ui::api::services::membership::GroupMembershipService {
+        ruggine_client_ui::api::services::membership::GroupMembershipService::default()
+    }
 }

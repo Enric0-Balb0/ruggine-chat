@@ -54,7 +54,7 @@ mod storage_service_auth_tests {
         assert!(storage.get_user_profile().is_none());
         
         // Store profile using TestFactory
-        let profile = TestFactory::mock_user_profile("test");
+    let profile = TestFactory::mock_user_profile();
         
         let result = storage.store_user_profile(&profile);
         assert!(result.is_ok(), "Should be able to store profile");
@@ -144,14 +144,14 @@ mod storage_service_auth_tests {
         let storage = setup_storage_service();
         
         // Store first profile using TestFactory
-        let profile1 = TestFactory::mock_user_profile("test1");
+    let profile1 = TestFactory::mock_user_profile();
         storage.store_user_profile(&profile1).unwrap();
         
         let retrieved1 = storage.get_user_profile().unwrap();
         assert_eq!(retrieved1.email, profile1.email);
         
         // Store second profile (should overwrite)
-        let profile2 = TestFactory::mock_user_profile("test2");
+    let profile2 = TestFactory::mock_user_profile();
         storage.store_user_profile(&profile2).unwrap();
         
         let retrieved2 = storage.get_user_profile().unwrap();
@@ -240,7 +240,7 @@ mod storage_service_auth_tests {
         
         // Setup complete session data (simulating logged-in user) using TestFactory
         let token = TestFactory::mock_token_response();
-        let profile = TestFactory::mock_user_profile("test");
+    let profile = TestFactory::mock_user_profile();
         
         // Store session data
         storage.store_token(&token).unwrap();
@@ -298,7 +298,7 @@ mod storage_service_auth_tests {
         
         // Set up session data using TestFactory
         let token = TestFactory::mock_token_response();
-        let profile = TestFactory::mock_user_profile("test");
+    let profile = TestFactory::mock_user_profile();
         
         storage.store_token(&token).unwrap();
         storage.store_user_profile(&profile).unwrap();

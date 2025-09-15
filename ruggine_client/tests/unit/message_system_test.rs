@@ -1,9 +1,6 @@
-use crate::common::factories::*;
 use crate::common::TestFactory;
 use ruggine_client_ui::types::message::{
-    Message, MessagePage, PaginationMetadata, TextMessageCreateRequest,
-    TextMessageReadDto, PaginatedTextMessageResponse, PaginationMetadataDto,
-    TextMessageInfoReadDto, TextMessageInfoReadAtDtoUpdate,
+    Message, MessagePage, PaginatedTextMessageResponse, PaginationMetadataDto,
 };
 use chrono::{DateTime, Utc};
 

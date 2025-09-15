@@ -54,20 +54,20 @@ mod invitation_service_integration_tests {
         
         let service = setup_invitation_service();
         
-        // Test all MembershipStatus variants
-        let pending = MembershipStatus::Pending;
-        let active = MembershipStatus::Active;
-        let inactive = MembershipStatus::Inactive;
-        
-        // Test equality
-        assert_eq!(pending, MembershipStatus::Pending);
-        assert_eq!(active, MembershipStatus::Active);
-        assert_eq!(inactive, MembershipStatus::Inactive);
-        
-        // Test inequality
-        assert_ne!(pending, active);
-        assert_ne!(active, inactive);
-        assert_ne!(pending, inactive);
+    // Test all MembershipStatus variants present in the current types
+    let active = MembershipStatus::Active;
+    let left = MembershipStatus::Left;
+    let banned = MembershipStatus::Banned;
+
+    // Test equality
+    assert_eq!(active, MembershipStatus::Active);
+    assert_eq!(left, MembershipStatus::Left);
+    assert_eq!(banned, MembershipStatus::Banned);
+
+    // Test inequality
+    assert_ne!(active, left);
+    assert_ne!(left, banned);
+    assert_ne!(active, banned);
     }
 
     #[tokio::test]
@@ -92,11 +92,11 @@ mod invitation_service_integration_tests {
         assert!(matches!(memberships[2].role, MemberRole::Admin));  // User 2, Group 1
         assert!(matches!(memberships[3].role, MemberRole::Member)); // User 2, Group 2
         
-        // Verify user and group assignments
-        assert_eq!(memberships[0].user_id, 1);
-        assert_eq!(memberships[0].group_id, 1);
-        assert_eq!(memberships[1].user_id, 1);
-        assert_eq!(memberships[1].group_id, 2);
+    // Verify user and group assignments
+    assert_eq!(memberships[0].user_id, 1);
+    assert_eq!(memberships[0].group_chat_id, 1);
+    assert_eq!(memberships[1].user_id, 1);
+    assert_eq!(memberships[1].group_chat_id, 2);
     }
 
     #[tokio::test]
@@ -105,28 +105,26 @@ mod invitation_service_integration_tests {
         
         let service = setup_invitation_service();
         
-        // Test GroupMembershipWithDetails creation
-        let admin_details = GroupFactory::group_membership_with_details(
-            1, 42, "Admin Group", MemberRole::Admin
-        );
-        
-        let member_details = GroupFactory::group_membership_with_details(
-            2, 42, "Member Group", MemberRole::Member
-        );
-        
-        // Verify admin details
-        assert_eq!(admin_details.membership.user_id, 1);
-        assert_eq!(admin_details.membership.group_id, 42);
-        assert_eq!(admin_details.group_details.id, 42);
-        assert_eq!(admin_details.group_details.name, "Admin Group");
-        assert!(matches!(admin_details.membership.role, MemberRole::Admin));
-        
-        // Verify member details
-        assert_eq!(member_details.membership.user_id, 2);
-        assert_eq!(member_details.membership.group_id, 42);
-        assert_eq!(member_details.group_details.id, 42);
-        assert_eq!(member_details.group_details.name, "Member Group");
-        assert!(matches!(member_details.membership.role, MemberRole::Member));
+    // Create membership and group details separately (current factories provide these separately)
+    let admin_membership = GroupFactory::membership_with_details(1, 42, MemberRole::Admin);
+    let admin_group = GroupFactory::group_with_details(42, "Admin Group", 1);
+
+    let member_membership = GroupFactory::membership_with_details(2, 42, MemberRole::Member);
+    let member_group = GroupFactory::group_with_details(42, "Member Group", 1);
+
+    // Verify admin details
+    assert_eq!(admin_membership.user_id, 1);
+    assert_eq!(admin_membership.group_chat_id, 42);
+    assert_eq!(admin_group.id, 42);
+    assert_eq!(admin_group.name, "Admin Group");
+    assert!(matches!(admin_membership.role, MemberRole::Admin));
+
+    // Verify member details
+    assert_eq!(member_membership.user_id, 2);
+    assert_eq!(member_membership.group_chat_id, 42);
+    assert_eq!(member_group.id, 42);
+    assert_eq!(member_group.name, "Member Group");
+    assert!(matches!(member_membership.role, MemberRole::Member));
     }
 
     #[tokio::test]
@@ -146,11 +144,11 @@ mod invitation_service_integration_tests {
         assert!(!membership1.joined_at.to_string().is_empty());
         assert!(!membership2.joined_at.to_string().is_empty());
         
-        // Should have valid user and group IDs
-        assert!(membership1.user_id > 0);
-        assert!(membership1.group_id > 0);
-        assert!(membership2.user_id > 0);
-        assert!(membership2.group_id > 0);
+    // Should have valid user and group IDs
+    assert!(membership1.user_id > 0);
+    assert!(membership1.group_chat_id > 0);
+    assert!(membership2.user_id > 0);
+    assert!(membership2.group_chat_id > 0);
     }
 
     #[tokio::test]
@@ -168,8 +166,8 @@ mod invitation_service_integration_tests {
         assert!(matches!(group_admin.role, MemberRole::Admin));
         assert!(matches!(group_member.role, MemberRole::Member));
         
-        // Both should be in the same group
-        assert_eq!(group_admin.group_id, group_member.group_id);
+    // Both should be in the same group
+    assert_eq!(group_admin.group_chat_id, group_member.group_chat_id);
         
         // But different users
         assert_ne!(group_admin.user_id, group_member.user_id);
@@ -182,25 +180,30 @@ mod invitation_service_integration_tests {
         let service = setup_invitation_service();
         
         // Create multiple group memberships for batch operations
+        // Use pairs (membership, group_detail) because factories provide membership and group separately
         let group_memberships: Vec<_> = (1..=5)
-            .map(|i| GroupFactory::group_membership_with_details(
-                i, 1, "Test Group", 
-                if i % 2 == 0 { MemberRole::Admin } else { MemberRole::Member }
+            .map(|i| (
+                GroupFactory::membership_with_details(
+                    i,
+                    1,
+                    if i % 2 == 0 { MemberRole::Admin } else { MemberRole::Member }
+                ),
+                GroupFactory::group_with_details(1, "Test Group", 1),
             ))
             .collect();
-        
+
         assert_eq!(group_memberships.len(), 5);
-        
+
         // Verify alternating roles
-        for (i, membership_details) in group_memberships.iter().enumerate() {
+        for (i, (membership, group_detail)) in group_memberships.iter().enumerate() {
             let user_id = (i + 1) as i32;
-            assert_eq!(membership_details.membership.user_id, user_id);
-            assert_eq!(membership_details.group_details.name, "Test Group");
-            
+            assert_eq!(membership.user_id, user_id);
+            assert_eq!(group_detail.name, "Test Group");
+
             if user_id % 2 == 0 {
-                assert!(matches!(membership_details.membership.role, MemberRole::Admin));
+                assert!(matches!(membership.role, MemberRole::Admin));
             } else {
-                assert!(matches!(membership_details.membership.role, MemberRole::Member));
+                assert!(matches!(membership.role, MemberRole::Member));
             }
         }
     }
@@ -220,9 +223,12 @@ mod invitation_service_integration_tests {
         assert!(!membership2.joined_at.to_string().is_empty());
         
         // Timestamps should be realistic (not in the future by much)
-        let now = chrono::Utc::now().naive_utc();
-        assert!(membership1.joined_at <= now);
-        assert!(membership2.joined_at <= now);
+    let now_naive = chrono::Utc::now().naive_utc();
+    // membership.joined_at may be chrono::DateTime or NaiveDateTime depending on factory; compare as naive
+    let m1 = membership1.joined_at.naive_utc();
+    let m2 = membership2.joined_at.naive_utc();
+    assert!(m1 <= now_naive);
+    assert!(m2 <= now_naive);
     }
 
     #[tokio::test]
@@ -243,9 +249,9 @@ mod invitation_service_integration_tests {
         assert_eq!(same_user_different_groups[1].user_id, 1);
         assert_eq!(same_user_different_groups[2].user_id, 1);
         
-        assert_eq!(same_user_different_groups[0].group_id, 1);
-        assert_eq!(same_user_different_groups[1].group_id, 2);
-        assert_eq!(same_user_different_groups[2].group_id, 3);
+    assert_eq!(same_user_different_groups[0].group_chat_id, 1);
+    assert_eq!(same_user_different_groups[1].group_chat_id, 2);
+    assert_eq!(same_user_different_groups[2].group_chat_id, 3);
         
         assert!(matches!(same_user_different_groups[0].role, MemberRole::Admin));
         assert!(matches!(same_user_different_groups[1].role, MemberRole::Member));

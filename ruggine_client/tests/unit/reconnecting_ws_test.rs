@@ -1,6 +1,4 @@
-use ruggine_client_ui::api::ws::reconnecting_ws_service::ReconnectingWsService;
-use ruggine_client_ui::types::message_ws::{WsStatus, WebSocketMessage};
-use leptos::*;
+use ruggine_client_ui::types::message_ws::WsStatus;
 
 #[cfg(test)]
 mod reconnecting_ws_tests {

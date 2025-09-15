@@ -45,7 +45,7 @@ impl BaseFactory {
     
     /// Generate unique token for tests
     pub fn get_unique_token() -> String {
-        let unique_id = chrono::Utc::now().timestamp_nanos();
+    let unique_id = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
         format!("test_token_{}", unique_id)
     }
     
@@ -57,7 +57,7 @@ impl BaseFactory {
     
     /// Generate unique UUID-like string for tests
     pub fn generate_uuid() -> String {
-        let unique_id = chrono::Utc::now().timestamp_nanos();
+    let unique_id = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
         format!("test-uuid-{}", unique_id)
     }
 }

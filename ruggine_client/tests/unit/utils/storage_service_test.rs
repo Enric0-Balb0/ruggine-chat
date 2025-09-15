@@ -2,7 +2,6 @@
 // Testing dual storage system, Remember Me functionality, and storage management
 
 use ruggine_client_ui::utils::storage::StorageService;
-use ruggine_client_ui::types::{TokenResponse, UserProfile};
 
 #[cfg(test)]
 mod storage_service_tests {

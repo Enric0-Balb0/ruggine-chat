@@ -1,7 +1,6 @@
 // WebSocket-related test data factory
 
 use super::base_factory::BaseFactory;
-use chrono::{DateTime, Utc};
 use ruggine_client_ui::types::message_ws::{
     WebSocketMessage, ClientAction, GroupAction, ServerEvent, GroupEvent,
     NotificationEvent, ControlMessage, WsError, WsStatus

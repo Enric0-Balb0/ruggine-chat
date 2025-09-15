@@ -1,7 +1,7 @@
 // User-related test data factory
 
 use super::base_factory::BaseFactory;
-use chrono::{NaiveDate, DateTime, Utc};
+use chrono::{NaiveDate, DateTime};
 use ruggine_client_ui::types::user::{
     UserRegisterRequest, UserProfile, UserStatus, UserType, Gender
 };

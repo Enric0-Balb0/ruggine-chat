@@ -1,7 +1,7 @@
 // Message-related test data factory
 
 use super::base_factory::BaseFactory;
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use ruggine_client_ui::types::message::{
     TextMessageCreateRequest, MessagePage, Message, PaginationMetadata,
     TextMessageInfoReadAtDtoUpdate
@@ -90,14 +90,15 @@ impl MessageFactory {
             Self::mock_message("page_msg1"),
             Self::mock_message("page_msg2"),
         ];
-        
+        let total = messages.len() as i32;
+
         MessagePage {
             data: messages,
             pagination: PaginationMetadata {
                 has_more: true,
                 next_cursor: Some(DateTime::from_timestamp(1000000100, 0).unwrap()),
                 page_size: 20,
-                total_count: Some(50),
+                total_count: Some(total),
             },
         }
     }

@@ -1,18 +1,16 @@
 // Integration tests for Message Service
 
 use std::sync::Mutex;
-use std::sync::Arc;
 
 #[cfg(test)]
 mod message_service_integration_tests {
     use super::*;
     use crate::common::*;
+    use crate::factories::MessageFactory;
     use ruggine_client_ui::api::services::message::MessageService;
     use ruggine_client_ui::api::client::ApiClient;
     use ruggine_client_ui::utils::storage::StorageService;
-    use ruggine_client_ui::types::message::{
-        TextMessageCreateRequest, MessagePage, TextMessageInfoReadAtDtoUpdate
-    };
+    use ruggine_client_ui::types::message::TextMessageCreateRequest;
 
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -39,10 +37,10 @@ mod message_service_integration_tests {
         
         let service = setup_message_service();
         
-        // Test valid request creation
-        let valid_request = MessageFactory::basic_text_message_create_request();
-        assert!(!valid_request.content.is_empty());
-        assert!(valid_request.group_id > 0);
+    // Test valid request creation
+    let valid_request = TestFactory::mock_message_create_request("Hello", 1);
+    assert!(!valid_request.content.is_empty());
+    assert!(valid_request.group_chat_id > 0);
         
         // Test unique request creation
         let unique_request = MessageFactory::unique_text_message_create_request("test");
@@ -57,13 +55,13 @@ mod message_service_integration_tests {
         let service = setup_message_service();
         
         // Test multiple request types
-        let basic_request = MessageFactory::basic_text_message_create_request();
-        let unique_request = MessageFactory::unique_text_message_create_request("unique");
-        let group_request = MessageFactory::text_message_for_group(42, "Group message");
+    let basic_request = TestFactory::mock_message_create_request("Hello, this is a test message!", 1);
+    let unique_request = MessageFactory::unique_text_message_create_request("unique");
+    let group_request = MessageFactory::text_message_for_group(42, "Group message");
         
         // Verify request properties
-        assert_eq!(basic_request.group_id, 1);
-        assert_eq!(group_request.group_id, 42);
+    assert_eq!(basic_request.group_chat_id, 1);
+    assert_eq!(group_request.group_chat_id, 42);
         assert_eq!(group_request.content, "Group message");
         
         assert_ne!(basic_request.content, unique_request.content);
@@ -76,17 +74,16 @@ mod message_service_integration_tests {
         
         let service = setup_message_service();
         
-        // Test message page creation
-        let page = MessageFactory::mock_message_page();
-        assert_eq!(page.messages.len(), 2);
-        assert_eq!(page.pagination.current_page, 1);
+    // Test message page creation
+    let page = MessageFactory::mock_message_page();
+        assert_eq!(page.data.len(), 2);
         assert_eq!(page.pagination.page_size, 20);
-        assert_eq!(page.pagination.total_items, 2);
+        assert_eq!(page.pagination.total_count.unwrap_or(0), 2);
         
         // Test empty page
-        let empty_page = MessageFactory::empty_message_page();
-        assert_eq!(empty_page.messages.len(), 0);
-        assert_eq!(empty_page.pagination.total_items, 0);
+    let empty_page = MessageFactory::empty_message_page();
+    assert_eq!(empty_page.data.len(), 0);
+    assert_eq!(empty_page.pagination.total_count.unwrap_or(0), 0);
     }
 
     #[tokio::test]
@@ -96,9 +93,8 @@ mod message_service_integration_tests {
         let service = setup_message_service();
         
         // Test read update creation
-        let update = MessageFactory::mock_text_message_info_read_at_dto_update();
-        assert!(update.message_id > 0);
-        assert!(!update.read_at.to_string().is_empty());
+    let update = MessageFactory::mock_message_info_read_dto(1, 1);
+    assert!(update.text_message_id > 0);
     }
 
     #[tokio::test]
@@ -108,23 +104,23 @@ mod message_service_integration_tests {
         let service = setup_message_service();
         
         // Create message and verify consistency
-        let message = MessageFactory::mock_message();
-        let dto = MessageFactory::mock_text_message_read_dto();
-        let info_dto = MessageFactory::mock_text_message_info_read_dto();
+    let message = MessageFactory::mock_message("mock");
+    let dto = MessageFactory::mock_message_read_dto("mock");
+    let info_dto = MessageFactory::mock_message_info_read_dto(1, 1);
         
-        // All should have valid IDs
-        assert!(message.id > 0);
-        assert!(dto.id > 0);
-        assert!(info_dto.id > 0);
-        
-        // All should have valid timestamps
-        assert!(!message.created_at.to_string().is_empty());
-        assert!(!dto.created_at.to_string().is_empty());
-        assert!(!info_dto.created_at.to_string().is_empty());
-        
-        // DTOs should have usernames
-        assert!(!dto.username.is_empty());
-        assert!(!info_dto.username.is_empty());
+    // All should have valid IDs
+    assert!(message.id > 0);
+    assert!(dto.id > 0);
+    assert!(info_dto.text_message_id > 0);
+
+    // All should have valid timestamps
+    assert!(!message.sent_at.to_string().is_empty());
+    assert!(!dto.sent_at.to_string().is_empty());
+    // info_dto.sent_at may be Option<String> on the read DTO wrapper; for the update DTO we only have ids
+
+    // DTOs used here don't include username fields in the updated DTOs; check sender_id instead
+    assert!(dto.sender_id > 0);
+    assert!(info_dto.text_message_id > 0);
     }
 
     #[tokio::test]
@@ -135,7 +131,7 @@ mod message_service_integration_tests {
         
         // Create multiple messages for batch testing
         let messages: Vec<TextMessageCreateRequest> = (1..=5)
-            .map(|i| MessageFactory::text_message_for_group(i, &format!("Batch message {}", i)))
+            .map(|i| MessageFactory::text_message_for_group(i as i32, &format!("Batch message {}", i)))
             .collect();
         
         assert_eq!(messages.len(), 5);
@@ -143,7 +139,7 @@ mod message_service_integration_tests {
         // Verify each message has correct group assignment
         for (i, msg) in messages.iter().enumerate() {
             let expected_group_id = (i + 1) as i32;
-            assert_eq!(msg.group_id, expected_group_id);
+            assert_eq!(msg.group_chat_id, expected_group_id);
             assert!(msg.content.contains(&format!("message {}", expected_group_id)));
         }
     }
@@ -157,23 +153,23 @@ mod message_service_integration_tests {
         // Test that service can handle different request scenarios
         let empty_content_request = TextMessageCreateRequest {
             content: "".to_string(),
-            group_id: 1,
+            group_chat_id: 1,
         };
         
         let zero_group_request = TextMessageCreateRequest {
             content: "Valid content".to_string(),
-            group_id: 0,
+            group_chat_id: 0,
         };
         
         let negative_group_request = TextMessageCreateRequest {
             content: "Valid content".to_string(),
-            group_id: -1,
+            group_chat_id: -1,
         };
         
         // These would be invalid in real scenarios
         assert!(empty_content_request.content.is_empty());
-        assert_eq!(zero_group_request.group_id, 0);
-        assert!(negative_group_request.group_id < 0);
+    assert_eq!(zero_group_request.group_chat_id, 0);
+    assert!(negative_group_request.group_chat_id < 0);
     }
 
     #[tokio::test]
@@ -187,14 +183,12 @@ mod message_service_integration_tests {
         let empty_page = MessageFactory::empty_message_page();
         
         // Normal page should have data
-        assert!(normal_page.pagination.total_items > 0);
-        assert!(normal_page.pagination.total_pages > 0);
+    assert!(normal_page.pagination.total_count.unwrap_or(0) > 0);
         
         // Empty page should have no data
-        assert_eq!(empty_page.pagination.total_items, 0);
-        assert_eq!(empty_page.pagination.total_pages, 0);
-        assert!(!empty_page.pagination.has_next);
-        assert!(!empty_page.pagination.has_previous);
+    assert_eq!(empty_page.pagination.total_count.unwrap_or(0), 0);
+    // pagination has_next/has_previous are not present; check has_more
+    assert!(!empty_page.pagination.has_more);
     }
 
     #[tokio::test]

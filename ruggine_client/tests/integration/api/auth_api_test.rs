@@ -2,9 +2,8 @@
 // Testing client-specific concerns, not server API logic
 
 use ruggine_client_ui::types::auth::LoginRequest;
-use ruggine_client_ui::types::auth::TokenResponse;
 use ruggine_client_ui::types::user::{UserRegisterRequest, Gender};
-use chrono::NaiveDate;
+use chrono::Utc;
 
 #[cfg(test)]
 mod auth_api_client_tests {
@@ -139,7 +138,8 @@ mod auth_api_client_tests {
     fn test_token_client_utilities() {
         // Test: CLIENT-SIDE token utilities for UI state management
         let valid_token = TestFactory::mock_token_response();
-        let expired_token = TestFactory::mock_expired_token_response();
+    // The TestFactory provides helpers; create an explicitly expired token for the negative case
+    let expired_token = TestFactory::mock_token_response_with_exp(Utc::now().timestamp() - 100);
         
         // These methods help client decide UI behavior
         assert!(!valid_token.is_expired(), "Valid token should not be expired");
@@ -154,14 +154,14 @@ mod auth_api_client_tests {
     fn test_token_storage_format() {
         // Test: Token formatting for client-side storage
         let token = TestFactory::mock_token_response();
-        
+
         // Client might need to store/retrieve tokens
         assert!(!token.token.is_empty(), "Token should have content");
         assert!(token.iat > 0, "Issue time should be valid");
         assert!(token.exp > token.iat, "Expiry should be after issue time");
-        
-        // Test token format expectations
-        assert!(token.token.starts_with("mock_"), "Test tokens should be identifiable");
+
+        // Test token format expectations (factory uses "test_token_" prefix)
+        assert!(token.token.starts_with("test_token_"), "Test tokens should be identifiable");
     }
 
     #[test]
@@ -316,7 +316,7 @@ mod auth_api_client_tests {
     #[test]
     fn test_logout_session_state_cleanup() {
         // Test: Client-side session state cleanup for logout
-        let user_profile = TestFactory::mock_user_profile("logout_test");
+    let user_profile = TestFactory::mock_user_profile();
         
         // Before logout - user profile exists
         assert!(!user_profile.email.is_empty(), "User profile should exist");

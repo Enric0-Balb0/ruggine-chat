@@ -1,7 +1,5 @@
-use ruggine_client_ui::utils::error_recovery::{NetworkOperation, ErrorRecovery, RetryConfig};
+use ruggine_client_ui::utils::error_recovery::RetryConfig;
 use ruggine_client_ui::error::AuthError;
-use std::future::Future;
-use std::pin::Pin;
 
 #[cfg(test)]
 mod error_recovery_tests {

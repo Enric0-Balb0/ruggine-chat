@@ -1,11 +1,10 @@
 // Client-focused tests - NOT testing server logic
 // Testing client-specific concerns: UI state, data transformation, error handling
 
-use ruggine_client_ui::types::user::{UserRegisterRequest, UserProfile, UserType, UserStatus, CurrentAction};
 
 #[cfg(test)]
 mod user_api_client_tests {
-    use super::*;
+    
     use crate::common::TestFactory;
 
     #[test]
@@ -33,7 +32,7 @@ mod user_api_client_tests {
     #[test]
     fn test_user_profile_display_methods() {
         // Test: Client-specific utility methods for UI display
-        let profile = TestFactory::mock_user_profile("display_test");
+    let profile = TestFactory::mock_user_profile();
         
         // These are CLIENT-SIDE utilities for UI rendering
         assert!(!profile.full_name().is_empty(), "Full name should be computed");

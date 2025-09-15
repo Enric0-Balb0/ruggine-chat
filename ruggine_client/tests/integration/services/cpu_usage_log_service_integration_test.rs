@@ -9,7 +9,7 @@ mod cpu_usage_log_service_integration_tests {
     use ruggine_client_ui::api::services::cpu_usage_log::CpuUsageLogService;
     use ruggine_client_ui::api::client::ApiClient;
     use ruggine_client_ui::utils::storage::StorageService;
-    use ruggine_client_ui::types::cpu_usage_log::{CpuUsagePage, PaginatedCpuUsageLogResponse};
+    
 
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 

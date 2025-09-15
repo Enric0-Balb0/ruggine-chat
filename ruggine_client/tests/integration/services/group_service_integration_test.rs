@@ -11,7 +11,7 @@ use std::sync::Mutex;
 #[cfg(test)]
 mod group_service_integration_tests {
     use super::*;
-    use crate::factory::TestFactory;
+    use crate::common::TestFactory;
 
     // Mutex to serialize tests that use shared storage
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
