@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=Office;
+Comment=Real-time chat application
+Exec=ruggine_client
+StartupWMClass=ruggine_client
+Icon=ruggine_client
+Name=Ruggine Chat
+Terminal=false
+Type=Application

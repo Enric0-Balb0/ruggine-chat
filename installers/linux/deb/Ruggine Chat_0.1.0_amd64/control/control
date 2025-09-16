@@ -1,0 +1,9 @@
+Package: ruggine-chat
+Version: 0.1.0
+Architecture: amd64
+Installed-Size: 15168
+Maintainer: you
+Priority: optional
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Description: Real-time chat application
+ Ruggine Chat - a modern, real-time, multi-platform chat client built in Rust with Leptos and Tauri.
